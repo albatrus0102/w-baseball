@@ -1,0 +1,221 @@
+{
+  "schemaVersion": 1,
+  "dataVersion": "2026.08.30",
+  "generatedAt": "2026-08-30T00:00:00Z",
+  "payloadKind": "snapshot",
+  "hasMore": false,
+  "items": [
+    {
+      "id": "team-demo-hangang",
+      "name": "한강 리버베어스",
+      "region": "11",
+      "city": "서울",
+      "foundedYear": 2015,
+      "introduction": "앱 동작 확인을 위한 데모 팀입니다. 실제 팀이 아닙니다.",
+      "recruitment": "open",
+      "recruitmentTarget": "초보 환영 · 20~40대",
+      "homeVenueId": "venue-demo-hangang",
+      "practiceArea": "서울",
+      "colorHex": "#1F4E79",
+      "aliases": [
+        "한강리버베어스",
+        "한강"
+      ],
+      "source": {
+        "sourceName": "demo-fixture",
+        "sourceUrl": "app://demo/fixture",
+        "fetchedAt": "2026-08-30T00:00:00Z",
+        "qualityStatus": "autoVerified",
+        "licenseStatus": "permitted",
+        "visibility": "public",
+        "isDemo": true,
+        "sourceRecordId": "team-demo-hangang"
+      }
+    },
+    {
+      "id": "team-demo-namsan",
+      "name": "남산 스카이라크스",
+      "region": "11",
+      "city": "서울",
+      "foundedYear": 2016,
+      "introduction": "앱 동작 확인을 위한 데모 팀입니다. 실제 팀이 아닙니다.",
+      "recruitment": "closed",
+      "homeVenueId": "venue-demo-suwon",
+      "practiceArea": "서울",
+      "colorHex": "#7A3E9D",
+      "aliases": [
+        "남산스카이라크스",
+        "남산"
+      ],
+      "source": {
+        "sourceName": "demo-fixture",
+        "sourceUrl": "app://demo/fixture",
+        "fetchedAt": "2026-08-30T00:00:00Z",
+        "qualityStatus": "autoVerified",
+        "licenseStatus": "permitted",
+        "visibility": "public",
+        "isDemo": true,
+        "sourceRecordId": "team-demo-namsan"
+      }
+    },
+    {
+      "id": "team-demo-suwon",
+      "name": "수원 필드메이커스",
+      "region": "41",
+      "city": "수원",
+      "foundedYear": 2017,
+      "introduction": "앱 동작 확인을 위한 데모 팀입니다. 실제 팀이 아닙니다.",
+      "recruitment": "open",
+      "recruitmentTarget": "경험 무관",
+      "homeVenueId": "venue-demo-incheon",
+      "practiceArea": "수원",
+      "colorHex": "#2E7D4F",
+      "aliases": [
+        "수원필드메이커스",
+        "수원"
+      ],
+      "source": {
+        "sourceName": "demo-fixture",
+        "sourceUrl": "app://demo/fixture",
+        "fetchedAt": "2026-08-30T00:00:00Z",
+        "qualityStatus": "autoVerified",
+        "licenseStatus": "permitted",
+        "visibility": "public",
+        "isDemo": true,
+        "sourceRecordId": "team-demo-suwon"
+      }
+    },
+    {
+      "id": "team-demo-goyang",
+      "name": "고양 윈드밀스",
+      "region": "41",
+      "city": "고양",
+      "foundedYear": 2018,
+      "introduction": "앱 동작 확인을 위한 데모 팀입니다. 실제 팀이 아닙니다.",
+      "recruitment": "unknown",
+      "homeVenueId": "venue-demo-busan",
+      "practiceArea": "고양",
+      "colorHex": "#B7791F",
+      "aliases": [
+        "고양윈드밀스",
+        "고양"
+      ],
+      "source": {
+        "sourceName": "demo-fixture",
+        "sourceUrl": "app://demo/fixture",
+        "fetchedAt": "2026-08-30T00:00:00Z",
+        "qualityStatus": "autoVerified",
+        "licenseStatus": "permitted",
+        "visibility": "public",
+        "isDemo": true,
+        "sourceRecordId": "team-demo-goyang"
+      }
+    },
+    {
+      "id": "team-demo-incheon",
+      "name": "인천 하버라이츠",
+      "region": "28",
+      "city": "인천",
+      "foundedYear": 2019,
+      "introduction": "앱 동작 확인을 위한 데모 팀입니다. 실제 팀이 아닙니다.",
+      "recruitment": "open",
+      "recruitmentTarget": "주말 훈련 가능자",
+      "homeVenueId": "venue-demo-hangang",
+      "practiceArea": "인천",
+      "colorHex": "#0F766E",
+      "aliases": [
+        "인천하버라이츠",
+        "인천"
+      ],
+      "source": {
+        "sourceName": "demo-fixture",
+        "sourceUrl": "app://demo/fixture",
+        "fetchedAt": "2026-08-30T00:00:00Z",
+        "qualityStatus": "autoVerified",
+        "licenseStatus": "permitted",
+        "visibility": "public",
+        "isDemo": true,
+        "sourceRecordId": "team-demo-incheon"
+      }
+    },
+    {
+      "id": "team-demo-busan",
+      "name": "부산 씨걸스",
+      "region": "26",
+      "city": "부산",
+      "foundedYear": 2020,
+      "introduction": "앱 동작 확인을 위한 데모 팀입니다. 실제 팀이 아닙니다.",
+      "recruitment": "open",
+      "recruitmentTarget": "초보 환영",
+      "homeVenueId": "venue-demo-suwon",
+      "practiceArea": "부산",
+      "colorHex": "#C2410C",
+      "aliases": [
+        "부산씨걸스",
+        "부산"
+      ],
+      "source": {
+        "sourceName": "demo-fixture",
+        "sourceUrl": "app://demo/fixture",
+        "fetchedAt": "2026-08-30T00:00:00Z",
+        "qualityStatus": "autoVerified",
+        "licenseStatus": "permitted",
+        "visibility": "public",
+        "isDemo": true,
+        "sourceRecordId": "team-demo-busan"
+      }
+    },
+    {
+      "id": "team-demo-daegu",
+      "name": "대구 애플블라썸",
+      "region": "27",
+      "city": "대구",
+      "foundedYear": 2021,
+      "introduction": "앱 동작 확인을 위한 데모 팀입니다. 실제 팀이 아닙니다.",
+      "recruitment": "closed",
+      "homeVenueId": "venue-demo-incheon",
+      "practiceArea": "대구",
+      "colorHex": "#9D174D",
+      "aliases": [
+        "대구애플블라썸",
+        "대구"
+      ],
+      "source": {
+        "sourceName": "demo-fixture",
+        "sourceUrl": "app://demo/fixture",
+        "fetchedAt": "2026-08-30T00:00:00Z",
+        "qualityStatus": "autoVerified",
+        "licenseStatus": "permitted",
+        "visibility": "public",
+        "isDemo": true,
+        "sourceRecordId": "team-demo-daegu"
+      }
+    },
+    {
+      "id": "team-demo-daejeon",
+      "name": "대전 코멧츠",
+      "region": "30",
+      "city": "대전",
+      "foundedYear": 2022,
+      "introduction": "앱 동작 확인을 위한 데모 팀입니다. 실제 팀이 아닙니다.",
+      "recruitment": "unknown",
+      "homeVenueId": "venue-demo-busan",
+      "practiceArea": "대전",
+      "colorHex": "#3730A3",
+      "aliases": [
+        "대전코멧츠",
+        "대전"
+      ],
+      "source": {
+        "sourceName": "demo-fixture",
+        "sourceUrl": "app://demo/fixture",
+        "fetchedAt": "2026-08-30T00:00:00Z",
+        "qualityStatus": "autoVerified",
+        "licenseStatus": "permitted",
+        "visibility": "public",
+        "isDemo": true,
+        "sourceRecordId": "team-demo-daejeon"
+      }
+    }
+  ]
+}

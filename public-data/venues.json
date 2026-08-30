@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "dataVersion": "2026.08.30",
+  "generatedAt": "2026-08-30T00:00:00Z",
+  "payloadKind": "snapshot",
+  "hasMore": false,
+  "items": [
+    {
+      "id": "venue-demo-hangang",
+      "name": "한강 야구장 (데모)",
+      "address": "서울 광진구 강변북로",
+      "region": "11",
+      "latitude": 37.53,
+      "longitude": 127.07,
+      "surface": "인조잔디",
+      "source": {
+        "sourceName": "demo-fixture",
+        "sourceUrl": "app://demo/fixture",
+        "fetchedAt": "2026-08-30T00:00:00Z",
+        "qualityStatus": "autoVerified",
+        "licenseStatus": "permitted",
+        "visibility": "public",
+        "isDemo": true,
+        "sourceRecordId": "venue-demo-hangang"
+      }
+    },
+    {
+      "id": "venue-demo-suwon",
+      "name": "수원 스포츠파크 야구장 (데모)",
+      "address": "경기 수원시 팔달구",
+      "region": "41",
+      "latitude": 37.28,
+      "longitude": 127.01,
+      "surface": "인조잔디",
+      "source": {
+        "sourceName": "demo-fixture",
+        "sourceUrl": "app://demo/fixture",
+        "fetchedAt": "2026-08-30T00:00:00Z",
+        "qualityStatus": "autoVerified",
+        "licenseStatus": "permitted",
+        "visibility": "public",
+        "isDemo": true,
+        "sourceRecordId": "venue-demo-suwon"
+      }
+    },
+    {
+      "id": "venue-demo-incheon",
+      "name": "인천 문학 보조구장 (데모)",
+      "address": "인천 미추홀구",
+      "region": "28",
+      "latitude": 37.435,
+      "longitude": 126.69,
+      "surface": "인조잔디",
+      "source": {
+        "sourceName": "demo-fixture",
+        "sourceUrl": "app://demo/fixture",
+        "fetchedAt": "2026-08-30T00:00:00Z",
+        "qualityStatus": "autoVerified",
+        "licenseStatus": "permitted",
+        "visibility": "public",
+        "isDemo": true,
+        "sourceRecordId": "venue-demo-incheon"
+      }
+    },
+    {
+      "id": "venue-demo-busan",
+      "name": "부산 사직 보조구장 (데모)",
+      "address": "부산 동래구",
+      "region": "26",
+      "latitude": 35.194,
+      "longitude": 129.061,
+      "surface": "인조잔디",
+      "source": {
+        "sourceName": "demo-fixture",
+        "sourceUrl": "app://demo/fixture",
+        "fetchedAt": "2026-08-30T00:00:00Z",
+        "qualityStatus": "autoVerified",
+        "licenseStatus": "permitted",
+        "visibility": "public",
+        "isDemo": true,
+        "sourceRecordId": "venue-demo-busan"
+      }
+    }
+  ]
+}

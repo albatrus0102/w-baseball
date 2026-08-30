@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "dataVersion": "2026.08.30",
+  "generatedAt": "2026-08-30T00:00:00Z",
+  "payloadKind": "snapshot",
+  "hasMore": false,
+  "items": [
+    {
+      "id": "comp-demo-league",
+      "name": "2026 데모 여자야구 리그",
+      "shortName": "데모 리그",
+      "level": "domestic",
+      "organizationId": "org-wbak",
+      "description": "앱의 일정·순위·기록 화면을 확인하기 위한 데모 대회입니다. 실제 대회가 아니며 모든 경기와 기록은 예시입니다.",
+      "seasons": [
+        {
+          "id": "season-demo-league-2026",
+          "year": 2026,
+          "name": "2026 정규 시즌",
+          "phase": "ongoing",
+          "startDate": "2026-04-05",
+          "endDate": "2026-11-15",
+          "stages": [
+            {
+              "id": "stage-demo-2026-regular",
+              "name": "정규 리그",
+              "format": "league",
+              "ordering": 1
+            }
+          ]
+        }
+      ],
+      "source": {
+        "sourceName": "demo-fixture",
+        "sourceUrl": "app://demo/fixture",
+        "fetchedAt": "2026-08-30T00:00:00Z",
+        "qualityStatus": "autoVerified",
+        "licenseStatus": "permitted",
+        "visibility": "public",
+        "isDemo": true,
+        "sourceRecordId": "comp-demo-league"
+      }
+    },
+    {
+      "id": "comp-wbsc-wbwc-2026",
+      "name": "2026 WBSC 여자야구 월드컵",
+      "shortName": "여자야구 월드컵",
+      "level": "international",
+      "organizationId": "org-wbsc",
+      "description": "WBSC가 주관하는 국제 대회입니다. 일정과 결과는 공식 페이지에서 확인할 수 있습니다.",
+      "resultsUrl": "https://www.wbsc.org/en/events/2026-x-womens-baseball-world-cup-group-stage-rockford/schedule-and-results",
+      "bracketUrl": "https://www.wbsc.org/en/events/2026-x-womens-baseball-world-cup-group-stage-rockford/standings",
+      "seasons": [
+        {
+          "id": "season-wbsc-wbwc-2026",
+          "year": 2026,
+          "name": "2026 그룹 스테이지 (Rockford)",
+          "phase": "upcoming",
+          "stages": []
+        }
+      ],
+      "source": {
+        "sourceName": "wbsc",
+        "sourceUrl": "https://www.wbsc.org/en/events/2026-x-womens-baseball-world-cup-group-stage-rockford/home",
+        "fetchedAt": "2026-08-30T00:00:00Z",
+        "qualityStatus": "autoVerified",
+        "licenseStatus": "linkOnly",
+        "visibility": "public",
+        "isDemo": false
+      }
+    }
+  ]
+}

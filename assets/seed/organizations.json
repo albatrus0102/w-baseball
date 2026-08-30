@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "dataVersion": "2026.08.30",
+  "generatedAt": "2026-08-30T00:00:00Z",
+  "payloadKind": "snapshot",
+  "hasMore": false,
+  "items": [
+    {
+      "id": "org-wbak",
+      "name": "한국여자야구연맹",
+      "shortName": "WBAK",
+      "country": "KR",
+      "websiteUrl": "https://www.wbak.net/home",
+      "source": {
+        "sourceName": "wbak",
+        "sourceUrl": "https://www.wbak.net/home",
+        "fetchedAt": "2026-08-30T00:00:00Z",
+        "qualityStatus": "autoVerified",
+        "licenseStatus": "linkOnly",
+        "visibility": "public",
+        "isDemo": false
+      }
+    },
+    {
+      "id": "org-kbsa",
+      "name": "대한야구소프트볼협회",
+      "shortName": "KBSA",
+      "country": "KR",
+      "websiteUrl": "https://kbsa.or.kr/",
+      "source": {
+        "sourceName": "kbsa",
+        "sourceUrl": "https://kbsa.or.kr/",
+        "fetchedAt": "2026-08-30T00:00:00Z",
+        "qualityStatus": "autoVerified",
+        "licenseStatus": "linkOnly",
+        "visibility": "public",
+        "isDemo": false
+      }
+    },
+    {
+      "id": "org-wbsc",
+      "name": "World Baseball Softball Confederation",
+      "shortName": "WBSC",
+      "country": "INT",
+      "websiteUrl": "https://www.wbsc.org/",
+      "source": {
+        "sourceName": "wbsc",
+        "sourceUrl": "https://www.wbsc.org/",
+        "fetchedAt": "2026-08-30T00:00:00Z",
+        "qualityStatus": "autoVerified",
+        "licenseStatus": "linkOnly",
+        "visibility": "public",
+        "isDemo": false
+      }
+    }
+  ]
+}

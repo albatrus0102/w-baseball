@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "competition.schema.json",
+  "title": "Competition",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "source"
+  ],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "shortName": {
+      "type": "string"
+    },
+    "level": {
+      "enum": [
+        "domestic",
+        "international",
+        "unknown"
+      ]
+    },
+    "organizationId": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "regulationsUrl": {
+      "type": "string",
+      "format": "uri"
+    },
+    "bracketUrl": {
+      "type": "string",
+      "format": "uri"
+    },
+    "resultsUrl": {
+      "type": "string",
+      "format": "uri"
+    },
+    "seasons": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "year",
+          "name"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "competitionId": {
+            "type": "string"
+          },
+          "year": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "phase": {
+            "enum": [
+              "upcoming",
+              "ongoing",
+              "completed",
+              "unknown"
+            ]
+          },
+          "startDate": {
+            "type": "string"
+          },
+          "endDate": {
+            "type": "string"
+          },
+          "stages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "name"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "seasonId": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "format": {
+                  "enum": [
+                    "league",
+                    "groupStage",
+                    "knockout",
+                    "friendly",
+                    "unknown"
+                  ]
+                },
+                "groupLabel": {
+                  "type": "string"
+                },
+                "ordering": {
+                  "type": "integer"
+                },
+                "deletedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            }
+          },
+          "deletedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "deletedAt": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "source": {
+      "$ref": "provenance.schema.json"
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,86 @@
+name: w_baseball
+description: "한국 여자야구 일정, 결과, 대회, 팀 정보를 한곳에서"
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  # Pinned to the Flutter 3.47.2 / Dart 3.13.2 stable toolchain this project
+  # was built and verified against. See docs/build-and-run.md.
+  sdk: ">=3.13.0 <4.0.0"
+  flutter: ">=3.47.0"
+
+# Every direct dependency is pinned to an exact version (no caret ranges) so a
+# fresh clone resolves byte-identically to the tree that passed `flutter test`
+# and `flutter build apk`. Transitive versions are locked by pubspec.lock,
+# which is committed. To bump: change one line, re-run tests, commit the lock.
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State management + dependency injection.
+  flutter_riverpod: 3.4.2
+
+  # Routing, deep links, and shell navigation with per-tab state retention.
+  go_router: 17.5.0
+
+  # HTTP: timeouts, cancellation, retry, ETag / If-Modified-Since.
+  dio: 5.11.0
+
+  # Offline local source of truth. The UI only ever reads from here.
+  drift: 2.31.0
+  drift_flutter: 0.2.8
+  path_provider: 2.1.6
+  sqlite3_flutter_libs: 0.5.42
+
+  # Small key/value store for settings, filter state, and last-sync markers.
+  shared_preferences: 2.5.5
+
+  # Local (device-scheduled) game notifications. No push, no server keys.
+  flutter_local_notifications: 19.5.0
+  timezone: 0.10.1
+  flutter_timezone: 5.1.0
+
+  # Platform integration. Calendar insert is a first-party MethodChannel
+  # (lib/core/platform/) rather than a package, so the Android-specific code
+  # stays isolated behind a service interface for the iOS port.
+  url_launcher: 6.3.2
+  share_plus: 12.0.2
+  webview_flutter: 4.14.1
+  package_info_plus: 9.0.1
+
+  # Only used for images we hold an explicit licence to cache.
+  cached_network_image: 3.4.1
+
+  # Formatting / i18n.
+  intl: 0.20.3
+
+  collection: 1.19.1
+  meta: 1.18.3
+  crypto: 3.0.7
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  flutter_lints: 6.0.0
+  # Used only by test/unit/migration_test.dart, to build a v1 database by hand
+  # and prove the real migration preserves the user's own rows.
+  sqlite3: 2.9.4
+  # Codegen is confined to Drift. DTOs and domain models are hand-written so
+  # that unknown-field tolerance and per-record quarantine stay explicit.
+  build_runner: 2.15.1
+  drift_dev: 2.31.0
+
+flutter:
+  uses-material-design: true
+  # Flutter does not recurse into sub-directories, so each one is listed.
+  assets:
+    - assets/seed/
+    - assets/seed/games/
+    - assets/seed/competitions/
+    - assets/seed/standings/
+    - assets/seed/content/
+    - assets/icons/

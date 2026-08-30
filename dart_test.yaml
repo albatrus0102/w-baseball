@@ -1,0 +1,7 @@
+# Tags used by this suite. Declaring them makes a typo in `--tags` /
+# `--exclude-tags` an error instead of a silently-ignored filter.
+tags:
+  screenshots:
+    # Golden images are review artefacts whose pixels depend on host fonts.
+    # CI runs `--exclude-tags screenshots`; a pixel diff must never block a
+    # build. Regenerate with `flutter test --tags screenshots --update-goldens`.

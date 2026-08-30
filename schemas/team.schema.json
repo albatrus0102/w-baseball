@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "team.schema.json",
+  "title": "Team",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "source"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "앱의 canonical id. 팀 이름을 키로 쓰지 않습니다 — 이름은 바뀝니다."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "shortName": {
+      "type": "string"
+    },
+    "region": {
+      "type": "string",
+      "description": "행정표준코드 시·도 코드(예: 11). 이름이 아닙니다."
+    },
+    "city": {
+      "type": "string"
+    },
+    "foundedYear": {
+      "type": "integer",
+      "minimum": 1900
+    },
+    "introduction": {
+      "type": "string"
+    },
+    "recruitment": {
+      "enum": [
+        "open",
+        "closed",
+        "unknown"
+      ],
+      "default": "unknown"
+    },
+    "recruitmentTarget": {
+      "type": "string",
+      "description": "팀이 직접 밝힌 모집 대상. 추정하지 않습니다."
+    },
+    "homeVenueId": {
+      "type": "string"
+    },
+    "practiceArea": {
+      "type": "string"
+    },
+    "officialUrl": {
+      "type": "string",
+      "format": "uri"
+    },
+    "contactUrl": {
+      "type": "string",
+      "format": "uri",
+      "description": "공식 문의 채널. 개인 연락처는 넣지 않습니다."
+    },
+    "logoUrl": {
+      "type": "string",
+      "format": "uri"
+    },
+    "logoLicense": {
+      "enum": [
+        "permitted",
+        "linkOnly",
+        "unknown"
+      ],
+      "default": "unknown"
+    },
+    "colorHex": {
+      "type": "string",
+      "pattern": "^#?[0-9a-fA-F]{6}$"
+    },
+    "aliases": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "띄어쓰기·지역명 표기 차이를 흡수합니다."
+    },
+    "deletedAt": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "source": {
+      "$ref": "provenance.schema.json"
+    }
+  },
+  "additionalProperties": false
+}

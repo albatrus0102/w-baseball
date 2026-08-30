@@ -1,0 +1,193 @@
+{
+  "schemaVersion": 1,
+  "dataVersion": "2026.08.30",
+  "generatedAt": "2026-08-30T00:00:00Z",
+  "payloadKind": "snapshot",
+  "hasMore": false,
+  "items": [
+    {
+      "id": "standing-demo-team-demo-hangang",
+      "seasonId": "season-demo-league-2026",
+      "teamId": "team-demo-hangang",
+      "capturedAt": "2026-08-30T00:00:00Z",
+      "rank": 1,
+      "played": 3,
+      "wins": 2,
+      "losses": 0,
+      "draws": 1,
+      "runsScored": 13,
+      "runsAllowed": 10,
+      "source": {
+        "sourceName": "demo-fixture",
+        "sourceUrl": "app://demo/fixture",
+        "fetchedAt": "2026-08-30T00:00:00Z",
+        "qualityStatus": "autoVerified",
+        "licenseStatus": "permitted",
+        "visibility": "public",
+        "isDemo": true,
+        "sourceRecordId": "standing-demo-team-demo-hangang"
+      }
+    },
+    {
+      "id": "standing-demo-team-demo-suwon",
+      "seasonId": "season-demo-league-2026",
+      "teamId": "team-demo-suwon",
+      "capturedAt": "2026-08-30T00:00:00Z",
+      "rank": 2,
+      "played": 3,
+      "wins": 2,
+      "losses": 1,
+      "draws": 0,
+      "runsScored": 18,
+      "runsAllowed": 8,
+      "source": {
+        "sourceName": "demo-fixture",
+        "sourceUrl": "app://demo/fixture",
+        "fetchedAt": "2026-08-30T00:00:00Z",
+        "qualityStatus": "autoVerified",
+        "licenseStatus": "permitted",
+        "visibility": "public",
+        "isDemo": true,
+        "sourceRecordId": "standing-demo-team-demo-suwon"
+      }
+    },
+    {
+      "id": "standing-demo-team-demo-daegu",
+      "seasonId": "season-demo-league-2026",
+      "teamId": "team-demo-daegu",
+      "capturedAt": "2026-08-30T00:00:00Z",
+      "rank": 3,
+      "played": 3,
+      "wins": 2,
+      "losses": 1,
+      "draws": 0,
+      "runsScored": 17,
+      "runsAllowed": 15,
+      "source": {
+        "sourceName": "demo-fixture",
+        "sourceUrl": "app://demo/fixture",
+        "fetchedAt": "2026-08-30T00:00:00Z",
+        "qualityStatus": "autoVerified",
+        "licenseStatus": "permitted",
+        "visibility": "public",
+        "isDemo": true,
+        "sourceRecordId": "standing-demo-team-demo-daegu"
+      }
+    },
+    {
+      "id": "standing-demo-team-demo-namsan",
+      "seasonId": "season-demo-league-2026",
+      "teamId": "team-demo-namsan",
+      "capturedAt": "2026-08-30T00:00:00Z",
+      "rank": 4,
+      "played": 2,
+      "wins": 1,
+      "losses": 1,
+      "draws": 0,
+      "runsScored": 10,
+      "runsAllowed": 8,
+      "source": {
+        "sourceName": "demo-fixture",
+        "sourceUrl": "app://demo/fixture",
+        "fetchedAt": "2026-08-30T00:00:00Z",
+        "qualityStatus": "autoVerified",
+        "licenseStatus": "permitted",
+        "visibility": "public",
+        "isDemo": true,
+        "sourceRecordId": "standing-demo-team-demo-namsan"
+      }
+    },
+    {
+      "id": "standing-demo-team-demo-goyang",
+      "seasonId": "season-demo-league-2026",
+      "teamId": "team-demo-goyang",
+      "capturedAt": "2026-08-30T00:00:00Z",
+      "rank": 5,
+      "played": 2,
+      "wins": 1,
+      "losses": 1,
+      "draws": 0,
+      "runsScored": 4,
+      "runsAllowed": 2,
+      "source": {
+        "sourceName": "demo-fixture",
+        "sourceUrl": "app://demo/fixture",
+        "fetchedAt": "2026-08-30T00:00:00Z",
+        "qualityStatus": "autoVerified",
+        "licenseStatus": "permitted",
+        "visibility": "public",
+        "isDemo": true,
+        "sourceRecordId": "standing-demo-team-demo-goyang"
+      }
+    },
+    {
+      "id": "standing-demo-team-demo-daejeon",
+      "seasonId": "season-demo-league-2026",
+      "teamId": "team-demo-daejeon",
+      "capturedAt": "2026-08-30T00:00:00Z",
+      "rank": 6,
+      "played": 2,
+      "wins": 0,
+      "losses": 1,
+      "draws": 1,
+      "runsScored": 4,
+      "runsAllowed": 7,
+      "source": {
+        "sourceName": "demo-fixture",
+        "sourceUrl": "app://demo/fixture",
+        "fetchedAt": "2026-08-30T00:00:00Z",
+        "qualityStatus": "autoVerified",
+        "licenseStatus": "permitted",
+        "visibility": "public",
+        "isDemo": true,
+        "sourceRecordId": "standing-demo-team-demo-daejeon"
+      }
+    },
+    {
+      "id": "standing-demo-team-demo-busan",
+      "seasonId": "season-demo-league-2026",
+      "teamId": "team-demo-busan",
+      "capturedAt": "2026-08-30T00:00:00Z",
+      "rank": 7,
+      "played": 2,
+      "wins": 0,
+      "losses": 1,
+      "draws": 1,
+      "runsScored": 9,
+      "runsAllowed": 13,
+      "source": {
+        "sourceName": "demo-fixture",
+        "sourceUrl": "app://demo/fixture",
+        "fetchedAt": "2026-08-30T00:00:00Z",
+        "qualityStatus": "autoVerified",
+        "licenseStatus": "permitted",
+        "visibility": "public",
+        "isDemo": true,
+        "sourceRecordId": "standing-demo-team-demo-busan"
+      }
+    },
+    {
+      "id": "standing-demo-team-demo-incheon",
+      "seasonId": "season-demo-league-2026",
+      "teamId": "team-demo-incheon",
+      "capturedAt": "2026-08-30T00:00:00Z",
+      "rank": 8,
+      "played": 3,
+      "wins": 0,
+      "losses": 2,
+      "draws": 1,
+      "runsScored": 9,
+      "runsAllowed": 21,
+      "source": {
+        "sourceName": "demo-fixture",
+        "sourceUrl": "app://demo/fixture",
+        "fetchedAt": "2026-08-30T00:00:00Z",
+        "qualityStatus": "autoVerified",
+        "licenseStatus": "permitted",
+        "visibility": "public",
+        "isDemo": true,
+        "sourceRecordId": "standing-demo-team-demo-incheon"
+      }
+    }
+  ]
+}

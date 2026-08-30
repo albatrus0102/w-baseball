@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "person.schema.json",
+  "title": "Person",
+  "description": "의도적으로 최소한입니다. 전화·이메일·주소·생년월일을 담을 자리가 스키마에 아예 없으므로 실수로도 저장될 수 없습니다.",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "source"
+  ],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "isMinor": {
+      "type": "boolean",
+      "default": false,
+      "description": "true 면 사진과 개인 프로필을 표시하지 않습니다."
+    },
+    "photoUrl": {
+      "type": "string",
+      "format": "uri"
+    },
+    "photoLicense": {
+      "enum": [
+        "permitted",
+        "linkOnly",
+        "unknown"
+      ],
+      "default": "unknown"
+    },
+    "aliases": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "deletedAt": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "source": {
+      "$ref": "provenance.schema.json"
+    }
+  },
+  "additionalProperties": false
+}

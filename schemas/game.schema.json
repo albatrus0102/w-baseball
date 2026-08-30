@@ -1,0 +1,176 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "game.schema.json",
+  "title": "Game",
+  "type": "object",
+  "required": [
+    "id",
+    "status",
+    "startTime",
+    "homeTeamId",
+    "awayTeamId",
+    "source"
+  ],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "scheduled",
+        "delayed",
+        "postponed",
+        "cancelled",
+        "live",
+        "final",
+        "forfeit",
+        "unknown"
+      ],
+      "description": "연기·취소·몰수는 승패로 뭉개지 않습니다. 모르는 값은 unknown 으로 보존하고 scheduled 로 오해하지 않습니다."
+    },
+    "startTime": {
+      "type": "string",
+      "format": "date-time",
+      "description": "시간대 표기 필수. 시간대 없는 시각은 거부됩니다."
+    },
+    "localTimeZone": {
+      "type": "string",
+      "default": "Asia/Seoul"
+    },
+    "homeTeamId": {
+      "type": "string"
+    },
+    "awayTeamId": {
+      "type": "string"
+    },
+    "seasonId": {
+      "type": "string"
+    },
+    "stageId": {
+      "type": "string"
+    },
+    "competitionId": {
+      "type": "string"
+    },
+    "venueId": {
+      "type": "string"
+    },
+    "homeScore": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "awayScore": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "round": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string",
+      "description": "licenseStatus 가 permitted 일 때만."
+    },
+    "officialDetailUrl": {
+      "type": "string",
+      "format": "uri",
+      "description": "이 경기의 공식 기록 페이지. 사이트 홈이 아닙니다."
+    },
+    "statusNote": {
+      "type": "string",
+      "description": "예: 우천 순연"
+    },
+    "lineScore": {
+      "type": "object",
+      "properties": {
+        "homeInnings": {
+          "type": "array",
+          "items": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "description": "null 은 '공격하지 않음'이며 0점과 다릅니다."
+        },
+        "awayInnings": {
+          "type": "array",
+          "items": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "homeRuns": {
+          "type": "integer"
+        },
+        "awayRuns": {
+          "type": "integer"
+        },
+        "homeHits": {
+          "type": "integer"
+        },
+        "awayHits": {
+          "type": "integer"
+        },
+        "homeErrors": {
+          "type": "integer"
+        },
+        "awayErrors": {
+          "type": "integer"
+        }
+      },
+      "description": "이닝 합계는 최종 득점과 정확히 일치해야 합니다."
+    },
+    "batting": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "pitching": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "deletedAt": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "source": {
+      "$ref": "provenance.schema.json"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "final"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "required": [
+          "homeScore",
+          "awayScore"
+        ],
+        "description": "종료된 경기는 점수가 있어야 합니다."
+      }
+    }
+  ],
+  "additionalProperties": false
+}

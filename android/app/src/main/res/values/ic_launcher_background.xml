@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- WbColors.navy. Kept as a resource so the adaptive background and the
+         raster icons come from the same value. -->
+    <color name="ic_launcher_background">#14213D</color>
+</resources>

@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "dataVersion": "2026.08.30.1",
+  "generatedAt": "2026-08-30T00:00:00Z",
+  "files": [
+    {
+      "path": "competitions/2026.json",
+      "sha256": "02fddf1288073c9eb5701734eb1572c8cfd2aceb545f1538bceebf1e31594078",
+      "size": 2505
+    },
+    {
+      "path": "content/discover.json",
+      "sha256": "17a3fc8cf59b77d8d898e71bcb7a3ebb54238e1f21768d719584ab7f6b6e8b4d",
+      "size": 23616
+    },
+    {
+      "path": "content/news.json",
+      "sha256": "d59df70f0c715ab50f8224dbb650ce8b846357a06e51f50b196b11be1d3a1176",
+      "size": 161
+    },
+    {
+      "path": "content/videos.json",
+      "sha256": "d59df70f0c715ab50f8224dbb650ce8b846357a06e51f50b196b11be1d3a1176",
+      "size": 161
+    },
+    {
+      "path": "games/2026-07.json",
+      "sha256": "2dfba9172e6df1a40694c4fe36daef9d316f75b189c6b31772bd05f7842d7e77",
+      "size": 42571
+    },
+    {
+      "path": "games/2026-08.json",
+      "sha256": "5dc829d6dfbabe663517172e2a715fe1df89e7a9517b2f67aa3473040f8d0e7a",
+      "size": 64525
+    },
+    {
+      "path": "games/2026-09.json",
+      "sha256": "fdda2ec8d5c7aa2f1eb51b8f57f6e8dad28b5517fe935e7bf89771d85cd0c051",
+      "size": 10065
+    },
+    {
+      "path": "games/2026-10.json",
+      "sha256": "000c843bfa0c9bd641225914800abbf9a4d750e859392283cee9de0b59555e6e",
+      "size": 2485
+    },
+    {
+      "path": "organizations.json",
+      "sha256": "f6481b5cb293f450b44b0704bfe7ad5e1288e3ef9b018430bb9a3ef291df48b9",
+      "size": 1552
+    },
+    {
+      "path": "people.json",
+      "sha256": "29e9541a4187395b1902020f30747e8d977cac673e923bec92126d4341ed7848",
+      "size": 31339
+    },
+    {
+      "path": "roster.json",
+      "sha256": "8863e3ed7bb8f9b55e06432616713eabeeb4470d7ec76ffeeb6ee371e36d4f42",
+      "size": 39739
+    },
+    {
+      "path": "standings/season-demo-league-2026.json",
+      "sha256": "722e9d99367fee9aa6b1fbe1d67d4091d4e308de19799779ce191e67f3797426",
+      "size": 5507
+    },
+    {
+      "path": "teams.json",
+      "sha256": "d8ac54f507283cfe286c6988be09b848d8ec6a590bbacdca6ae8c4b011acb43f",
+      "size": 6769
+    },
+    {
+      "path": "venues.json",
+      "sha256": "a937453f31b7f2d49c3721944816845ecb4e8e7010ba96f321573b48914746cd",
+      "size": 2492
+    }
+  ]
+}

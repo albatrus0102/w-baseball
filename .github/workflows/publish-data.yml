@@ -1,0 +1,149 @@
+name: 데이터 수집·게시
+
+# The data pipeline. Runs on a schedule and on demand.
+#
+# Design constraints this workflow exists to satisfy:
+#   * No always-on server. Everything is a scheduled job producing static files.
+#   * One failing source must not block the rest, and must never wipe the last
+#     good data set.
+#   * Nothing publishes unless validation passes.
+#   * API keys come only from GitHub Secrets and are never printed.
+#   * WBAK / KBSA stay off until an explicit permission grant exists.
+on:
+  schedule:
+    # 06:10 and 18:10 KST — shortly after the 기상청 mid-range forecast is
+    # issued (06:00 / 18:00 KST), so a run always has the newest one.
+    - cron: '10 21 * * *'   # 06:10 KST
+    - cron: '10 9 * * *'    # 18:10 KST
+  workflow_dispatch:
+    inputs:
+      sources:
+        description: '수집할 출처 (쉼표 구분, 비우면 활성화된 전체)'
+        required: false
+        default: ''
+      publish:
+        description: '검증 통과 시 실제로 게시할지'
+        type: boolean
+        required: false
+        default: false
+
+concurrency:
+  # Never two publishes at once: the second could overwrite the first's
+  # manifest with a stale file list.
+  group: publish-data
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  collect:
+    name: 수집 · 정규화 · 검증
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 마지막 정상 데이터 백업
+        # Kept so a failed publish can be rolled back to exactly what was live.
+        run: cp -r public-data "$RUNNER_TEMP/public-data-previous"
+
+      - name: 출처 목록
+        run: python scripts/ingest/fetch_sources.py --list
+
+      - name: 수집
+        # Every source is individually guarded inside the script, so one
+        # failure is recorded and skipped rather than failing the job.
+        env:
+          # Absent secrets simply leave a source disabled — the script skips it
+          # and says which variable was missing, never its value.
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          KMA_SERVICE_KEY: ${{ secrets.KMA_SERVICE_KEY }}
+          WB_YOUTUBE_CHANNEL_IDS: ${{ vars.WB_YOUTUBE_CHANNEL_IDS }}
+          WB_KMA_ZONES: ${{ vars.WB_KMA_ZONES }}
+          # Feature flags. WBAK / KBSA are deliberately absent: they cannot be
+          # switched on by a variable alone, because the script blocks them
+          # until the permission note is removed in code review.
+          WB_INGEST_NAVER: ${{ vars.WB_INGEST_NAVER }}
+          WB_INGEST_YOUTUBE: ${{ vars.WB_INGEST_YOUTUBE }}
+          WB_INGEST_KMA: ${{ vars.WB_INGEST_KMA }}
+          WB_INGEST_WBSC: ${{ vars.WB_INGEST_WBSC }}
+          WB_INGEST_WPBL: ${{ vars.WB_INGEST_WPBL }}
+        run: |
+          if [ -n "${{ inputs.sources }}" ]; then
+            IFS=',' read -ra LIST <<< "${{ inputs.sources }}"
+            ARGS=()
+            for s in "${LIST[@]}"; do ARGS+=(--source "$s"); done
+            python scripts/ingest/fetch_sources.py "${ARGS[@]}" --out build/raw
+          else
+            python scripts/ingest/fetch_sources.py --all --out build/raw
+          fi
+
+      - name: 정규화 · 별칭 해석 · 이야기 묶음
+        run: python scripts/normalize/normalize.py --in build/raw --out build/normalized
+
+      - name: 검증
+        # The gate. Non-zero exit stops the job before anything is published.
+        run: python scripts/validate/validate_data.py public-data
+
+      - name: 실행 요약
+        if: always()
+        run: |
+          {
+            echo "## 데이터 수집 결과"
+            echo
+            if [ -f build/raw/fetch-summary.json ]; then
+              echo '```json'
+              cat build/raw/fetch-summary.json
+              echo '```'
+            else
+              echo '수집 요약 파일이 없습니다.'
+            fi
+            echo
+            echo "### 사람 검수 대기"
+            if [ -f build/normalized/review/unknown-aliases.json ]; then
+              echo "미확인 팀 별칭: $(python -c "import json;print(len(json.load(open('build/normalized/review/unknown-aliases.json'))))")건"
+            fi
+            echo
+            echo "> 자동 생성된 요약은 모두 reviewStatus=pending 입니다."
+            echo "> 사람이 검수하기 전까지 production 배포에 포함되지 않습니다."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 검수 후보 업로드
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: review-candidates
+          path: |
+            build/normalized/
+            build/raw/fetch-summary.json
+          retention-days: 30
+
+      - name: 게시
+        # Only on an explicit request, and only after validation passed.
+        if: ${{ inputs.publish == true }}
+        run: |
+          git config user.name  "w-baseball-bot"
+          git config user.email "bot@users.noreply.github.com"
+          if [ -z "$(git status --porcelain public-data)" ]; then
+            echo "변경된 데이터가 없습니다. 게시하지 않습니다."
+            exit 0
+          fi
+          git add public-data
+          git commit -m "data: 정기 갱신 $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push
+
+      - name: 실패 시 롤백
+        if: failure()
+        # The last good data set stays live. A failed run must never leave the
+        # app pointing at a partially-written manifest.
+        run: |
+          rm -rf public-data
+          cp -r "$RUNNER_TEMP/public-data-previous" public-data
+          echo "::warning::검증 실패로 이전 데이터를 유지했습니다."

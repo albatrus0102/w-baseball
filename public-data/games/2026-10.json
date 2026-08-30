@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "dataVersion": "2026.08.30",
+  "generatedAt": "2026-08-30T00:00:00Z",
+  "payloadKind": "snapshot",
+  "hasMore": false,
+  "items": [
+    {
+      "id": "game-demo-20261003-15",
+      "status": "scheduled",
+      "startTime": "2026-10-03T05:00:00Z",
+      "localTimeZone": "Asia/Seoul",
+      "homeTeamId": "team-demo-namsan",
+      "awayTeamId": "team-demo-busan",
+      "competitionId": "comp-demo-league",
+      "seasonId": "season-demo-league-2026",
+      "stageId": "stage-demo-2026-regular",
+      "venueId": "venue-demo-busan",
+      "round": "5라운드",
+      "source": {
+        "sourceName": "demo-fixture",
+        "sourceUrl": "app://demo/fixture",
+        "fetchedAt": "2026-08-30T00:00:00Z",
+        "qualityStatus": "autoVerified",
+        "licenseStatus": "permitted",
+        "visibility": "public",
+        "isDemo": true,
+        "sourceRecordId": "game-demo-20261003-15"
+      }
+    },
+    {
+      "id": "game-demo-20261010-63",
+      "status": "scheduled",
+      "startTime": "2026-10-10T05:00:00Z",
+      "localTimeZone": "Asia/Seoul",
+      "homeTeamId": "team-demo-daegu",
+      "awayTeamId": "team-demo-goyang",
+      "competitionId": "comp-demo-league",
+      "seasonId": "season-demo-league-2026",
+      "stageId": "stage-demo-2026-regular",
+      "venueId": "venue-demo-suwon",
+      "round": "6라운드",
+      "source": {
+        "sourceName": "demo-fixture",
+        "sourceUrl": "app://demo/fixture",
+        "fetchedAt": "2026-08-30T00:00:00Z",
+        "qualityStatus": "autoVerified",
+        "licenseStatus": "permitted",
+        "visibility": "public",
+        "isDemo": true,
+        "sourceRecordId": "game-demo-20261010-63"
+      }
+    },
+    {
+      "id": "game-demo-20261017-27",
+      "status": "scheduled",
+      "startTime": "2026-10-17T05:00:00Z",
+      "localTimeZone": "Asia/Seoul",
+      "homeTeamId": "team-demo-suwon",
+      "awayTeamId": "team-demo-daejeon",
+      "competitionId": "comp-demo-league",
+      "seasonId": "season-demo-league-2026",
+      "stageId": "stage-demo-2026-regular",
+      "venueId": "venue-demo-incheon",
+      "round": "7라운드",
+      "source": {
+        "sourceName": "demo-fixture",
+        "sourceUrl": "app://demo/fixture",
+        "fetchedAt": "2026-08-30T00:00:00Z",
+        "qualityStatus": "autoVerified",
+        "licenseStatus": "permitted",
+        "visibility": "public",
+        "isDemo": true,
+        "sourceRecordId": "game-demo-20261017-27"
+      }
+    }
+  ]
+}

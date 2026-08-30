@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- WbColors.darkCanvas, so a dark-mode launch does not flash light. -->
+    <color name="launch_background">#0C1017</color>
+</resources>

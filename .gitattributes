@@ -1,0 +1,35 @@
+# Line endings are normalised to LF in the repository and on checkout.
+#
+# Not cosmetic. Two CI steps compare regenerated output against what is
+# committed — `dart run build_runner build` for the Drift code, and
+# `build_schemas.py` for the JSON Schemas — and both use `git status
+# --porcelain`. If Windows checked out CRLF while the Linux runner wrote LF,
+# every file would look modified and the build would fail for a reason that has
+# nothing to do with the change under review.
+#
+# The generators here already write `newline='\n'` explicitly, so LF is what the
+# tooling produces anyway.
+* text=auto eol=lf
+
+# Windows-only scripts need CRLF to run.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary: never touch, never diff as text.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.ttf binary
+*.otf binary
+*.jar binary
+*.keystore binary
+*.jks binary
+*.apk binary
+*.aab binary
+
+# Generated, and large. Collapsed in diffs so a review shows the change that
+# caused it rather than 40,000 lines of output. Still committed, because CI
+# verifies it matches what the generator produces.
+lib/core/database/database.g.dart linguist-generated=true diff=false

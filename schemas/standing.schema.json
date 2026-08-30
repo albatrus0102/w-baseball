@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "standing.schema.json",
+  "title": "Standing snapshot",
+  "type": "object",
+  "required": [
+    "id",
+    "seasonId",
+    "teamId",
+    "capturedAt",
+    "source"
+  ],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "seasonId": {
+      "type": "string"
+    },
+    "stageId": {
+      "type": "string"
+    },
+    "teamId": {
+      "type": "string"
+    },
+    "capturedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "rank": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "played": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "wins": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "losses": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "draws": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "runsScored": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "runsAllowed": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "gamesBehind": {
+      "type": "number"
+    },
+    "deletedAt": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "source": {
+      "$ref": "provenance.schema.json"
+    }
+  },
+  "additionalProperties": false
+}

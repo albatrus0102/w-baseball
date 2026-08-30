@@ -1,0 +1,29 @@
+PROBE|홈-입문자|scale=1.4|OK
+PROBE|configured|detail=1
+PROBE|홈|scale=1.3|OK
+PROBE|경기|scale=1.3|OK
+PROBE|fresh-after-onboarding|detail=1
+PROBE|마이야구|scale=1.3|OK
+PROBE|홈|scale=1.4|OK
+PROBE|경기|scale=1.4|OK
+PROBE|마이야구|scale=1.4|OK
+PROBE|홈|scale=1.7|OK
+PROBE|경기|scale=1.7|OK
+PROBE|마이야구|scale=1.7|OK
+PROBE|홈|scale=2.0|OK
+PROBE|경기|scale=2.0|OK
+PROBE|마이야구|scale=2.0|OK
+BENCHMARK|T1 현역 다음 경기 상세|taps=1|scrolls=0
+BENCHMARK|T1 입문자 경기 상세|taps=3|scrolls=0
+BENCHMARK|T2 검색 (홈)|taps=1|scrolls=0
+BENCHMARK|T2 검색 (발견)|taps=1|scrolls=0
+BENCHMARK|T2 검색 (경기)|taps=1|scrolls=0
+BENCHMARK|T2 검색 (마이야구)|taps=1|scrolls=0
+BENCHMARK|T3 근처 경기|taps=2|scrolls=0
+BENCHMARK|T4 내 팀 설정|taps=2|scrolls=0
+BENCHMARK|T5 마이야구 진입|taps=1|scrolls=0
+BENCHMARK|M1 오늘 경기 결과|taps=2|scrolls=0
+BENCHMARK|M2 팀 다음 경기·구장|taps=2|scrolls=2
+BENCHMARK|M3 대회 순위|taps=2|scrolls=0
+BENCHMARK|M4 원문 확인 후 복귀|taps=2|scrolls=0
+BENCHMARK|M5 캘린더+알림 (상세 도달)|taps=1|scrolls=0

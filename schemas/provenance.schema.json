@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "provenance.schema.json",
+  "title": "Provenance",
+  "description": "모든 게시 가능한 레코드가 공유하는 출처 블록. 이 블록 없이는 게시할 수 없습니다.",
+  "type": "object",
+  "required": [
+    "sourceName",
+    "sourceUrl",
+    "fetchedAt"
+  ],
+  "properties": {
+    "sourceName": {
+      "type": "string",
+      "minLength": 1,
+      "description": "출처 키. 예: wbak, kbsa, wbsc, wpbl, demo-fixture, app-editorial"
+    },
+    "sourceUrl": {
+      "type": "string",
+      "pattern": "^(https?://|app:)",
+      "description": "사람이 확인할 수 있는 그 레코드의 상세 페이지. 사이트 홈이 아닙니다. 앱이 직접 작성한 내용만 app: URI를 씁니다."
+    },
+    "sourceRecordId": {
+      "type": "string",
+      "description": "원천이 쓰는 자체 id. 앱의 canonical id와 분리해 보관합니다."
+    },
+    "fetchedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "verifiedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "사람이 공식 기록과 대조한 시각."
+    },
+    "contentHash": {
+      "type": "string"
+    },
+    "qualityStatus": {
+      "enum": [
+        "autoVerified",
+        "humanVerified",
+        "disputed"
+      ]
+    },
+    "licenseStatus": {
+      "enum": [
+        "permitted",
+        "linkOnly",
+        "unknown"
+      ],
+      "description": "permitted 일 때만 본문·이미지를 복제할 수 있습니다."
+    },
+    "visibility": {
+      "enum": [
+        "public",
+        "private",
+        "hidden"
+      ]
+    },
+    "isDemo": {
+      "type": "boolean",
+      "default": false,
+      "description": "true 면 앱이 모든 화면에 데모 라벨을 붙이고, production 배포에서는 거부됩니다."
+    }
+  },
+  "additionalProperties": false
+}

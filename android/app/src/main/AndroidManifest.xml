@@ -1,0 +1,129 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+      Permissions, and the ones deliberately absent.
+
+      Requested:
+        INTERNET            – syncing the published static JSON.
+        ACCESS_NETWORK_STATE – to tell "offline" from "server error" in the UI.
+        POST_NOTIFICATIONS  – Android 13+. Asked for in context, only when the
+                              user first enables a game alert, never at launch.
+        SCHEDULE_EXACT_ALARM / USE_EXACT_ALARM – a "1 hour before first pitch"
+                              alert is useless if it drifts.
+        RECEIVE_BOOT_COMPLETED – re-arm scheduled alerts after a reboot.
+
+      Deliberately NOT requested:
+        ACCESS_FINE_LOCATION / ACCESS_COARSE_LOCATION – nearby games work from
+                              a region the user picks. Location is never
+                              required, and background location is never used.
+        READ_CALENDAR / WRITE_CALENDAR – the calendar handoff uses
+                              ACTION_INSERT, which needs no permission.
+        READ_CONTACTS, CAMERA, storage – no feature needs them.
+    -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <application
+        android:label="여자야구"
+        android:name="${applicationName}"
+        android:icon="@mipmap/ic_launcher">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:taskAffinity=""
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+            <meta-data
+              android:name="io.flutter.embedding.android.NormalTheme"
+              android:resource="@style/NormalTheme"
+              />
+
+            <!--
+              Hands the launching intent's URI to Flutter's router. Without
+              this the intent-filter below still launches the app, but the
+              path is dropped and every shared link opens the home screen —
+              which is exactly what happened until an emulator run caught it.
+              The widget tests could not: they call the router directly and
+              never cross the platform boundary.
+            -->
+            <meta-data
+              android:name="flutter_deeplinking_enabled"
+              android:value="true"
+              />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+
+            <!--
+              Deep links. Screens are addressable so a shared link reopens the
+              exact game / team / competition. Host is a placeholder until a
+              domain is registered; the custom scheme works regardless.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="wbaseball" android:host="app" />
+            </intent-filter>
+        </activity>
+
+        <!-- Re-arms game notifications after a reboot or time-zone change. -->
+        <receiver
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+        </receiver>
+        <receiver
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"
+            android:exported="false" />
+
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" />
+    </application>
+
+    <!--
+      Package visibility (Android 11+). We must declare what we intend to hand
+      off to, or canLaunchUrl() reports false even when an app is installed.
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.PROCESS_TEXT"/>
+            <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- Opening official pages in an external browser. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+        <!-- Maps apps, for venue directions. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="geo" />
+        </intent>
+        <!-- Calendar apps, for the "add to calendar" handoff. -->
+        <intent>
+            <action android:name="android.intent.action.INSERT" />
+            <data android:mimeType="vnd.android.cursor.dir/event" />
+        </intent>
+        <!-- System share sheet. -->
+        <intent>
+            <action android:name="android.intent.action.SEND" />
+            <data android:mimeType="text/plain" />
+        </intent>
+    </queries>
+</manifest>
