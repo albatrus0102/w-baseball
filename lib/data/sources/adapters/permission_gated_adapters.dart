@@ -37,10 +37,17 @@ abstract base class PermissionGatedAdapter extends BaseSportsDataSource {
 
   /// Guard used by every fetch method, so an accidentally-enabled adapter with
   /// no implementation fails loudly rather than silently returning nothing.
+  ///
+  /// Only reachable when [enabled] is true, which is the "someone turned the
+  /// flag on and the code is not written" case — not the licensing case. It
+  /// therefore reports [SyncFailureKind.notImplemented] and says so, rather
+  /// than repeating [disabledReasonKo]; telling a user who just enabled a
+  /// source that we are waiting for permission sends them looking for a
+  /// problem that is on our side.
   Never notImplemented() => throw SyncException(
-    SyncFailureKind.forbidden,
+    SyncFailureKind.notImplemented,
     sourceName: sourceName,
-    message: disabledReasonKo,
+    message: '$displayName 어댑터가 활성화되었지만 아직 구현되지 않았습니다.',
   );
 }
 

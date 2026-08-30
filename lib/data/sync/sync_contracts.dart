@@ -343,6 +343,13 @@ enum SyncFailureKind {
   schemaUnsupported,
   malformedPayload,
   checksumMismatch,
+  /// Configured, reachable, and simply not built yet.
+  ///
+  /// Kept distinct from [unauthorized] because the user-facing sentences are
+  /// opposites: one blames the publisher for withholding access, the other
+  /// admits the app has not implemented the connection. Reporting a missing
+  /// adapter as an access problem sends people to complain to the wrong party.
+  notImplemented,
   circuitOpen,
   cancelled,
   unknown;
@@ -372,6 +379,7 @@ enum SyncFailureKind {
     SyncFailureKind.schemaUnsupported => '앱이 지원하지 않는 데이터 버전입니다. 앱을 업데이트해 주세요.',
     SyncFailureKind.malformedPayload => '데이터 형식이 올바르지 않습니다.',
     SyncFailureKind.checksumMismatch => '받은 파일이 배포 목록과 일치하지 않아 적용하지 않았습니다.',
+    SyncFailureKind.notImplemented => '이 데이터 출처는 아직 앱에 연결되지 않았습니다.',
     SyncFailureKind.circuitOpen => '해당 출처는 잠시 후 다시 시도합니다.',
     SyncFailureKind.cancelled => '동기화가 취소되었습니다.',
     SyncFailureKind.unknown => '알 수 없는 오류가 발생했습니다.',

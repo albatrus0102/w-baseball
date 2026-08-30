@@ -233,7 +233,11 @@ query Games($month: String, $after: String, $first: Int!, $updatedSince: DateTim
     // guesswork. The switch-over guide documents exactly which two methods to
     // fill in, and the contract tests already cover the behaviour required.
     throw SyncException(
-      SyncFailureKind.unauthorized,
+      // Not `unauthorized`: nobody denied us anything. Setting
+      // `WB_API_TRANSPORT=graphql` turns this source on, and reporting the
+      // resulting failure as an access problem would tell the user the
+      // publisher refused them when the truth is this adapter was never built.
+      SyncFailureKind.notImplemented,
       sourceName: sourceName,
       message: 'GraphQL 어댑터는 공식 스키마가 확정된 뒤 연결합니다.',
     );
