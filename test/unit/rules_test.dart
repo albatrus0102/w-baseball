@@ -41,6 +41,93 @@ void main() {
       expect(start.isBefore(utc), isTrue);
     });
 
+    test('오늘 날짜는 기기 시간대의 서머타임에 휘둘리지 않는다', () {
+      // Korea has no daylight saving; the *device* may, and local `DateTime`
+      // arithmetic follows the device. Callers add days to this value and
+      // subtract two of them from each other, and across a fall-back the gap
+      // between consecutive local midnights is 23 hours — enough to truncate
+      // `inDays` to 0 and label tomorrow's fixture 오늘, or to land on Friday
+      // when reaching for Saturday. UTC days are always 24 hours.
+      //
+      // The flavour is the fix, so the flavour is what is asserted: this test
+      // runs on a machine in one time zone and has to hold in every other.
+      final today = Kst.todayKst(DateTime.utc(2026, 8, 30, 5));
+      expect(today.isUtc, isTrue, reason: '로컬 플레이버면 산술이 기기 시간대를 따릅니다');
+      expect(today.year, 2026);
+      expect(today.month, 8);
+      expect(today.day, 30);
+    });
+
+    test('하루 간격은 언제나 정확히 24시간이다', () {
+      // What the flavour buys. A year of consecutive days, each pair exactly a
+      // day apart — the property `relativeDayLabel` divides by.
+      var utc = DateTime.utc(2026, 1, 1, 5);
+      for (var i = 0; i < 365; i++) {
+        final a = Kst.todayKst(utc);
+        final b = Kst.todayKst(utc.add(const Duration(days: 1)));
+        expect(
+          b.difference(a),
+          const Duration(days: 1),
+          reason: '${Kst.dayKey(utc)} 다음 날과의 간격이 하루가 아닙니다',
+        );
+        utc = utc.add(const Duration(days: 1));
+      }
+    });
+
+    test('오늘·내일·모레 표기가 하루 경계에서 맞는다', () {
+      final now = DateTime.utc(2026, 8, 30, 5); // 8월 30일 14:00 KST
+      expect(KoDate.relativeDayLabel(now, now), '오늘');
+      expect(
+        KoDate.relativeDayLabel(now.add(const Duration(days: 1)), now),
+        '내일',
+      );
+      expect(
+        KoDate.relativeDayLabel(now.subtract(const Duration(days: 1)), now),
+        '어제',
+      );
+      // 23:00 KST today and 00:30 KST tomorrow are 90 minutes apart and must
+      // still land on different labels.
+      final lateTonight = DateTime.utc(2026, 8, 30, 14);
+      final justAfterMidnight = DateTime.utc(2026, 8, 30, 15, 30);
+      expect(KoDate.relativeDayLabel(lateTonight, now), '오늘');
+      expect(KoDate.relativeDayLabel(justAfterMidnight, now), '내일');
+    });
+
+    test('주말 범위를 모든 요일에서 구한다', () {
+      // Every weekday in one week, so an off-by-one in the shift shows up
+      // rather than being hidden by the one day the old test happened to use.
+      for (var day = 24; day <= 30; day++) {
+        final nowUtc = DateTime.utc(2026, 8, day, 3);
+        final weekend = Kst.upcomingWeekendUtc(nowUtc);
+        final startKst = Kst.toKst(weekend.startUtc);
+
+        expect(startKst.weekday, DateTime.saturday, reason: '8/$day');
+        expect(
+          weekend.endUtc.difference(weekend.startUtc),
+          const Duration(days: 2),
+          reason: '8/$day',
+        );
+
+        final todayKst = Kst.todayKst(nowUtc);
+        final isWeekend =
+            todayKst.weekday == DateTime.saturday ||
+            todayKst.weekday == DateTime.sunday;
+        if (isWeekend) {
+          expect(
+            weekend.startUtc.isAfter(nowUtc),
+            isFalse,
+            reason: '주말에는 이번 주말을 줘야 합니다 (8/$day)',
+          );
+        } else {
+          expect(
+            weekend.startUtc.isAfter(nowUtc),
+            isTrue,
+            reason: '평일에는 다가오는 주말을 줘야 합니다 (8/$day)',
+          );
+        }
+      }
+    });
+
     test('다가오는 주말 범위를 구한다', () {
       // 2026-08-30 is a Sunday; the window should be the current weekend.
       final sunday = DateTime.utc(2026, 8, 30, 3);

@@ -59,9 +59,21 @@ class Kst {
   /// "Today" in KST, regardless of the device's own time zone. A user in
   /// Seoul and a user abroad watching Korean baseball should agree on which
   /// day a fixture belongs to.
+  ///
+  /// Returned as a UTC-flavoured value carrying KST calendar fields, which is
+  /// the whole point: callers add days to it and subtract two of them from
+  /// each other. Korea has no daylight saving, but the *device* may, and local
+  /// arithmetic follows the device. Across a fall-back the gap between two
+  /// consecutive local midnights is 23 hours, so `difference(...).inDays`
+  /// truncates to 0 and tomorrow's fixture is labelled 오늘; adding five days
+  /// to reach Saturday lands on Friday 23:00 and picks the wrong weekend. UTC
+  /// days are always 24 hours, so none of that can happen.
+  ///
+  /// Reading `.year` / `.month` / `.day` / `.weekday` is unaffected by the
+  /// flavour — those are the same fields either way.
   static DateTime todayKst(DateTime nowUtc) {
     final k = toKst(nowUtc);
-    return DateTime(k.year, k.month, k.day);
+    return DateTime.utc(k.year, k.month, k.day);
   }
 
   static bool isSameKstDay(DateTime a, DateTime b) => dayKey(a) == dayKey(b);
