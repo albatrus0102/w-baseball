@@ -67,9 +67,7 @@ void main() {
         if (!lines[i].contains('substring(1)')) continue;
         // Only rate formatting is the concern; trimming a leading '/' off a
         // path is unrelated and legitimate.
-        final window = lines
-            .sublist((i - 3).clamp(0, i), i + 1)
-            .join(' ');
+        final window = lines.sublist((i - 3).clamp(0, i), i + 1).join(' ');
         if (window.contains('toStringAsFixed(3)')) {
           offenders.add(
             '  ${entity.path.replaceAll(r'\', '/')}:${i + 1}  '
@@ -100,9 +98,7 @@ void main() {
     // and needs a schema migration; it is recorded in the backlog rather than
     // done in passing, because the defaults only govern rows nobody currently
     // writes.
-    final source = File(
-      'lib/data/sync/content_sync.dart',
-    ).readAsStringSync();
+    final source = File('lib/data/sync/content_sync.dart').readAsStringSync();
 
     const contentTables = <String>[
       'FeaturedTopics',
@@ -195,9 +191,7 @@ void main() {
     // A cached `Provider<DateTime>` would satisfy the rule above and still be
     // wrong: read once at startup, "3분 전" would still say "3분 전" an hour
     // later. The function form is the part that has to hold.
-    final providers = File(
-      'lib/app/providers.dart',
-    ).readAsStringSync();
+    final providers = File('lib/app/providers.dart').readAsStringSync();
 
     expect(
       providers,

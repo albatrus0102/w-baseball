@@ -177,11 +177,7 @@ class DriftTeamRepository implements TeamRepository {
       // logic and favourite marking stay in exactly one place.
       final next = await gameRepository
           .watchGames(
-            GameQuery(
-              teamIds: <String>[teamId],
-              fromUtc: clock(),
-              limit: 3,
-            ),
+            GameQuery(teamIds: <String>[teamId], fromUtc: clock(), limit: 3),
           )
           .first;
 

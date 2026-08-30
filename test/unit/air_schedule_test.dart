@@ -74,7 +74,10 @@ void main() {
       final inside = lastAired.add(const Duration(days: 20));
       final outside = lastAired.add(const Duration(days: 22));
 
-      expect(season().nextAirSlot(inside, lastAiredAtKst: lastAired), isNotNull);
+      expect(
+        season().nextAirSlot(inside, lastAiredAtKst: lastAired),
+        isNotNull,
+      );
       expect(season().nextAirSlot(outside, lastAiredAtKst: lastAired), isNull);
     });
 
@@ -108,10 +111,8 @@ void main() {
       // An explicit end date is stronger evidence than recency, and it is
       // still honoured on its own terms.
       expect(
-        season(finale: DateTime(2026, 8, 27)).nextAirSlot(
-          duringTheRun,
-          lastAiredAtKst: lastAired,
-        ),
+        season(finale: DateTime(2026, 8, 27))
+            .nextAirSlot(duringTheRun, lastAiredAtKst: lastAired),
         isNull,
       );
     });
@@ -128,27 +129,21 @@ void main() {
 
     test('보관된 시즌은 슬롯이 남아 있어도 말하지 않는다', () {
       expect(
-        season(isActive: false).nextAirSlot(
-          duringTheRun,
-          lastAiredAtKst: lastAired,
-        ),
+        season(isActive: false)
+            .nextAirSlot(duringTheRun, lastAiredAtKst: lastAired),
         isNull,
       );
     });
 
     test('편성 정보가 없으면 말하지 않는다', () {
       expect(
-        season(dayOfWeek: null).nextAirSlot(
-          duringTheRun,
-          lastAiredAtKst: lastAired,
-        ),
+        season(dayOfWeek: null)
+            .nextAirSlot(duringTheRun, lastAiredAtKst: lastAired),
         isNull,
       );
       expect(
-        season(minuteOfDay: null).nextAirSlot(
-          duringTheRun,
-          lastAiredAtKst: lastAired,
-        ),
+        season(minuteOfDay: null)
+            .nextAirSlot(duringTheRun, lastAiredAtKst: lastAired),
         isNull,
       );
     });

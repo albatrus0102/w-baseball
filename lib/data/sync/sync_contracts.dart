@@ -343,6 +343,7 @@ enum SyncFailureKind {
   schemaUnsupported,
   malformedPayload,
   checksumMismatch,
+
   /// Configured, reachable, and simply not built yet.
   ///
   /// Kept distinct from [unauthorized] because the user-facing sentences are

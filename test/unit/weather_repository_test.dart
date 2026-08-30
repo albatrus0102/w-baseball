@@ -197,10 +197,7 @@ void main() {
         precipitationProbability: 90,
       );
 
-      final risks = await repo().risksForGames({
-        'g-soon': soon,
-        'g-far2': far,
-      });
+      final risks = await repo().risksForGames({'g-soon': soon, 'g-far2': far});
 
       expect(risks['g-far2']!.horizon, ForecastHorizon.beyondForecast);
       expect(risks['g-far2']!.level, WeatherRiskLevel.unknown);
@@ -230,8 +227,8 @@ void main() {
               precipitationProbability: const Value(90),
               confidence: Value(ForecastConfidence.high.name),
               sourceName: 'demo',
-            sourceUrl: 'https://example.test/demo',
-            fetchedAt: now,
+              sourceUrl: 'https://example.test/demo',
+              fetchedAt: now,
             ),
           );
 
