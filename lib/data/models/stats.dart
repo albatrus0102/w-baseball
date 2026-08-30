@@ -15,6 +15,7 @@ String formatRate(double? value, {int decimalPlaces = 3}) {
   if (decimalPlaces == 3 && text.startsWith('0.')) return text.substring(1);
   return text;
 }
+
 /// Which family a statistic belongs to.
 enum StatCategory {
   batting,
@@ -42,7 +43,6 @@ enum StatCategory {
 /// we only publish figures that come from official public records, and we do
 /// not invent an overall score or an AI player grade.
 @immutable
-
 class StatDefinition {
   const StatDefinition({
     required this.key,
@@ -259,6 +259,7 @@ class Leaderboard {
     this.teamFilterId,
     this.qualifiedOnly = true,
     this.qualificationThreshold,
+    this.qualificationVariesByTeam = false,
     this.computedAt,
   });
 
@@ -272,9 +273,28 @@ class Leaderboard {
   final DataCoverage coverage;
 
   final bool qualifiedOnly;
+
+  /// The single cut-off, when every team in this ranking has one and they
+  /// agree. Null when the team game counts are unknown, or when they differ —
+  /// [qualificationVariesByTeam] tells the two apart.
   final int? qualificationThreshold;
+
+  /// True when teams have played different numbers of games, so there is no
+  /// one number to show. Naming a single figure then would be wrong for most
+  /// of the players it is displayed above.
+  final bool qualificationVariesByTeam;
   final DateTime? computedAt;
   final Provenance provenance;
+
+  static bool _qualifies(
+    LeaderboardEntry e,
+    int? Function(LeaderboardEntry)? thresholdFor,
+  ) {
+    if (thresholdFor == null) return true;
+    final threshold = thresholdFor(e);
+    if (threshold == null) return true;
+    return (e.qualifierValue ?? 0) >= threshold;
+  }
 
   List<LeaderboardEntry> get qualified =>
       entries.where((e) => e.qualifies).toList(growable: false);
@@ -287,10 +307,18 @@ class Leaderboard {
   /// Values from different competitions are never combined — the caller must
   /// pass a single season/stage, because summing records across competitions
   /// with different rules would be meaningless.
+  /// [thresholdFor] is asked per entry rather than once for the board.
+  ///
+  /// 규정 타석 is the player's *own team's* games times 3.1, and teams do not
+  /// play the same number of games — rain-outs and uneven schedules see to
+  /// that, especially early in a season. One number applied to everyone either
+  /// excludes players who qualify or ranks players who do not. Returning null
+  /// for an entry means we cannot say, and the entry is left qualified rather
+  /// than cut on a guess.
   static List<LeaderboardEntry> rank(
     List<LeaderboardEntry> raw, {
     required bool higherIsBetter,
-    int? threshold,
+    int? Function(LeaderboardEntry entry)? thresholdFor,
   }) {
     final scored = raw
         .map(
@@ -300,8 +328,7 @@ class Leaderboard {
             teamId: e.teamId,
             teamName: e.teamName,
             value: e.value,
-            qualifies:
-                threshold == null || (e.qualifierValue ?? 0) >= threshold,
+            qualifies: _qualifies(e, thresholdFor),
             qualifierValue: e.qualifierValue,
             gamesCounted: e.gamesCounted,
           ),

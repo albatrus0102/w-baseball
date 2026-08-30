@@ -140,7 +140,7 @@ void main() {
           entry('높은기록_미달', 9, qualifier: 5),
         ],
         higherIsBetter: true,
-        threshold: 50,
+        thresholdFor: (_) => 50,
       );
       expect(ranked.first.playerName, '낮은기록_충족');
       expect(ranked.first.qualifies, isTrue);

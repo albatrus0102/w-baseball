@@ -454,13 +454,31 @@ class DriftCompetitionRepository implements CompetitionRepository {
 
       if (raw.isEmpty) continue;
 
-      // Threshold scales with the team's game count; unknown means we show
-      // everyone and say so rather than guessing a cut-off.
+      // 규정 타석 is each player's own team's games times 3.1, so the cut-off
+      // is asked per entry. It used to be computed once from `raw.first` —
+      // one arbitrary player's team, picked by map iteration order — and then
+      // applied to the whole league. Teams do not play the same number of
+      // games, so that excluded players who qualified and ranked players who
+      // did not, and which team set the bar could change between runs.
+      int? Function(LeaderboardEntry)? thresholdFor;
       int? threshold;
+      var variesByTeam = false;
       final rule = def.qualification;
       if (rule != null && qualifiedOnly) {
-        final sample = raw.first.teamId;
-        threshold = rule.threshold(teamGames[sample]);
+        int? forEntry(LeaderboardEntry e) {
+          final teamId = e.teamId;
+          return teamId == null ? null : rule.threshold(teamGames[teamId]);
+        }
+
+        thresholdFor = forEntry;
+        // A single figure is only honest when every team in this ranking
+        // agrees on it; otherwise the label names the rule instead.
+        final distinct = raw.map(forEntry).toSet();
+        if (distinct.length == 1) {
+          threshold = distinct.first;
+        } else {
+          variesByTeam = true;
+        }
       }
 
       out.add(
@@ -469,7 +487,7 @@ class DriftCompetitionRepository implements CompetitionRepository {
           entries: Leaderboard.rank(
             raw,
             higherIsBetter: def.higherIsBetter,
-            threshold: threshold,
+            thresholdFor: thresholdFor,
           ),
           seasonId: seasonId,
           coverage: coverage,
@@ -477,6 +495,7 @@ class DriftCompetitionRepository implements CompetitionRepository {
           teamFilterId: teamId,
           qualifiedOnly: qualifiedOnly,
           qualificationThreshold: threshold,
+          qualificationVariesByTeam: variesByTeam,
           computedAt: _clock().toUtc(),
         ),
       );

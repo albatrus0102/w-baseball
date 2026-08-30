@@ -134,6 +134,25 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
   }
 }
 
+/// What to say above a ranking about its cut-off.
+///
+/// Three different situations, and only one of them is a number. Teams play
+/// different numbers of games, so 규정 타석 differs between them; printing a
+/// single figure above a mixed table states something untrue for most of the
+/// players under it.
+String _qualificationNote(QualificationRule rule, Leaderboard board) {
+  if (board.qualificationVariesByTeam) {
+    return '${rule.labelKo}은 팀마다 다릅니다 — ${rule.descriptionKo} '
+        '선수별로 각자 소속 팀의 경기 수로 계산했습니다.';
+  }
+  if (board.qualificationThreshold == null) {
+    // We say so rather than inventing a cut-off.
+    return '${rule.labelKo}은 팀 경기 수가 확인되면 계산됩니다. '
+        '현재는 전체 기록을 표시합니다.';
+  }
+  return '${rule.labelKo} ${board.qualificationThreshold} 이상';
+}
+
 class _LeaderboardCard extends StatelessWidget {
   const _LeaderboardCard({required this.board, required this.qualifiedOnly});
 
@@ -257,12 +276,7 @@ class _LeaderboardCard extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: WbSpace.sm),
               child: Text(
-                board.qualificationThreshold == null
-                    // We say so rather than inventing a cut-off.
-                    ? '${def.qualification!.labelKo}은 팀 경기 수가 확인되면 계산됩니다. '
-                          '현재는 전체 기록을 표시합니다.'
-                    : '${def.qualification!.labelKo} '
-                          '${board.qualificationThreshold} 이상',
+                _qualificationNote(def.qualification!, board),
                 style: WbType.micro.copyWith(color: c.inkMuted, height: 1.5),
               ),
             ),
