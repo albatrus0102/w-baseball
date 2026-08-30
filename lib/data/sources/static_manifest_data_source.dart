@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 
 import '../../core/config/app_config.dart';
@@ -226,9 +229,33 @@ final class StaticManifestDataSource extends JsonDocumentDataSource {
       );
     }
 
-    // Only record the hash once the body is in hand; the caller commits it
-    // after a successful transaction via [commitApplied].
-    _pendingHashes[key] = entry?.sha256;
+    // The manifest declares what this file should hash to, so check it. The
+    // hash used to serve only as a change-detection key: a file that did not
+    // match was downloaded and applied anyway, and then its *declared* hash was
+    // recorded as applied — so the corruption stuck and the file was never
+    // fetched again.
+    //
+    // JSON parsing catches a truncated body, but not a body that is valid JSON
+    // and simply not the one the publisher signed: a stale CDN edge, a
+    // half-finished upload, a wrong file at the right path.
+    final declared = entry?.sha256;
+    if (declared != null && declared.isNotEmpty) {
+      final actual = sha256.convert(utf8.encode(doc.body)).toString();
+      // Case-insensitive: hex digests are written both ways in the wild.
+      if (actual.toLowerCase() != declared.toLowerCase()) {
+        throw SyncException(
+          SyncFailureKind.checksumMismatch,
+          sourceName: sourceName,
+          message:
+              '$path: manifest는 $declared 를 선언했는데 '
+              '받은 파일은 $actual 입니다.',
+        );
+      }
+    }
+
+    // Only record the hash once the body is in hand *and verified*; the caller
+    // commits it after a successful transaction via [commitApplied].
+    _pendingHashes[key] = declared;
     _pendingValidators[key] = doc.validators;
 
     return SourceDocument(

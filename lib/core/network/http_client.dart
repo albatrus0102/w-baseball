@@ -57,6 +57,16 @@ class WbHttpClient {
     max: _config.maxBackoff,
   );
 
+  /// Transport options for this client.
+  ///
+  /// Public so a test can build a Dio with the same settings and swap only the
+  /// adapter. Constructing one by hand instead silently changes behaviour:
+  /// without `ResponseType.plain` the body arrives decoded and the `String`
+  /// cast fails, and without the permissive `validateStatus` a 404 throws
+  /// instead of being reported as "no such file" — both of which turn into a
+  /// retry loop rather than an obvious error.
+  static Dio buildDio(SyncConfig config) => _buildDio(config);
+
   static Dio _buildDio(SyncConfig config) {
     return Dio(
       BaseOptions(
@@ -104,13 +114,21 @@ class WbHttpClient {
     final existing = _inFlight[key];
     if (existing != null) return existing;
 
-    final future = _getDocument(
-      uri,
-      sourceName: sourceName,
-      validators: validators,
-      cancelToken: cancelToken,
-      extraHeaders: extraHeaders,
-    ).whenComplete(() => _inFlight.remove(key));
+    final future =
+        _getDocument(
+          uri,
+          sourceName: sourceName,
+          validators: validators,
+          cancelToken: cancelToken,
+          extraHeaders: extraHeaders,
+          // Block body, not an arrow. `Map.remove` returns the value it removed —
+          // which here is this very future — and `whenComplete` waits on any future
+          // its callback returns. Written as `=> _inFlight.remove(key)` the future
+          // waits for itself and never completes, so every request through this
+          // client hangs. Discarding the return value is the whole fix.
+        ).whenComplete(() {
+          _inFlight.remove(key);
+        });
 
     _inFlight[key] = future;
     return future;

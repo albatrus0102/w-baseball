@@ -342,6 +342,7 @@ enum SyncFailureKind {
   serverError,
   schemaUnsupported,
   malformedPayload,
+  checksumMismatch,
   circuitOpen,
   cancelled,
   unknown;
@@ -351,7 +352,11 @@ enum SyncFailureKind {
     SyncFailureKind.network ||
     SyncFailureKind.timeout ||
     SyncFailureKind.rateLimited ||
-    SyncFailureKind.serverError => true,
+    SyncFailureKind.serverError ||
+    // A hash mismatch is usually transient: a CDN edge still serving the
+    // previous file, or an upload caught half-finished. Retrying can get the
+    // right bytes, which is why this is not lumped in with malformedPayload.
+    SyncFailureKind.checksumMismatch => true,
     _ => false,
   };
 
@@ -366,6 +371,7 @@ enum SyncFailureKind {
     SyncFailureKind.serverError => '데이터 서버에 문제가 있습니다.',
     SyncFailureKind.schemaUnsupported => '앱이 지원하지 않는 데이터 버전입니다. 앱을 업데이트해 주세요.',
     SyncFailureKind.malformedPayload => '데이터 형식이 올바르지 않습니다.',
+    SyncFailureKind.checksumMismatch => '받은 파일이 배포 목록과 일치하지 않아 적용하지 않았습니다.',
     SyncFailureKind.circuitOpen => '해당 출처는 잠시 후 다시 시도합니다.',
     SyncFailureKind.cancelled => '동기화가 취소되었습니다.',
     SyncFailureKind.unknown => '알 수 없는 오류가 발생했습니다.',
