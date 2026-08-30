@@ -95,8 +95,20 @@ class Provenance {
   /// and are blocked from the production manifest by `scripts/validate`.
   final bool isDemo;
 
-  /// The timestamp a user cares about: when we last confirmed the record.
+  /// The timestamp a user cares about: when we last had reason to trust the
+  /// record. A human check if there was one, otherwise the fetch.
   DateTime get lastConfirmedAt => verifiedAt ?? fetchedAt;
+
+  /// Whether [lastConfirmedAt] means a person checked this, or just that we
+  /// downloaded it.
+  ///
+  /// `verifiedAt` is the only field that says anyone looked. Since the review
+  /// ledger landed, no generated record carries one — so a line that reads
+  /// "방금 확인" over `lastConfirmedAt` is telling the user a record was
+  /// confirmed when all that happened was a file download. That is the same
+  /// overstatement the ledger was introduced to remove, made again in wording
+  /// instead of in data.
+  bool get isHumanConfirmed => verifiedAt != null;
 
   bool isStale(DateTime now, Duration threshold) =>
       now.difference(lastConfirmedAt) > threshold;

@@ -39,11 +39,15 @@ class WbSourceLine extends StatelessWidget {
     final c = WbTheme.of(context);
     final isStale = provenance.isStale(now, staleAfter);
     final confirmed = KoDate.relative(provenance.lastConfirmedAt, now);
+    // 확인 claims a person checked the record; 갱신 only claims we refreshed
+    // it. Which one is true depends on whether `verifiedAt` exists, and today
+    // it never does.
+    final verb = provenance.isHumanConfirmed ? '확인' : '갱신';
 
     final children = <Widget>[
       Flexible(
         child: Text(
-          '출처 ${_sourceLabel(provenance.sourceName)} · $confirmed 확인',
+          '출처 ${_sourceLabel(provenance.sourceName)} · $confirmed $verb',
           style: WbType.micro.copyWith(color: c.inkMuted),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -74,7 +78,7 @@ class WbSourceLine extends StatelessWidget {
     if (onTap == null) {
       return Semantics(
         label:
-            '출처 ${_sourceLabel(provenance.sourceName)}, $confirmed 확인'
+            '출처 ${_sourceLabel(provenance.sourceName)}, $confirmed $verb'
             '${isStale ? ', 오래된 정보' : ''}'
             '${provenance.isDemo ? ', 데모 데이터' : ''}',
         child: ExcludeSemantics(child: row),
