@@ -36,8 +36,28 @@ jobs:
       - name: 코드 생성 확인
         # Drift output is committed. If regenerating changes anything, the
         # commit is stale and the build must stop rather than silently drift.
+        #
+        # The comparison is against build_runner output *after* `dart
+        # format`, not the raw generator output, because the two disagree on
+        # this toolchain: build_runner resolves `dart_style` through
+        # pubspec.lock (a pinned library dependency), while the standalone
+        # `dart format` below ships bundled inside the Flutter SDK itself.
+        # The two format a `typedef X = Y Function({...})` differently, so
+        # comparing raw generator output against the committed (which was,
+        # itself, formatted before being committed) file reports "drift"
+        # that is not real -- confirmed by formatting a fresh regeneration of
+        # database.g.dart and diffing it against HEAD: identical. Without
+        # this note, the next person deletes the format line as redundant
+        # with the "포맷 확인" step below -- it looks redundant on a clean
+        # checkout, and only stops being redundant right after a fresh
+        # codegen run, which is exactly what this step just did.
+        #
+        # tools/commit_gate.py's local gate makes the equivalent fix, scoped
+        # to only the generated files (never a bare `dart format .`) because
+        # a local run can't assume a disposable checkout the way CI can.
         run: |
           dart run build_runner build
+          find lib -name '*.g.dart' -o -name '*.freezed.dart' -o -name '*.gr.dart' | xargs -r dart format
           if [ -n "$(git status --porcelain lib)" ]; then
             echo "::error::생성된 코드가 커밋과 다릅니다. build_runner 를 실행하고 커밋하세요."
             git --no-pager diff --stat lib

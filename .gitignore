@@ -28,6 +28,11 @@ migrate_working_dir/
 **/ios/Flutter/.last_build_id
 .dart_tool/
 .flutter-plugins-dependencies
+
+# tools/commit_gate.py: one-line, per-clone Flutter SDK path. Deliberately
+# not committed -- see that file's docstring ("where Flutter is allowed to
+# live") for why this is a local declaration rather than a probed/guessed one.
+.flutter_root
 .pub-cache/
 .pub/
 /build/

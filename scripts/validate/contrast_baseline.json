@@ -1,0 +1,49 @@
+{
+  "_comment": "Frozen contrast failures, as of the day this ratchet went live. A pair here means: this foreground/background combination is currently below its WCAG threshold, and check_contrast.py is told not to fail the build over it. Fix the colours, then DELETE the entry -- a passing pair left in this file is itself a failure (see check_contrast.py's --update-baseline / stale-entry check).",
+  "failures": [
+    {
+      "pair": "action_on_actionSoft",
+      "theme": "light"
+    },
+    {
+      "pair": "divider_on_canvas",
+      "theme": "dark"
+    },
+    {
+      "pair": "divider_on_canvas",
+      "theme": "light"
+    },
+    {
+      "pair": "divider_on_surface",
+      "theme": "dark"
+    },
+    {
+      "pair": "divider_on_surface",
+      "theme": "light"
+    },
+    {
+      "pair": "highlight_icon_on_dividerAlpha40_canvas",
+      "theme": "light"
+    },
+    {
+      "pair": "highlight_on_highlightSoft",
+      "theme": "light"
+    },
+    {
+      "pair": "highlight_star_on_surface",
+      "theme": "light"
+    },
+    {
+      "pair": "highlight_star_on_surfaceRaised",
+      "theme": "light"
+    },
+    {
+      "pair": "inkMuted_on_dividerAlpha_canvas",
+      "theme": "light"
+    },
+    {
+      "pair": "verified_on_verifiedSoft",
+      "theme": "light"
+    }
+  ]
+}
