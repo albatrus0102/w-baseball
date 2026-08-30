@@ -320,14 +320,37 @@ class ProgramSeason {
   final ContentMeta meta;
   final DateTime? deletedAt;
 
+  /// How long a published weekly slot is trusted without fresh evidence.
+  ///
+  /// Three slots. A weekly programme that has not aired for three weeks is
+  /// between seasons, has moved, or is over — and the data cannot tell us
+  /// which. `finaleDate` and `isActive` both exist for this, and both are
+  /// written once when a season is published and never revised, so neither
+  /// notices that time has passed.
+  static const Duration scheduleEvidenceWindow = Duration(days: 21);
+
   /// The next broadcast slot at or after [from], derived purely from the
   /// weekly schedule. Returns null when the schedule is unknown or the season
   /// has finished — we never guess an air date.
-  DateTime? nextAirSlot(DateTime from) {
+  ///
+  /// [lastAiredAtKst] is the most recent episode we hold. Without it the
+  /// projection runs on a published weekly slot alone, which never expires:
+  /// the card would still promise "다음 방송 목요일 밤 10시" years after the
+  /// programme ended, because nothing in the record says it did. A finale date
+  /// is stronger evidence than recency and still wins where one exists.
+  DateTime? nextAirSlot(DateTime from, {DateTime? lastAiredAtKst}) {
     final day = airDayOfWeek;
     final minute = airTimeMinuteOfDay;
     if (day == null || minute == null || !isActive) return null;
     final finale = finaleDate;
+
+    if (finale == null) {
+      // Before the premiere there is nothing to have aired yet, so the
+      // premiere itself is the evidence.
+      final evidence = lastAiredAtKst ?? premiereDate;
+      if (evidence == null) return null;
+      if (from.difference(evidence) > scheduleEvidenceWindow) return null;
+    }
     var candidate = DateTime(
       from.year,
       from.month,

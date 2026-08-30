@@ -52,6 +52,15 @@ void main() {
     regionCode: '11',
     regionLabel: '서울',
   );
+  // The third mode is not a blend of the other two: `both` interleaves modules
+  // by urgency instead of concatenating two lists, so it is the ordering no
+  // other capture shows.
+  const both = AudiencePreference(
+    mode: AudienceMode.both,
+    onboardingCompleted: true,
+    regionCode: '11',
+    regionLabel: '서울',
+  );
 
   /// Fixed instant every screenshot is rendered at. Chosen to sit shortly
   /// after the seed's `generatedAt` so relative times read naturally.
@@ -113,6 +122,27 @@ void main() {
   });
 
   group('홈', () {
+    testWidgets(
+      '둘 다 · 라이트',
+      (t) => capture(
+        t,
+        name: 'home_both',
+        screen: const HomeScreen(),
+        audience: both,
+      ),
+    );
+
+    testWidgets(
+      '둘 다 · 다크',
+      (t) => capture(
+        t,
+        name: 'home_both',
+        screen: const HomeScreen(),
+        audience: both,
+        brightness: Brightness.dark,
+      ),
+    );
+
     testWidgets(
       '입문자 · 라이트',
       (t) => capture(

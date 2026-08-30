@@ -135,7 +135,11 @@ class FeaturedHeroCard extends StatelessWidget {
                   const SizedBox(height: WbSpace.md),
                 ],
                 if (item.programSeason != null)
-                  _NextAirLine(season: item.programSeason!, now: now),
+                  _NextAirLine(
+                    season: item.programSeason!,
+                    now: now,
+                    lastAiredAt: item.latestEpisode?.airedAt,
+                  ),
                 const WbInsetDivider(vertical: WbSpace.md),
                 WbSourceLine(provenance: topic.meta.provenance, now: now),
               ],
@@ -201,15 +205,26 @@ class _EpisodeLine extends StatelessWidget {
 /// If the schedule is unknown, or the season has ended, nothing is shown — we
 /// never guess an air date.
 class _NextAirLine extends StatelessWidget {
-  const _NextAirLine({required this.season, required this.now});
+  const _NextAirLine({
+    required this.season,
+    required this.now,
+    this.lastAiredAt,
+  });
 
   final ProgramSeason season;
   final DateTime now;
 
+  /// Evidence that the published weekly slot is still being kept to.
+  final DateTime? lastAiredAt;
+
   @override
   Widget build(BuildContext context) {
     final c = WbTheme.of(context);
-    final next = season.nextAirSlot(Kst.toKst(now));
+    final aired = lastAiredAt;
+    final next = season.nextAirSlot(
+      Kst.toKst(now),
+      lastAiredAtKst: aired == null ? null : Kst.toKst(aired),
+    );
 
     if (next == null) {
       if (!season.isActive) {
