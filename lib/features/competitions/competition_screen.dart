@@ -425,11 +425,7 @@ class _Standings extends StatelessWidget {
                         SizedBox(
                           width: 46,
                           child: Text(
-                            row.snapshot.winRate == null
-                                ? '-'
-                                : row.snapshot.winRate!
-                                      .toStringAsFixed(3)
-                                      .substring(1),
+                            formatRate(row.snapshot.winRate),
                             textAlign: TextAlign.center,
                             style: WbType.tabular.copyWith(color: c.ink),
                           ),
@@ -479,12 +475,7 @@ class _Standings extends StatelessWidget {
                   MapEntry('승', '${s.wins}'),
                   MapEntry('패', '${s.losses}'),
                   MapEntry('무', '${s.draws}'),
-                  MapEntry(
-                    '승률',
-                    s.winRate == null
-                        ? '-'
-                        : s.winRate!.toStringAsFixed(3).substring(1),
-                  ),
+                  MapEntry('승률', formatRate(s.winRate)),
                   MapEntry('득점', '${s.runsScored}'),
                   MapEntry('실점', '${s.runsAllowed}'),
                   MapEntry('득실차', '${s.runDifferential}'),

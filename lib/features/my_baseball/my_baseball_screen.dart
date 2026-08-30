@@ -376,7 +376,7 @@ class _StandingBlock extends ConsumerWidget {
                       '${snapshot.losses}패'
                       '${snapshot.draws > 0 ? ' ${snapshot.draws}무' : ''}'
                       '${snapshot.winRate == null ? '' : ' · 승률 '
-                                '${snapshot.winRate!.toStringAsFixed(3).substring(1)}'}',
+                                '${formatRate(snapshot.winRate)}'}',
                       style: WbType.tabular.copyWith(color: c.ink),
                     ),
                     const SizedBox(height: WbSpace.md),

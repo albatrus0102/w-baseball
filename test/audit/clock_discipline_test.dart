@@ -49,6 +49,42 @@ void main() {
     );
   });
 
+  test('비율 표기의 앞자리를 화면에서 직접 자르지 않는다', () {
+    // Same failure shape as the clock: a helper existed, was correct, and the
+    // screens went around it. `formatRate` drops the leading zero only when
+    // there is one; four call sites cut the first character outright, so a
+    // 1.000 win rate rendered as .000 — an undefeated team shown bottom of the
+    // table.
+    final offenders = <String>[];
+    for (final entity in Directory('lib').listSync(recursive: true)) {
+      if (entity is! File || !entity.path.endsWith('.dart')) continue;
+      if (entity.path.endsWith('stats.dart')) continue; // Defines formatRate.
+      final lines = entity.readAsLinesSync();
+      for (var i = 0; i < lines.length; i++) {
+        if (!lines[i].contains('substring(1)')) continue;
+        // Only rate formatting is the concern; trimming a leading '/' off a
+        // path is unrelated and legitimate.
+        final window = lines
+            .sublist((i - 3).clamp(0, i), i + 1)
+            .join(' ');
+        if (window.contains('toStringAsFixed(3)')) {
+          offenders.add(
+            '  ${entity.path.replaceAll(r'\', '/')}:${i + 1}  '
+            '${lines[i].trim()}',
+          );
+        }
+      }
+    }
+
+    expect(
+      offenders,
+      isEmpty,
+      reason:
+          '다음 위치에서 비율 문자열의 앞자리를 직접 자릅니다. formatRate()를 쓰세요 — '
+          '1.000이 .000으로 표시됩니다:\n${offenders.join('\n')}',
+    );
+  });
+
   test('시계는 값이 아니라 함수로 노출된다', () {
     // A cached `Provider<DateTime>` would satisfy the rule above and still be
     // wrong: read once at startup, "3분 전" would still say "3분 전" an hour

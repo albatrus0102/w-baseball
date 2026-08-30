@@ -178,6 +178,23 @@ void main() {
       expect(era.format(2.5), '2.50');
     });
 
+    test('1.000은 잘리지 않는다', () {
+      // The leading zero is dropped only when there is one. Cutting the first
+      // character unconditionally turns a perfect day — 3타수 3안타, an
+      // undefeated team — into .000, the worst number on the page, and it does
+      // so precisely when someone is proudest of it.
+      expect(formatRate(1), '1.000');
+      expect(formatRate(0), '.000');
+      expect(formatRate(0.325), '.325');
+      expect(formatRate(null), '-');
+    });
+
+    test('ERA처럼 소수 두 자리인 값은 앞자리를 건드리지 않는다', () {
+      // The convention is specific to three-decimal rate stats. An ERA of 0.90
+      // is written 0.90, not .90.
+      expect(formatRate(0.9, decimalPlaces: 2), '0.90');
+    });
+
     test('종합 평점이나 AI 등급 항목은 존재하지 않는다', () {
       final keys = StatDefinition.defaults.map((d) => d.key).toSet();
       for (final forbidden in <String>[

@@ -6,6 +6,7 @@ import '../../../core/design_system/theme.dart';
 import '../../../core/design_system/tokens.dart';
 import '../../../core/design_system/typography.dart';
 import '../../../data/models/domain.dart';
+import '../../../data/models/stats.dart';
 
 /// Line score, batting and pitching.
 ///
@@ -487,12 +488,7 @@ class _TeamStatBlock extends StatelessWidget {
             MapEntry('볼넷', '${detail.walks}'),
             MapEntry('삼진', '${detail.strikeouts}'),
             MapEntry('도루', '${detail.stolenBases}'),
-            MapEntry(
-              '타율',
-              detail.average == null
-                  ? '-'
-                  : detail.average!.toStringAsFixed(3).substring(1),
-            ),
+            MapEntry('타율', formatRate(detail.average)),
           ]);
         } else if (detail is PitchingGameStat) {
           entries.addAll(<MapEntry<String, String>>[

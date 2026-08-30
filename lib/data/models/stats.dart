@@ -3,6 +3,18 @@ import 'package:meta/meta.dart';
 import 'content.dart' show DataCoverage;
 import 'domain.dart';
 
+/// Formats a rate stat the Korean way: `.333`, never `0.333`.
+///
+/// The leading zero is dropped only when there actually is one. `1.000` — an
+/// undefeated team, a 3-for-3 afternoon — has to stay `1.000`; cutting the
+/// first character unconditionally turns the best possible number into the
+/// worst one, and it does so exactly when someone is proudest of it.
+String formatRate(double? value, {int decimalPlaces = 3}) {
+  if (value == null) return '-';
+  final text = value.toStringAsFixed(decimalPlaces);
+  if (decimalPlaces == 3 && text.startsWith('0.')) return text.substring(1);
+  return text;
+}
 /// Which family a statistic belongs to.
 enum StatCategory {
   batting,
@@ -30,6 +42,7 @@ enum StatCategory {
 /// we only publish figures that come from official public records, and we do
 /// not invent an overall score or an AI player grade.
 @immutable
+
 class StatDefinition {
   const StatDefinition({
     required this.key,
@@ -64,10 +77,7 @@ class StatDefinition {
   String format(double? value) {
     if (value == null) return '-';
     if (decimalPlaces == 0) return value.round().toString();
-    final text = value.toStringAsFixed(decimalPlaces);
-    // Korean baseball convention drops the leading zero for rate stats.
-    if (decimalPlaces == 3 && text.startsWith('0.')) return text.substring(1);
-    return text;
+    return formatRate(value, decimalPlaces: decimalPlaces);
   }
 
   static const List<StatDefinition> defaults = <StatDefinition>[
