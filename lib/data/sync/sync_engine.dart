@@ -5,6 +5,7 @@ import '../../core/database/database.dart';
 import '../dto/dtos.dart';
 import '../mappers/dto_mappers.dart';
 import '../models/domain.dart' show GameStatus;
+import '../models/provenance.dart' show RecordVisibility;
 import '../sources/sports_data_source.dart';
 import '../sources/static_manifest_data_source.dart';
 import 'sync_contracts.dart';
@@ -446,7 +447,7 @@ class SyncEngine {
       var inserted = 0;
       var updated = 0;
       DateTime? newest;
-      for (final dto in page.items) {
+      for (final dto in _visibleOnly(page.items)) {
         final existed = await _exists(
           db.organizations,
           db.organizations.id,
@@ -462,7 +463,7 @@ class SyncEngine {
       final tombstoned = await _applyTombstones(
         page: page,
         entityType: 'organization',
-        presentIds: page.items.map((e) => e.id).toSet(),
+        presentIds: _visibleOnly(page.items).map((e) => e.id).toSet(),
         markDeleted: (id, at) =>
             (db.update(db.organizations)..where((t) => t.id.equals(id))).write(
               OrganizationsCompanion(deletedAt: Value(at)),
@@ -489,7 +490,7 @@ class SyncEngine {
       var inserted = 0;
       var updated = 0;
       DateTime? newest;
-      for (final dto in page.items) {
+      for (final dto in _visibleOnly(page.items)) {
         final existed = await _exists(db.venues, db.venues.id, dto.id);
         await db.into(db.venues).insertOnConflictUpdate(DtoMappers.venue(dto));
         await _recordIdentity(dto, 'venue', dto.id);
@@ -499,7 +500,7 @@ class SyncEngine {
       final tombstoned = await _applyTombstones(
         page: page,
         entityType: 'venue',
-        presentIds: page.items.map((e) => e.id).toSet(),
+        presentIds: _visibleOnly(page.items).map((e) => e.id).toSet(),
         markDeleted: (id, at) =>
             (db.update(db.venues)..where((t) => t.id.equals(id))).write(
               VenuesCompanion(deletedAt: Value(at)),
@@ -526,7 +527,7 @@ class SyncEngine {
       var inserted = 0;
       var updated = 0;
       DateTime? newest;
-      for (final dto in page.items) {
+      for (final dto in _visibleOnly(page.items)) {
         final previous = await (db.select(
           db.teams,
         )..where((t) => t.id.equals(dto.id))).getSingleOrNull();
@@ -567,7 +568,7 @@ class SyncEngine {
       final tombstoned = await _applyTombstones(
         page: page,
         entityType: 'team',
-        presentIds: page.items.map((e) => e.id).toSet(),
+        presentIds: _visibleOnly(page.items).map((e) => e.id).toSet(),
         markDeleted: (id, at) =>
             (db.update(db.teams)..where((t) => t.id.equals(id))).write(
               TeamsCompanion(deletedAt: Value(at)),
@@ -594,7 +595,7 @@ class SyncEngine {
       var inserted = 0;
       var updated = 0;
       DateTime? newest;
-      for (final dto in page.items) {
+      for (final dto in _visibleOnly(page.items)) {
         final existed = await _exists(
           db.competitions,
           db.competitions.id,
@@ -622,7 +623,7 @@ class SyncEngine {
       final tombstoned = await _applyTombstones(
         page: page,
         entityType: 'competition',
-        presentIds: page.items.map((e) => e.id).toSet(),
+        presentIds: _visibleOnly(page.items).map((e) => e.id).toSet(),
         markDeleted: (id, at) =>
             (db.update(db.competitions)..where((t) => t.id.equals(id))).write(
               CompetitionsCompanion(deletedAt: Value(at)),
@@ -649,7 +650,7 @@ class SyncEngine {
       var inserted = 0;
       var updated = 0;
       DateTime? newest;
-      for (final dto in page.items) {
+      for (final dto in _visibleOnly(page.items)) {
         final existed = await _exists(db.people, db.people.id, dto.id);
         await db.into(db.people).insertOnConflictUpdate(DtoMappers.person(dto));
         await (db.delete(
@@ -679,7 +680,7 @@ class SyncEngine {
       var inserted = 0;
       var updated = 0;
       DateTime? newest;
-      for (final dto in page.items) {
+      for (final dto in _visibleOnly(page.items)) {
         // A roster entry implies the team took part in that season, so we
         // materialise the TeamSeason join rather than dropping the row.
         final teamSeasonId = '${dto.teamId}__${dto.seasonId}';
@@ -718,7 +719,7 @@ class SyncEngine {
       var updated = 0;
       DateTime? newest;
 
-      for (final dto in page.items) {
+      for (final dto in _visibleOnly(page.items)) {
         final previous = await (db.select(
           db.games,
         )..where((t) => t.id.equals(dto.id))).getSingleOrNull();
@@ -802,9 +803,9 @@ class SyncEngine {
       // August snapshot never tombstones September fixtures.
       var tombstoned = 0;
       if (page.payloadKind == SyncPayloadKind.snapshot) {
-        final months = page.items.map((g) => _monthOf(g)).toSet();
+        final months = _visibleOnly(page.items).map((g) => _monthOf(g)).toSet();
         for (final month in months) {
-          final present = page.items
+          final present = _visibleOnly(page.items)
               .where((g) => _monthOf(g) == month)
               .map((g) => g.id)
               .toSet();
@@ -900,7 +901,7 @@ class SyncEngine {
       var inserted = 0;
       var updated = 0;
       DateTime? newest;
-      for (final dto in page.items) {
+      for (final dto in _visibleOnly(page.items)) {
         // Carry the previous rank forward so the UI can show movement without
         // re-deriving it from history on every read.
         final previous =
@@ -940,7 +941,7 @@ class SyncEngine {
       var inserted = 0;
       var updated = 0;
       DateTime? newest;
-      for (final dto in page.items) {
+      for (final dto in _visibleOnly(page.items)) {
         final existed = await _exists(db.articles, db.articles.id, dto.id);
         await db
             .into(db.articles)
@@ -961,7 +962,7 @@ class SyncEngine {
       var inserted = 0;
       var updated = 0;
       DateTime? newest;
-      for (final dto in page.items) {
+      for (final dto in _visibleOnly(page.items)) {
         final existed = await _exists(db.videos, db.videos.id, dto.id);
         await db.into(db.videos).insertOnConflictUpdate(DtoMappers.video(dto));
         existed ? updated++ : inserted++;
@@ -1012,6 +1013,25 @@ class SyncEngine {
 
   /// Snapshot semantics: anything this source previously supplied that is
   /// absent from a full snapshot is tombstoned. Never applied to a delta.
+  /// Records the publisher marked non-public never reach storage.
+  ///
+  /// `RecordVisibility` was parsed and stored and enforced nowhere, so a
+  /// record published as `private` or `hidden` rendered exactly like a public
+  /// one. Applied here rather than at each read because there are ten read
+  /// paths and one write path — and because dropping an item from a snapshot's
+  /// present set makes the existing tombstone pass mark any row already stored
+  /// as deleted, which is what has to happen when a record is withdrawn.
+  ///
+  /// Unknown values parse to `public`, so this only ever withholds what the
+  /// publisher explicitly asked to be withheld.
+  List<T> _visibleOnly<T extends EntityDto>(List<T> items) => items
+      .where(
+        (e) =>
+            RecordVisibility.parse(e.source.visibility) ==
+            RecordVisibility.public,
+      )
+      .toList(growable: false);
+
   Future<int> _applyTombstones<T>({
     required SyncPage<T> page,
     required String entityType,

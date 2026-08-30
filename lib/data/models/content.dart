@@ -138,11 +138,20 @@ class ContentMeta {
   /// `manual` + `pending`, so that rule hid whatever it was applied to — and it
   /// was applied at exactly one of the ten content types, which is why one
   /// section went dark while nine identical records rendered fine.
-  bool get isPublishable => switch (reviewStatus) {
-    ReviewStatus.rejected => false,
-    ReviewStatus.reviewed => true,
-    ReviewStatus.pending => summaryMethod != SummaryMethod.aiAssisted,
-  };
+  bool get isPublishable {
+    // `RecordVisibility` used to be parsed, stored, and checked nowhere, so a
+    // record published as `private` or `hidden` rendered exactly like a public
+    // one. Content rides in through `ContentSyncEngine`'s ten nested write
+    // loops rather than the entity sync path, so it is enforced here — at the
+    // gate the repository already consults on every read.
+    if (provenance.visibility != RecordVisibility.public) return false;
+
+    return switch (reviewStatus) {
+      ReviewStatus.rejected => false,
+      ReviewStatus.reviewed => true,
+      ReviewStatus.pending => summaryMethod != SummaryMethod.aiAssisted,
+    };
+  }
 }
 
 /// The rotating "what should lead the app right now" slot.

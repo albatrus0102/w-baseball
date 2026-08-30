@@ -2,17 +2,20 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-/// Screens must not read the wall clock directly.
+/// Rules about the source itself, for failures no running app reveals.
 ///
-/// This is a source-level rule because the failure it prevents is invisible at
-/// runtime. A screen that calls `DateTime.now()` renders correctly — it just
-/// renders *differently* depending on when you looked. That made every golden
-/// containing a relative time drift on its own: a screenshot captured at 09:00
-/// showed "방금 확인" and the identical build re-checked at 14:00 showed
-/// "5시간 전 확인", so a real UI regression and an afternoon were the same diff.
+/// Each one here started as a real defect with the same shape: a correct
+/// mechanism existed, and the calling code walked past it. Nothing crashed,
+/// nothing looked wrong in review, and the only way to catch the next
+/// occurrence is to read the source.
 ///
-/// The fix is `clockProvider`, which a test pins. This test is what keeps the
-/// next screen from quietly opting out of it.
+/// - A screen calling `DateTime.now()` renders correctly; it just renders
+///   *differently* depending on when you looked, which made a real UI
+///   regression and an afternoon produce the same golden diff.
+/// - Trimming a rate string's first character is right for `0.325` and turns
+///   `1.000` into `.000`.
+/// - No remote image is rendered anywhere in this app today, which is the only
+///   reason the licensing rule holds. One `Image.network` would end that.
 void main() {
   /// Dart has no way to ask "was this identifier used" at test time, so the
   /// check is textual. It ignores comments, which legitimately name the API
@@ -83,6 +86,65 @@ void main() {
           '다음 위치에서 비율 문자열의 앞자리를 직접 자릅니다. formatRate()를 쓰세요 — '
           '1.000이 .000으로 표시됩니다:\n${offenders.join('\n')}',
     );
+  });
+
+  test('원격 이미지를 무조건 그리는 코드가 없다', () {
+    // Today the app renders no images at all, so no unlicensed photo and no
+    // minor's photo can reach a screen. That is not a decision anything
+    // enforces — it is the state of not having built it yet, and one
+    // `Image.network(topic.heroImageUrl!)` would end it silently.
+    //
+    // `ContentMeta` carries `heroImageLicense`, `FeaturedTopic` exposes
+    // `canShowHeroImage`, and `Person` carries `isMinor`. Whoever adds the
+    // first image has to route through them, so this test fails until the
+    // exemption below is widened deliberately rather than by accident.
+    const widgets = <String>[
+      'Image.network',
+      'NetworkImage(',
+      'FadeInImage',
+      'CachedNetworkImage',
+    ];
+
+    final offenders = <String>[];
+    for (final entity in Directory('lib').listSync(recursive: true)) {
+      if (entity is! File || !entity.path.endsWith('.dart')) continue;
+      if (entity.path.endsWith('.g.dart')) continue;
+      final lines = entity.readAsLinesSync();
+      for (var i = 0; i < lines.length; i++) {
+        final code = lines[i].trim();
+        if (code.startsWith('//')) continue;
+        if (widgets.any(code.contains)) {
+          offenders.add(
+            '  ${entity.path.replaceAll(r'\', '/')}:${i + 1}  $code',
+          );
+        }
+      }
+    }
+
+    expect(
+      offenders,
+      isEmpty,
+      reason:
+          '원격 이미지를 그리는 코드가 생겼습니다. 이용허락(heroImageLicense)과 '
+          '미성년 여부(isMinor)를 먼저 확인하도록 바꾸고, 이 테스트를 그에 맞게 '
+          '고치세요:\n${offenders.join('\n')}',
+    );
+  });
+
+  test('이용허락과 미성년 확인 장치가 남아 있다', () {
+    // The gates the rule above points at. If one is deleted as unused — and
+    // `canShowHeroImage` currently has no callers, which is exactly how that
+    // happens — the next person adding an image has nothing to route through.
+    final content = File('lib/data/models/content.dart').readAsStringSync();
+    expect(
+      content,
+      contains('bool get canShowHeroImage'),
+      reason: '호출부가 없다고 지우면, 이미지를 추가하는 사람이 거칠 관문이 사라집니다',
+    );
+    expect(content, contains('heroImageLicense == LicenseStatus.permitted'));
+
+    final domain = File('lib/data/models/domain.dart').readAsStringSync();
+    expect(domain, contains('isMinor'));
   });
 
   test('시계는 값이 아니라 함수로 노출된다', () {

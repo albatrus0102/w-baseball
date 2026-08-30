@@ -113,6 +113,7 @@ class ContentSyncEngine {
                 fetchedAt: topic.meta.source.fetchedAt,
                 verifiedAt: Value(topic.meta.source.verifiedAt),
                 licenseStatus: _defaulted(topic.meta.source.licenseStatus),
+                visibility: _defaulted(topic.meta.source.visibility),
                 isDemo: Value(topic.meta.source.isDemo),
                 publishedAt: topic.meta.publishedAt,
                 summaryMethod: _defaulted(topic.meta.summaryMethod),
@@ -143,6 +144,7 @@ class ContentSyncEngine {
                 sourceUrl: program.meta.source.sourceUrl,
                 fetchedAt: program.meta.source.fetchedAt,
                 licenseStatus: _defaulted(program.meta.source.licenseStatus),
+                visibility: _defaulted(program.meta.source.visibility),
                 isDemo: Value(program.meta.source.isDemo),
                 publishedAt: program.meta.publishedAt,
                 summaryMethod: _defaulted(program.meta.summaryMethod),
@@ -171,6 +173,7 @@ class ContentSyncEngine {
                   sourceUrl: season.meta.source.sourceUrl,
                   fetchedAt: season.meta.source.fetchedAt,
                   licenseStatus: _defaulted(season.meta.source.licenseStatus),
+                  visibility: _defaulted(season.meta.source.visibility),
                   isDemo: Value(season.meta.source.isDemo),
                   publishedAt: season.meta.publishedAt,
                   summaryMethod: _defaulted(season.meta.summaryMethod),
@@ -198,6 +201,7 @@ class ContentSyncEngine {
                     licenseStatus: _defaulted(
                       episode.meta.source.licenseStatus,
                     ),
+                    visibility: _defaulted(episode.meta.source.visibility),
                     isDemo: Value(episode.meta.source.isDemo),
                     publishedAt: episode.meta.publishedAt,
                     summaryMethod: _defaulted(episode.meta.summaryMethod),
@@ -229,6 +233,7 @@ class ContentSyncEngine {
                       licenseStatus: _defaulted(
                         recap.meta.source.licenseStatus,
                       ),
+                      visibility: _defaulted(recap.meta.source.visibility),
                       isDemo: Value(recap.meta.source.isDemo),
                       publishedAt: recap.meta.publishedAt,
                       summaryMethod: _defaulted(recap.meta.summaryMethod),
@@ -262,6 +267,7 @@ class ContentSyncEngine {
                       licenseStatus: _defaulted(
                         person.meta.source.licenseStatus,
                       ),
+                      visibility: _defaulted(person.meta.source.visibility),
                       isDemo: Value(person.meta.source.isDemo),
                       publishedAt: person.meta.publishedAt,
                       summaryMethod: _defaulted(person.meta.summaryMethod),
@@ -294,6 +300,7 @@ class ContentSyncEngine {
                 sourceUrl: clip.meta.source.sourceUrl,
                 fetchedAt: clip.meta.source.fetchedAt,
                 licenseStatus: _defaulted(clip.meta.source.licenseStatus),
+                visibility: _defaulted(clip.meta.source.visibility),
                 isDemo: Value(clip.meta.source.isDemo),
                 publishedAt: clip.meta.publishedAt,
                 summaryMethod: _defaulted(clip.meta.summaryMethod),
@@ -323,6 +330,7 @@ class ContentSyncEngine {
                 fetchedAt: cluster.meta.source.fetchedAt,
                 verifiedAt: Value(cluster.meta.source.verifiedAt),
                 licenseStatus: _defaulted(cluster.meta.source.licenseStatus),
+                visibility: _defaulted(cluster.meta.source.visibility),
                 isDemo: Value(cluster.meta.source.isDemo),
                 publishedAt: cluster.meta.publishedAt,
                 summaryMethod: _defaulted(cluster.meta.summaryMethod),
@@ -369,6 +377,7 @@ class ContentSyncEngine {
                 sourceUrl: guide.meta.source.sourceUrl,
                 fetchedAt: guide.meta.source.fetchedAt,
                 licenseStatus: _defaulted(guide.meta.source.licenseStatus),
+                visibility: _defaulted(guide.meta.source.visibility),
                 isDemo: Value(guide.meta.source.isDemo),
                 publishedAt: guide.meta.publishedAt,
                 summaryMethod: _defaulted(guide.meta.summaryMethod),
@@ -399,6 +408,7 @@ class ContentSyncEngine {
                 sourceUrl: info.source.sourceUrl,
                 fetchedAt: info.source.fetchedAt,
                 licenseStatus: _defaulted(info.source.licenseStatus),
+                visibility: _defaulted(info.source.visibility),
                 isDemo: Value(info.source.isDemo),
               ),
             );
@@ -433,6 +443,7 @@ class ContentSyncEngine {
                 sourceUrl: forecast.source.sourceUrl,
                 fetchedAt: forecast.source.fetchedAt,
                 licenseStatus: _defaulted(forecast.source.licenseStatus),
+                visibility: _defaulted(forecast.source.visibility),
                 isDemo: Value(forecast.source.isDemo),
               ),
             );
@@ -490,6 +501,19 @@ class ContentSyncEngine {
   });
 }
 
+/// Provenance the content path used to drop on the floor.
+///
+/// `visibility` was read from the payload, carried through the DTO, and then
+/// simply not written by any of the eleven content write sites — so every
+/// content row landed on the column default, `public`. A publisher marking a
+/// topic `private` or `hidden` had no effect whatsoever, and nothing said so.
+///
+/// `qualityStatus`, `verifiedAt`, `contentHash` and `sourceRecordId` are still
+/// dropped here. The first two default to the *weakest* claim the app can
+/// make, so losing them errs toward saying less than we know rather than more,
+/// and restoring them would let a payload assert human verification through a
+/// path with no coverage. They are recorded as work rather than fixed in
+/// passing.
 /// `Value.absent()` for a null, so a column that has a database default keeps
 /// it instead of being handed a null the schema does not allow.
 Value<String> _defaulted(String? value) =>
