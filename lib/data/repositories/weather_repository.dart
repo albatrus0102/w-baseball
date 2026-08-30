@@ -154,11 +154,19 @@ class DriftWeatherRepository implements WeatherRepository {
     return age > const Duration(hours: 24);
   }
 
-  /// Rewrites the stored horizon to the live one and strips any values the new
-  /// horizon does not permit. Defence in depth: even a bad row cannot leak a
-  /// precise temperature into a long-range card.
+  /// Rewrites the stored horizon to the live one, strips any values the new
+  /// horizon does not permit, and recomputes confidence against the live lead
+  /// time. Defence in depth: even a bad row cannot leak a precise temperature
+  /// into a long-range card.
+  ///
+  /// Deliberately unconditional. It used to return the row untouched when the
+  /// stored horizon already matched the live one, which looks like a harmless
+  /// shortcut and is not: confidence turns over *inside* 중기예보, at D+6. A
+  /// row issued at D+5 as 보통 stayed 보통 when the game was still nine days
+  /// out, so the app claimed more confidence in a forecast than its own rule
+  /// allows — and it did so in the direction people plan around. The horizon
+  /// matching says nothing about whether the derived fields are still true.
   WeatherForecast _withHorizon(WeatherForecast f, ForecastHorizon horizon) {
-    if (f.horizon == horizon) return f;
     return WeatherForecast(
       id: f.id,
       venueId: f.venueId,
