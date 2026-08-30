@@ -245,3 +245,39 @@ class WbDensityScope extends InheritedWidget {
   bool updateShouldNotify(WbDensityScope oldWidget) =>
       oldWidget.density != density;
 }
+
+/// Whether a source line may pass judgement on freshness, and how stale is
+/// too stale.
+///
+/// Installed once, high in the tree (see `WbFreshnessHost` in `app/app.dart`)
+/// — the same pattern as [WbDensityScope] — so `WbSourceLine` reads one
+/// answer instead of each of its seventeen call sites asking Riverpod
+/// individually whether a verdict is currently safe to print.
+///
+/// [staleAfter] is null exactly when no verdict may be rendered: either no
+/// remote source is configured, or one is configured but has never actually
+/// synced. Re-reading the data bundled into the APK does not count as a sync
+/// for this purpose — see the `hasRemoteSourceConfiguredProvider` /
+/// `freshnessThresholdProvider` pair in `app/providers.dart` for why.
+///
+/// Null is also this scope's default when no ancestor installs it — a screen
+/// or a test that pumps a source line bare gets silence, never an unearned
+/// "up to date". A widget that forgets to provide this scope must say less
+/// than it should, not more.
+class WbFreshnessScope extends InheritedWidget {
+  const WbFreshnessScope({
+    super.key,
+    required this.staleAfter,
+    required super.child,
+  });
+
+  final Duration? staleAfter;
+
+  static Duration? of(BuildContext context) => context
+      .dependOnInheritedWidgetOfExactType<WbFreshnessScope>()
+      ?.staleAfter;
+
+  @override
+  bool updateShouldNotify(WbFreshnessScope oldWidget) =>
+      oldWidget.staleAfter != staleAfter;
+}

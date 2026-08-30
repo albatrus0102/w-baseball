@@ -144,7 +144,7 @@ final gameRepositoryProvider = Provider<GameRepository>((ref) {
       final report = await ref
           .read(syncEngineProvider)
           .refreshAll(ref.read(dataSourcesProvider), scope: scope);
-      if (report.anySucceeded) {
+      if (_hasRealSyncSuccess(report)) {
         await ref
             .read(preferencesProvider)
             .setLastSuccessfulSyncAt(DateTime.now().toUtc());
@@ -527,7 +527,10 @@ final gameWeatherProvider = StreamProvider.family<WeatherForecast?, String>((
 /// build just asks the clock again, exactly as `DateTime.now()` did.
 typedef WbClock = DateTime Function();
 
-final clockProvider = Provider<WbClock>((ref) => () => DateTime.now().toUtc());
+final clockProvider = Provider<WbClock>(
+  (ref) =>
+      () => DateTime.now().toUtc(),
+);
 
 /// Drift-backed implementation of the manifest source's validator store.
 class DriftValidatorStore implements ValidatorStore {
@@ -596,9 +599,26 @@ class SyncStatus {
     return now.difference(last) > threshold;
   }
 
-  /// A partial success is reported honestly rather than as a clean success.
-  bool get isPartial =>
-      lastReport?.anyFailed == true && lastReport?.anySucceeded == true;
+  /// A partial success is reported honestly rather than as a clean success —
+  /// but only when a *real* source actually contributed something.
+  ///
+  /// The bundled seed always succeeds, so `lastReport.anySucceeded` alone is
+  /// always true whenever the seed is in the source list — which is always.
+  /// Gated on that, `isPartial` collapsed to plain `anyFailed`: a remote
+  /// source configured and completely unreachable would still show "일부
+  /// 데이터만 갱신됨", because the seed's re-read (not a sync in any sense a
+  /// user cares about) was propping up `anySucceeded`. That is the exact
+  /// overstatement `_hasRealSyncSuccess` exists to prevent for
+  /// `lastSuccessAt`, one screen over — so the same predicate applies here.
+  /// When no real source succeeds, this is not a partial sync; it is a sync
+  /// that did not happen, and showing no badge (rather than inventing a
+  /// "failed" one) is the same fail-safe-silence choice the rest of this
+  /// feature makes.
+  bool get isPartial {
+    final report = lastReport;
+    if (report == null) return false;
+    return report.anyFailed && _hasRealSyncSuccess(report);
+  }
 }
 
 class SyncController extends Notifier<SyncStatus> {
@@ -636,13 +656,13 @@ class SyncController extends Notifier<SyncStatus> {
         .read(syncEngineProvider)
         .refreshAll(ref.read(dataSourcesProvider), scope: scope);
 
-    if (report.anySucceeded) {
+    if (_hasRealSyncSuccess(report)) {
       await prefs.setLastSuccessfulSyncAt(report.finishedAt);
     }
 
     state = SyncStatus(
       isSyncing: false,
-      lastSuccessAt: report.anySucceeded
+      lastSuccessAt: _hasRealSyncSuccess(report)
           ? report.finishedAt
           : state.lastSuccessAt,
       lastReport: report,
@@ -654,3 +674,81 @@ class SyncController extends Notifier<SyncStatus> {
 final syncControllerProvider = NotifierProvider<SyncController, SyncStatus>(
   SyncController.new,
 );
+
+/// True when [report] contains a success from something other than the
+/// bundled seed.
+///
+/// `report.anySucceeded` alone is not enough to advance `lastSuccessfulSyncAt`
+/// — re-reading the seed bundle always "succeeds" (the asset shipped inside
+/// the APK cannot fail to load) and is not a sync in the sense a user cares
+/// about, since nothing left the device. Counting it here was reproduced as
+/// the cause of the app bar claiming "방금 갱신" seconds after a fresh install
+/// with no remote configured at all: `dataSourcesProvider` still contains the
+/// seed source, `refreshAll` re-reads it, and `anySucceeded` was true.
+bool _hasRealSyncSuccess(SyncReport report) => report.results.any(
+  (r) => r.isSuccess && r.sourceName != BundledSeedDataSource.seedSourceName,
+);
+
+/// True when at least one source other than the bundled seed could ever
+/// succeed — a static manifest URL, a future official API, or a licence-
+/// gated adapter.
+///
+/// The seed reports `isEnabled == true` unconditionally, so it can never be
+/// what distinguishes "there is somewhere real to sync from" versus "this
+/// install is running on nothing but what shipped in the APK". Only the
+/// *other* sources' own configuration answers that.
+final hasRemoteSourceConfiguredProvider = Provider<bool>((ref) {
+  final config = ref.watch(appConfigProvider);
+  return config.manifest.isConfigured ||
+      config.futureApi.isConfigured ||
+      config.flags.wbakAdapterEnabled ||
+      config.flags.kbsaAdapterEnabled ||
+      config.flags.wbscAdapterEnabled ||
+      config.flags.wpblAdapterEnabled;
+});
+
+/// The threshold `WbFreshnessScope` should carry, or null when no source line
+/// anywhere may currently render a freshness verdict.
+///
+/// A verdict needs two things to both be true: somewhere real to sync from,
+/// and a real sync having actually succeeded at least once. Neither alone is
+/// sufficient — a configured-but-unreachable manifest must not silently
+/// borrow the "fresh" reading a previous, different remote earned, and an
+/// unconfigured install must not read `lastSuccessAt` (which the seed can
+/// never set — see `_hasRealSyncSuccess`) as proof of anything.
+final freshnessThresholdProvider = Provider<Duration?>((ref) {
+  final hasRemote = ref.watch(hasRemoteSourceConfiguredProvider);
+  final everSynced = ref.watch(syncControllerProvider).lastSuccessAt != null;
+  return hasRemote && everSynced
+      ? ref.watch(appConfigProvider).sync.staleAfter
+      : null;
+});
+
+/// The three states any freshness-reporting surface can be in.
+///
+/// Kept as one enum rather than each screen re-deriving it from
+/// `hasRemoteSourceConfiguredProvider` and `SyncStatus.lastSuccessAt`
+/// separately: that duplication is exactly how the app bar came to announce
+/// "방금 갱신" for a bundle re-read that never left the device — two call
+/// sites asking a subtly different question and agreeing only by accident.
+enum FreshnessState {
+  /// Nothing has ever been configured to sync from. Not a temporary
+  /// condition the user is waiting out — there is nothing to wait for.
+  noRemoteConfigured,
+
+  /// A remote source is configured but has never actually synced yet.
+  neverSynced,
+
+  /// A remote source is configured and has synced at least once.
+  synced;
+
+  static FreshnessState resolve({
+    required bool hasRemoteConfigured,
+    required DateTime? lastSuccessAt,
+  }) {
+    if (!hasRemoteConfigured) return FreshnessState.noRemoteConfigured;
+    return lastSuccessAt == null
+        ? FreshnessState.neverSynced
+        : FreshnessState.synced;
+  }
+}

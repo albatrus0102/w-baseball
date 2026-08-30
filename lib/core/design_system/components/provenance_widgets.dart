@@ -18,14 +18,12 @@ class WbSourceLine extends StatelessWidget {
     super.key,
     required this.provenance,
     required this.now,
-    this.staleAfter = const Duration(hours: 12),
     this.onTap,
     this.compact,
   });
 
   final Provenance provenance;
   final DateTime now;
-  final Duration staleAfter;
   final VoidCallback? onTap;
 
   /// Null means "follow the current [WbDensity]". Compact tightens the line;
@@ -37,16 +35,41 @@ class WbSourceLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final isCompact = compact ?? !WbDensityScope.of(context).showsSecondaryLine;
     final c = WbTheme.of(context);
-    final isStale = provenance.isStale(now, staleAfter);
-    final confirmed = KoDate.relative(provenance.lastConfirmedAt, now);
-    // 확인 claims a person checked the record; 갱신 only claims we refreshed
-    // it. Which one is true depends on whether `verifiedAt` exists, and today
-    // it never does.
-    final verb = provenance.isHumanConfirmed ? '확인' : '갱신';
+
+    // Whether *any* freshness verdict may be printed comes from the shell,
+    // not from this record. Null (the fail-safe default — see
+    // WbFreshnessScope) means no source line anywhere may currently render
+    // one, so this falls back to stating a bare fact instead of judging it.
+    final staleAfter = WbFreshnessScope.of(context);
+    final canVerdict = staleAfter != null;
+    final isStale = canVerdict && provenance.isStale(now, staleAfter);
+
+    // Built once and reused for both the visible text and the semantics
+    // label below, so the two cannot say different things — a screen-reader
+    // user has no way to notice if a hand-written label quietly drifts from
+    // what is actually on screen.
+    final sourceLabel = _sourceLabel(provenance.sourceName);
+    final String timePhrase;
+    if (canVerdict) {
+      final confirmed = KoDate.relative(provenance.lastConfirmedAt, now);
+      // 확인 claims a person checked the record; 갱신 only claims we refreshed
+      // it. Which one is true depends on whether `verifiedAt` exists, and
+      // today it never does.
+      final verb = provenance.isHumanConfirmed ? '확인' : '갱신';
+      timePhrase = '$confirmed $verb';
+    } else {
+      // `~기준` ("as of") states a fact and claims nothing about a refresh
+      // having happened — unlike `갱신`, which would be untrue here: nothing
+      // was actually fetched from anywhere just now. An absolute date, not
+      // `KoDate.relative`, because "2일 전 기준" reads like a judgement and
+      // drifts on its own every day with no code change.
+      timePhrase =
+          '${KoDate.monthDayOrFullDate(provenance.lastConfirmedAt, now)} 기준';
+    }
 
     final children = <Widget>[
       Text(
-        '출처 ${_sourceLabel(provenance.sourceName)} · $confirmed $verb',
+        '출처 $sourceLabel · $timePhrase',
         style: WbType.micro.copyWith(color: c.inkMuted),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
@@ -83,7 +106,7 @@ class WbSourceLine extends StatelessWidget {
     if (onTap == null) {
       return Semantics(
         label:
-            '출처 ${_sourceLabel(provenance.sourceName)}, $confirmed $verb'
+            '출처 $sourceLabel, $timePhrase'
             '${isStale ? ', 오래된 정보' : ''}'
             '${provenance.isDemo ? ', 데모 데이터' : ''}',
         child: ExcludeSemantics(child: row),

@@ -190,8 +190,7 @@ Future<TestApp> buildTestApp({
       // Pins every screen's clock. Screens ask `clockProvider` rather than
       // `DateTime.now()`, so this is what keeps a golden containing "방금 확인"
       // from becoming "5시간 전 확인" as the afternoon wears on.
-      if (frozenNow != null)
-        clockProvider.overrideWithValue(() => frozenNow),
+      if (frozenNow != null) clockProvider.overrideWithValue(() => frozenNow),
     ],
   );
 
@@ -301,9 +300,12 @@ Future<void> pumpScreen(
         builder: (context, widget) => MediaQuery(
           data: MediaQuery.of(context)
               .copyWith(textScaler: TextScaler.linear(phone.textScale)),
-          // Mirrors `WbApp`: density comes from the preference under test, so a
-          // screen pumped here lays out exactly as it does in the real app.
-          child: WbDensityHost(child: widget ?? const SizedBox.shrink()),
+          // Mirrors `WbApp`: density and the freshness verdict permission both
+          // come from providers under test, so a screen pumped here lays out
+          // — and states freshness — exactly as it does in the real app.
+          child: WbDensityHost(
+            child: WbFreshnessHost(child: widget ?? const SizedBox.shrink()),
+          ),
         ),
         home: child,
       ),

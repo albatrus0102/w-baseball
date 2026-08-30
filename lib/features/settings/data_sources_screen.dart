@@ -39,6 +39,7 @@ class DataSourcesScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final c = WbTheme.of(context);
     final config = ref.watch(appConfigProvider);
+    final hasRemoteConfigured = ref.watch(hasRemoteSourceConfiguredProvider);
     final runs = ref.watch(_syncRunsProvider);
     final demoCount = ref.watch(_demoCountProvider).value ?? 0;
     final now = ref.watch(clockProvider)();
@@ -134,7 +135,15 @@ class DataSourcesScreen extends ConsumerWidget {
                 ),
                 _KeyValue(
                   label: '오래된 기준',
-                  value: '${config.sync.staleAfter.inHours}시간',
+                  // This screen is diagnostics, so it states the policy value
+                  // even while it cannot yet apply to anything — unlike a
+                  // source line, which must stay silent (see
+                  // `WbFreshnessScope`), this row's whole job is to answer
+                  // "can I trust this number", and a stale figure with no
+                  // caveat would answer that question wrong.
+                  value: hasRemoteConfigured
+                      ? '${config.sync.staleAfter.inHours}시간'
+                      : '원격 갱신이 설정되면 ${config.sync.staleAfter.inHours}시간',
                 ),
                 const SizedBox(height: WbSpace.sm),
                 Text(

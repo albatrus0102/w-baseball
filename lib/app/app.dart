@@ -49,7 +49,9 @@ class WbApp extends ConsumerWidget {
         );
         return MediaQuery(
           data: media.copyWith(textScaler: clamped),
-          child: WbDensityHost(child: child ?? const SizedBox.shrink()),
+          child: WbDensityHost(
+            child: WbFreshnessHost(child: child ?? const SizedBox.shrink()),
+          ),
         );
       },
     );
@@ -72,5 +74,26 @@ class WbDensityHost extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return WbDensityScope(density: ref.watch(densityProvider), child: child);
+  }
+}
+
+/// Publishes whether a freshness verdict may currently be rendered, and how
+/// stale is too stale, to the whole tree.
+///
+/// Same placement as [WbDensityHost] and the same reason: computing
+/// `freshnessThresholdProvider` once here means every `WbSourceLine` agrees,
+/// instead of each of its call sites asking Riverpod — and risking a
+/// forgotten one silently keeping the old always-12-hours behaviour.
+class WbFreshnessHost extends ConsumerWidget {
+  const WbFreshnessHost({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return WbFreshnessScope(
+      staleAfter: ref.watch(freshnessThresholdProvider),
+      child: child,
+    );
   }
 }

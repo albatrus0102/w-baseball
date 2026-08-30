@@ -142,7 +142,12 @@ void main() {
     });
 
     testWidgets('갱신 상태를 앱바에 표시한다', (tester) async {
+      // A verdict may only render once a remote is actually configured — see
+      // `FreshnessState` — so this configures one rather than relying on the
+      // default (empty `WB_MANIFEST_BASE_URL`), which is what state 1 below
+      // exercises instead.
       final app = await buildTestApp(
+        config: _configuredForRemoteSync(),
         lastSync: DateTime.now().toUtc().subtract(const Duration(hours: 2)),
       );
       addTearDown(app.dispose);
@@ -166,8 +171,24 @@ void main() {
       expectNoOverflow(tester);
     });
 
-    testWidgets('한 번도 갱신하지 못했으면 그렇게 말한다', (tester) async {
+    testWidgets('원격이 설정되지 않았으면 갱신 여부가 아니라 기본 데이터임을 말한다', (tester) async {
+      // Default `AppConfig.fromEnvironment()`: `WB_MANIFEST_BASE_URL` is
+      // empty, exactly as it ships. There is nothing to sync from, so this
+      // must never say "아직 갱신되지 않음" — that phrase reads as "wait and
+      // it will", and there is nothing to wait for.
       final app = await buildTestApp(seedAssets: false);
+      addTearDown(app.dispose);
+
+      await pumpScreen(tester, app, const HomeScreen());
+      expect(find.text('앱 기본 데이터 표시 중'), findsOneWidget);
+      expect(find.text('아직 갱신되지 않음'), findsNothing);
+    });
+
+    testWidgets('원격은 설정됐지만 한 번도 갱신하지 못했으면 그렇게 말한다', (tester) async {
+      final app = await buildTestApp(
+        config: _configuredForRemoteSync(),
+        seedAssets: false,
+      );
       addTearDown(app.dispose);
 
       await pumpScreen(tester, app, const HomeScreen());
@@ -480,4 +501,16 @@ void main() {
       }
     });
   });
+}
+
+/// A config with a remote configured, so `hasRemoteSourceConfiguredProvider`
+/// is true and a freshness verdict is permitted to render at all — the
+/// default `AppConfig.fromEnvironment()` ships with an empty manifest URL,
+/// which is state 1 in `FreshnessState`, not the "configured" states this
+/// helper is for.
+AppConfig _configuredForRemoteSync() {
+  final base = AppConfig.fromEnvironment();
+  return base.copyWith(
+    manifest: const ManifestConfig(baseUrl: 'https://example.test/wb'),
+  );
 }

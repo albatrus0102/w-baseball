@@ -35,9 +35,19 @@ class HomeScreen extends ConsumerWidget {
     final now = ref.watch(clockProvider)();
     final modules = HomeModule.resolveOrder(audience);
 
-    final subtitle = sync.lastSuccessAt == null
-        ? '아직 갱신되지 않음'
-        : '${KoDate.relative(sync.lastSuccessAt!, now)} 갱신';
+    // Three states, not two: an install with nothing configured to sync from
+    // must never say "아직 갱신되지 않음", because that reads as "wait and it
+    // will" — there is nothing to wait for. See `FreshnessState`.
+    final freshness = FreshnessState.resolve(
+      hasRemoteConfigured: ref.watch(hasRemoteSourceConfiguredProvider),
+      lastSuccessAt: sync.lastSuccessAt,
+    );
+    final subtitle = switch (freshness) {
+      FreshnessState.noRemoteConfigured => '앱 기본 데이터 표시 중',
+      FreshnessState.neverSynced => '아직 갱신되지 않음',
+      FreshnessState.synced =>
+        '${KoDate.relative(sync.lastSuccessAt!, now)} 갱신',
+    };
 
     return Scaffold(
       appBar: WbPrimaryAppBar(title: '여자야구', subtitle: subtitle),

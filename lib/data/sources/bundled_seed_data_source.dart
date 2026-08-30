@@ -32,8 +32,13 @@ final class BundledSeedDataSource extends JsonDocumentDataSource {
 
   AssetBundle get _assets => bundle ?? rootBundle;
 
+  /// Shared so callers that need to tell a real remote sync apart from a
+  /// re-read of the bundle (see `providers.dart`) reference one constant
+  /// rather than repeating the string `'seed'`.
+  static const String seedSourceName = 'seed';
+
   @override
-  String get sourceName => 'seed';
+  String get sourceName => seedSourceName;
 
   @override
   String get displayName => '앱 기본 데이터';

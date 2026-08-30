@@ -214,4 +214,19 @@ class KoDate {
     final absolute = monthDayWeekday(utc);
     return relative == null ? absolute : '$relative · $absolute';
   }
+
+  /// An absolute "as of" date: `monthDay`, or the full year-qualified date
+  /// when [utc] falls in a different year than [nowUtc].
+  ///
+  /// Used wherever a source line states a fact instead of a freshness verdict
+  /// (see `WbFreshnessScope`) — a bare "8월 30일" reads fine today but would be
+  /// ambiguous for a record left over from a previous year, and the relative
+  /// wording ("2일 전 기준") that would otherwise disambiguate is exactly what
+  /// a fact-only line must not claim, since it drifts on its own every day
+  /// with no code change.
+  static String monthDayOrFullDate(DateTime utc, DateTime nowUtc) {
+    final target = Kst.toKst(utc);
+    final today = Kst.toKst(nowUtc);
+    return target.year == today.year ? monthDay(utc) : fullDate(utc);
+  }
 }

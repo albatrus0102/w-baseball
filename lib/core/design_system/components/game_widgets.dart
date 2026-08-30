@@ -113,7 +113,6 @@ class WbHeroGameCard extends StatelessWidget {
     this.weatherRisk,
     this.onToggleFollow,
     this.isFavoriteDriven = false,
-    this.staleAfter = const Duration(hours: 12),
   });
 
   final GameCard card;
@@ -124,8 +123,6 @@ class WbHeroGameCard extends StatelessWidget {
 
   /// True when this fixture leads because the user follows one of the clubs.
   final bool isFavoriteDriven;
-
-  final Duration staleAfter;
 
   @override
   Widget build(BuildContext context) {
@@ -241,11 +238,7 @@ class WbHeroGameCard extends StatelessWidget {
             ],
           ),
           const WbInsetDivider(vertical: WbSpace.sm),
-          WbSourceLine(
-            provenance: game.provenance,
-            now: now,
-            staleAfter: staleAfter,
-          ),
+          WbSourceLine(provenance: game.provenance, now: now),
         ],
       ),
     );

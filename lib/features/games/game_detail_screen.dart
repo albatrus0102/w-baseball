@@ -486,11 +486,7 @@ class _ProvenanceSection extends ConsumerWidget {
           children: <Widget>[
             Text('데이터 출처', style: WbType.captionStrong.copyWith(color: c.ink)),
             const SizedBox(height: WbSpace.sm),
-            WbSourceLine(
-              provenance: game.provenance,
-              now: now,
-              staleAfter: config.sync.staleAfter,
-            ),
+            WbSourceLine(provenance: game.provenance, now: now),
             const SizedBox(height: WbSpace.xs),
             Text(
               '마지막 확인 ${KoDate.dateTime(game.provenance.lastConfirmedAt)}',

@@ -52,8 +52,9 @@ void main() {
               GlobalWidgetsLocalizations.delegate,
               GlobalCupertinoLocalizations.delegate,
             ],
-            builder: (context, widget) =>
-                WbDensityHost(child: widget ?? const SizedBox.shrink()),
+            builder: (context, widget) => WbDensityHost(
+              child: WbFreshnessHost(child: widget ?? const SizedBox.shrink()),
+            ),
           ),
         ),
       ),

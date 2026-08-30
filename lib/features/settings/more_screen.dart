@@ -25,7 +25,15 @@ class MoreScreen extends ConsumerWidget {
     final sync = ref.watch(syncControllerProvider);
     final audience = ref.watch(audienceProvider);
     final now = ref.watch(clockProvider)();
-    final config = ref.watch(appConfigProvider);
+    // Same three-state read the home app bar uses — see `FreshnessState`.
+    // Computing it independently here is exactly the duplication that once
+    // let this row say "아직 갱신되지 않았습니다" for an install with nothing
+    // configured to sync from at all.
+    final hasRemoteConfigured = ref.watch(hasRemoteSourceConfiguredProvider);
+    final freshness = FreshnessState.resolve(
+      hasRemoteConfigured: hasRemoteConfigured,
+      lastSuccessAt: sync.lastSuccessAt,
+    );
 
     return Scaffold(
       appBar: const WbPrimaryAppBar(title: '더보기', showSearch: false),
@@ -43,12 +51,13 @@ class MoreScreen extends ConsumerWidget {
                       Icon(Icons.sync_rounded, size: 17, color: c.brand),
                       const SizedBox(width: WbSpace.sm),
                       Expanded(
-                        child: Text(
-                          sync.lastSuccessAt == null
-                              ? '아직 갱신되지 않았습니다'
-                              : '${KoDate.relative(sync.lastSuccessAt!, now)} 갱신됨',
-                          style: WbType.body.copyWith(color: c.ink),
-                        ),
+                        child: Text(switch (freshness) {
+                          FreshnessState.noRemoteConfigured =>
+                            '앱 기본 데이터로 동작 중입니다',
+                          FreshnessState.neverSynced => '아직 갱신되지 않았습니다',
+                          FreshnessState.synced =>
+                            '${KoDate.relative(sync.lastSuccessAt!, now)} 갱신됨',
+                        }, style: WbType.body.copyWith(color: c.ink)),
                       ),
                       if (sync.isSyncing)
                         const SizedBox(
@@ -76,7 +85,7 @@ class MoreScreen extends ConsumerWidget {
                       dense: true,
                     ),
                   ],
-                  if (!config.manifest.isConfigured) ...<Widget>[
+                  if (!hasRemoteConfigured) ...<Widget>[
                     const SizedBox(height: WbSpace.sm),
                     Text(
                       '원격 데이터 주소가 설정되지 않아 앱에 포함된 기본 데이터로 동작 중입니다.',
