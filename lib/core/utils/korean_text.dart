@@ -180,6 +180,15 @@ class KoreanText {
     '/',
     "'",
     '"',
+    // Not typography. `search_key` is matched with `LIKE '%q%'`, so a `%` that
+    // survives normalisation becomes a wildcard: typing it alone returned every
+    // team, venue and person in the database. `|` is the separator between the
+    // normalised name and its 초성 inside the key, so leaving it in lets a query
+    // match across the boundary between two forms that were never adjacent in
+    // any name. Both are stripped from stored keys and from queries alike, which
+    // is what keeps the SQL and in-memory paths agreeing.
+    '%',
+    '|',
   }.contains(char);
 
   /// Korean particle selection: `팀을` vs `선수를`.
