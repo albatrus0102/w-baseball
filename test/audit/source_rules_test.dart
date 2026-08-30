@@ -88,6 +88,50 @@ void main() {
     );
   });
 
+  test('콘텐츠를 쓸 때 검수 상태를 반드시 넘긴다', () {
+    // The schema's own default for `review_status` is `reviewed`, and for
+    // `summary_method` it is `manual` — together, "a person wrote this and a
+    // person checked it". That is the exact claim the review ledger exists to
+    // stop the app making on its own, and it is what an omitted column falls
+    // through to.
+    //
+    // All nine writers pass `reviewStatus` today, via `_reviewOrPending`. This
+    // catches the tenth. Changing the column defaults would be the deeper fix
+    // and needs a schema migration; it is recorded in the backlog rather than
+    // done in passing, because the defaults only govern rows nobody currently
+    // writes.
+    final source = File(
+      'lib/data/sync/content_sync.dart',
+    ).readAsStringSync();
+
+    const contentTables = <String>[
+      'FeaturedTopics',
+      'Programs',
+      'ProgramSeasons',
+      'Episodes',
+      'EpisodeRecaps',
+      'OfficialClips',
+      'Storylines',
+      'FeaturedPeople',
+      'StoryClusters',
+      'BeginnerGuides',
+    ];
+
+    final writers = <String>[];
+    for (final table in contentTables) {
+      if (source.contains('${table}Companion.insert(')) writers.add(table);
+    }
+
+    expect(
+      source.split('reviewStatus:').length - 1,
+      writers.length,
+      reason:
+          '콘텐츠 쓰기 지점 ${writers.length}곳 중 일부가 reviewStatus를 넘기지 않습니다. '
+          '빠뜨리면 컬럼 기본값 reviewed로 저장되어, 아무도 검수하지 않은 레코드가 '
+          '검수됐다고 기록됩니다. _reviewOrPending()을 쓰세요.',
+    );
+  });
+
   test('원격 이미지를 무조건 그리는 코드가 없다', () {
     // Today the app renders no images at all, so no unlicensed photo and no
     // minor's photo can reach a screen. That is not a decision anything
