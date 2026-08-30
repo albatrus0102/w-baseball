@@ -41,7 +41,7 @@ class DataSourcesScreen extends ConsumerWidget {
     final config = ref.watch(appConfigProvider);
     final runs = ref.watch(_syncRunsProvider);
     final demoCount = ref.watch(_demoCountProvider).value ?? 0;
-    final now = DateTime.now().toUtc();
+    final now = ref.watch(clockProvider)();
 
     return Scaffold(
       appBar: AppBar(title: const Text('데이터 출처')),

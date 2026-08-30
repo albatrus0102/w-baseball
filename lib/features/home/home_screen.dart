@@ -32,7 +32,7 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final audience = ref.watch(audienceProvider);
     final sync = ref.watch(syncControllerProvider);
-    final now = DateTime.now().toUtc();
+    final now = ref.watch(clockProvider)();
     final modules = HomeModule.resolveOrder(audience);
 
     final subtitle = sync.lastSuccessAt == null

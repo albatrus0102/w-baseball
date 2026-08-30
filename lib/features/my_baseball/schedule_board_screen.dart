@@ -37,14 +37,14 @@ class _ScheduleBoardScreenState extends ConsumerState<ScheduleBoardScreen> {
   @override
   void initState() {
     super.initState();
-    final today = Kst.todayKst(DateTime.now().toUtc());
+    final today = Kst.todayKst(ref.read(clockProvider)());
     _visibleMonth = DateTime(today.year, today.month);
     _selectedDayKey = Kst.dayKeyOfKstDate(today);
   }
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now().toUtc();
+    final now = ref.watch(clockProvider)();
     final followed =
         ref.watch(followedTeamIdsProvider).value ?? const <String>{};
     final monthKey = Kst.monthKeyOfKstDate(_visibleMonth);

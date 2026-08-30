@@ -27,7 +27,7 @@ class DiscoverScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final now = DateTime.now().toUtc();
+    final now = ref.watch(clockProvider)();
     final policy = ref.watch(spoilerPolicyProvider);
     final showBeginner = ref.watch(showBeginnerExplanationsProvider);
     final audience = ref.watch(audienceProvider);

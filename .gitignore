@@ -69,3 +69,8 @@ android/.kotlin/
 
 # Per-machine tool settings, not project configuration.
 .claude/settings.local.json
+
+# Golden comparison output. Written on every failing screenshot run and
+# rewritten on the next one; committing it makes an unrelated diff look like a
+# UI change.
+test/screenshots/failures/

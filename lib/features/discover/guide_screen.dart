@@ -29,7 +29,7 @@ class GuideScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final guide = ref.watch(_guideProvider(guideId));
-    final now = DateTime.now().toUtc();
+    final now = ref.watch(clockProvider)();
     final c = WbTheme.of(context);
 
     return Scaffold(

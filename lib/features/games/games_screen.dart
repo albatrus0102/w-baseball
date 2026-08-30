@@ -96,7 +96,7 @@ class GamesTabController extends Notifier<GamesTabState> {
 
   @override
   GamesTabState build() {
-    final today = Kst.dayKey(DateTime.now().toUtc());
+    final today = Kst.dayKey(ref.read(clockProvider)());
     // Opening on an empty today was measured as a whole extra tap for a
     // newcomer (T1′ in docs/task-benchmarks.md). Land on the nearest day that
     // actually has fixtures instead, and say so; `오늘로` in the app bar is
@@ -147,7 +147,7 @@ class GamesTabController extends Notifier<GamesTabState> {
   void jumpToToday() {
     _userPickedDay = true;
     state = state.copyWith(
-      dayKey: Kst.dayKey(DateTime.now().toUtc()),
+      dayKey: Kst.dayKey(ref.read(clockProvider)()),
       landedOnNearest: false,
     );
   }
@@ -172,7 +172,7 @@ class GamesScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(gamesTabProvider);
     final controller = ref.read(gamesTabProvider.notifier);
-    final now = DateTime.now().toUtc();
+    final now = ref.watch(clockProvider)();
     final games = ref.watch(gamesProvider(state.toQuery()));
 
     return Scaffold(

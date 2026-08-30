@@ -187,7 +187,11 @@ Future<TestApp> buildTestApp({
       analyticsProvider.overrideWithValue(const NoopAnalyticsService()),
       // No network source, so nothing in a widget test can reach out.
       dataSourcesProvider.overrideWithValue(const []),
-      if (frozenNow != null) nowProvider.overrideWithValue(frozenNow),
+      // Pins every screen's clock. Screens ask `clockProvider` rather than
+      // `DateTime.now()`, so this is what keeps a golden containing "방금 확인"
+      // from becoming "5시간 전 확인" as the afternoon wears on.
+      if (frozenNow != null)
+        clockProvider.overrideWithValue(() => frozenNow),
     ],
   );
 
@@ -203,7 +207,11 @@ Future<TestApp> buildTestApp({
     final engine = SyncEngine(db: db, config: resolvedConfig);
     await engine.refreshSource(
       source,
-      scope: GameSyncScope(months: _monthsAround(DateTime.now().toUtc())),
+      // Frozen too: months are derived from the clock, so a real-time month
+      // boundary would silently change which fixtures a golden contains.
+      scope: GameSyncScope(
+        months: _monthsAround(frozenNow ?? DateTime.now().toUtc()),
+      ),
       incremental: false,
     );
     final contentEngine = ContentSyncEngine(

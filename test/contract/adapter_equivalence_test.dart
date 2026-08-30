@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:dio/dio.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -9,7 +10,9 @@ import 'package:w_baseball/core/database/database.dart';
 import 'package:w_baseball/data/mappers/row_mappers.dart';
 import 'package:w_baseball/data/models/domain.dart';
 import 'package:w_baseball/data/sources/bundled_seed_data_source.dart';
+import 'package:w_baseball/core/network/http_client.dart';
 import 'package:w_baseball/data/sources/fake/fake_rest_api_data_source.dart';
+import 'package:w_baseball/data/sources/future_rest_api_data_source.dart';
 import 'package:w_baseball/data/sync/sync_contracts.dart';
 import 'package:w_baseball/data/sync/sync_engine.dart';
 
@@ -20,6 +23,13 @@ import 'package:w_baseball/data/sync/sync_engine.dart';
 ///
 /// If that holds, connecting a real official API later is a matter of adding
 /// one adapter — repositories, screens and the database are untouched.
+///
+/// Three transports are compared, not two. The third is the *real*
+/// [FutureRestApiDataSource] over a stubbed HTTP layer: the adapter that will
+/// actually run the day an official API is connected. It was previously
+/// untested — `WB_API_TRANSPORT` defaults to `none`, so nothing ever
+/// constructed it — and an adapter whose first execution is in production is
+/// the same shape of risk that hid a deadlock in the HTTP client.
 void main() {
   const contract = DataContractConfig();
   final config = AppConfig.fromEnvironment();
@@ -158,6 +168,7 @@ void main() {
 
   late _DomainSnapshot viaStaticFiles;
   late _DomainSnapshot viaFakeApi;
+  late _DomainSnapshot viaRealRestAdapter;
 
   setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
@@ -180,6 +191,28 @@ void main() {
         // the file path reads one document.
         pageSize: 2,
       );
+      await engine.refreshSource(source, scope: scope, incremental: false);
+    });
+
+    // Transport C: the production REST adapter, talking to a stub server that
+    // paginates the same bytes. Everything from the response body inward is
+    // the shared path; what this exercises is the part that is not — URL and
+    // query construction, header handling, and the HTTP client underneath.
+    viaRealRestAdapter = await runSource((engine) async {
+      final source = FutureRestApiDataSource(
+        config: const FutureApiConfig(
+          transport: ApiTransport.rest,
+          baseUrl: 'https://api.example.test',
+          pageSize: 2,
+        ),
+        contract: contract,
+        httpClient: WbHttpClient(
+          config: const SyncConfig(),
+          dio: WbHttpClient.buildDio(const SyncConfig())
+            ..httpClientAdapter = _PaginatingApiStub(fixture, pageSize: 2),
+        ),
+      );
+      expect(source.isEnabled, isTrue, reason: '설정이 갖춰지면 켜져야 합니다');
       await engine.refreshSource(source, scope: scope, incremental: false);
     });
   });
@@ -273,6 +306,19 @@ void main() {
       expect(draw.isDraw, isTrue);
       expect(draw.winnerTeamId, isNull);
     }
+  });
+
+  test('실제 REST 어댑터도 같은 데이터를 적재한다', () {
+    // The adapter that runs when an official API is connected. Until now it
+    // had no test at all.
+    expect(viaRealRestAdapter.teams, hasLength(5));
+    expect(viaRealRestAdapter.games, hasLength(5));
+  });
+
+  test('실제 REST 어댑터의 도메인 지문이 파일 경로와 일치한다', () {
+    // The claim in docs/connecting-an-official-api.md, checked against the
+    // real adapter rather than a stand-in for it.
+    expect(viaRealRestAdapter.fingerprint(), viaStaticFiles.fingerprint());
   });
 
   test('전체 스냅샷의 도메인 지문이 일치한다', () {
@@ -423,3 +469,74 @@ Map<String, dynamic> _game(
   'statusNote': ?note,
   'source': _source(id),
 };
+
+/// A stub official API.
+///
+/// Serves the same fixture as the file transport, but paginated and addressed
+/// by path and query the way a REST API is — which is the part of
+/// [FutureRestApiDataSource] that the shared envelope code does not cover.
+class _PaginatingApiStub implements HttpClientAdapter {
+  _PaginatingApiStub(this.fixture, {required this.pageSize});
+
+  final Map<String, String> fixture;
+  final int pageSize;
+
+  /// Maps an API path onto the fixture files that back it.
+  static const _sources = <String, List<String>>{
+    '/v1/teams': <String>['teams.json'],
+    '/v1/venues': <String>['venues.json'],
+    '/v1/competitions': <String>['competitions/2026.json'],
+    '/v1/games': <String>['games/2026-08.json'],
+    '/v1/organizations': <String>[],
+    '/v1/standings': <String>[],
+  };
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    final files = _sources[options.uri.path];
+    if (files == null) return ResponseBody.fromString('', 404);
+
+    final items = <dynamic>[];
+    for (final file in files) {
+      final body = fixture[file];
+      if (body == null) continue;
+      final decoded = jsonDecode(body);
+      if (decoded is Map<String, dynamic>) {
+        items.addAll((decoded['items'] as List<dynamic>?) ?? const <dynamic>[]);
+      } else if (decoded is List) {
+        items.addAll(decoded);
+      }
+    }
+
+    // Cursor is an offset, matching what the adapter echoes back from
+    // `nextCursor`. A stub that ignored it would loop or truncate.
+    final offset =
+        int.tryParse(options.uri.queryParameters['cursor'] ?? '') ?? 0;
+    final end = (offset + pageSize).clamp(0, items.length);
+    final hasMore = end < items.length;
+
+    return ResponseBody.fromString(
+      jsonEncode(<String, dynamic>{
+        'schemaVersion': 1,
+        'generatedAt': '2026-08-30T00:00:00Z',
+        // Only the final page may be treated as a snapshot; declaring every
+        // page one would make each delete the records before it.
+        'payloadKind': hasMore ? 'delta' : 'snapshot',
+        'hasMore': hasMore,
+        if (hasMore) 'nextCursor': '$end',
+        'items': items.sublist(offset, end),
+      }),
+      200,
+      headers: {
+        Headers.contentTypeHeader: [Headers.jsonContentType],
+      },
+    );
+  }
+
+  @override
+  void close({bool force = false}) {}
+}

@@ -164,6 +164,7 @@ final teamRepositoryProvider = Provider<TeamRepository>((ref) {
   return DriftTeamRepository(
     db: ref.watch(databaseProvider),
     gameRepository: ref.watch(gameRepositoryProvider),
+    clock: ref.watch(clockProvider),
   );
 });
 
@@ -513,9 +514,20 @@ final gameWeatherProvider = StreamProvider.family<WeatherForecast?, String>((
   return ref.watch(weatherRepositoryProvider).watchForecast(gameId);
 });
 
-/// Now, refreshed on demand. Widgets read this instead of calling
-/// `DateTime.now()` so tests can pin the clock.
-final nowProvider = Provider<DateTime>((ref) => DateTime.now().toUtc());
+/// The current instant, as a function.
+///
+/// Screens call `ref.watch(clockProvider)()` instead of `DateTime.now()`, so a
+/// test can pin the clock: a screenshot taken at 09:00 and the same screenshot
+/// taken at 14:00 then render identically. Without this every golden that
+/// prints a relative time ("방금 확인", "3분 전") drifts on its own.
+///
+/// A function rather than a `Provider<DateTime>`. A cached instant is read once
+/// and never moves, so "3분 전" would still read "3분 전" an hour later. The
+/// closure's identity is stable, so watching it costs no extra rebuilds — each
+/// build just asks the clock again, exactly as `DateTime.now()` did.
+typedef WbClock = DateTime Function();
+
+final clockProvider = Provider<WbClock>((ref) => () => DateTime.now().toUtc());
 
 /// Drift-backed implementation of the manifest source's validator store.
 class DriftValidatorStore implements ValidatorStore {

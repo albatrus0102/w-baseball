@@ -34,7 +34,7 @@ class StoryClusterScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cluster = ref.watch(_clusterProvider(clusterId));
-    final now = DateTime.now().toUtc();
+    final now = ref.watch(clockProvider)();
     final showBeginner = ref.watch(showBeginnerExplanationsProvider);
 
     return Scaffold(

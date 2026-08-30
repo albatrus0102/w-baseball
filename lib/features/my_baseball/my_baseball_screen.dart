@@ -49,7 +49,7 @@ class MyBaseballScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final followed =
         ref.watch(followedTeamIdsProvider).value ?? const <String>{};
-    final now = DateTime.now().toUtc();
+    final now = ref.watch(clockProvider)();
 
     return Scaffold(
       appBar: const WbPrimaryAppBar(title: '마이야구'),

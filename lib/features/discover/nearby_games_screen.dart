@@ -64,7 +64,7 @@ class _NearbyGamesScreenState extends ConsumerState<NearbyGamesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now().toUtc();
+    final now = ref.watch(clockProvider)();
     final range = _range(now);
     final region = KoreanRegion.byCode(_regionCode);
 

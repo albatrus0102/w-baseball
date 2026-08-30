@@ -24,7 +24,7 @@ class MoreScreen extends ConsumerWidget {
     final c = WbTheme.of(context);
     final sync = ref.watch(syncControllerProvider);
     final audience = ref.watch(audienceProvider);
-    final now = DateTime.now().toUtc();
+    final now = ref.watch(clockProvider)();
     final config = ref.watch(appConfigProvider);
 
     return Scaffold(

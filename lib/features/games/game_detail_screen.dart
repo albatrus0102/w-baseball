@@ -36,7 +36,7 @@ class GameDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final detail = ref.watch(gameDetailProvider(gameId));
-    final now = DateTime.now().toUtc();
+    final now = ref.watch(clockProvider)();
 
     return Scaffold(
       body: detail.when(
@@ -593,7 +593,7 @@ class GameWeatherPanel extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = WbTheme.of(context);
-    final now = DateTime.now().toUtc();
+    final now = ref.watch(clockProvider)();
     final horizon = ForecastHorizon.between(now, startTimeUtc);
     final forecast = ref.watch(gameWeatherProvider(gameId));
 
@@ -722,7 +722,7 @@ class _ReminderButton extends ConsumerWidget {
 
     // A finished or called-off fixture has nothing left to announce.
     final canRemind =
-        game.startTimeUtc.isAfter(DateTime.now().toUtc()) &&
+        game.startTimeUtc.isAfter(ref.watch(clockProvider)()) &&
         game.status != GameStatus.cancelled &&
         game.status != GameStatus.postponed;
 

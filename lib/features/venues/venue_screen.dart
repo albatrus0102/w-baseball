@@ -26,7 +26,7 @@ class VenueScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = WbTheme.of(context);
-    final now = DateTime.now().toUtc();
+    final now = ref.watch(clockProvider)();
     final venue = ref.watch(venueByIdProvider(venueId));
 
     return Scaffold(

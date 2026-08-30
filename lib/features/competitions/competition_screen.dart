@@ -40,7 +40,7 @@ class _CompetitionScreenState extends ConsumerState<CompetitionScreen>
   @override
   Widget build(BuildContext context) {
     final detail = ref.watch(competitionDetailProvider(widget.seasonId));
-    final now = DateTime.now().toUtc();
+    final now = ref.watch(clockProvider)();
 
     return Scaffold(
       body: detail.when(

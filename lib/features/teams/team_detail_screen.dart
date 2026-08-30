@@ -28,7 +28,7 @@ class TeamDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final detail = ref.watch(teamDetailProvider(teamId));
-    final now = DateTime.now().toUtc();
+    final now = ref.watch(clockProvider)();
 
     return Scaffold(
       body: detail.when(

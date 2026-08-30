@@ -34,7 +34,7 @@ class FeaturedTopicScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final item = ref.watch(_featuredTopicProvider(topicId));
     final policy = ref.watch(spoilerPolicyProvider);
-    final now = DateTime.now().toUtc();
+    final now = ref.watch(clockProvider)();
 
     return Scaffold(
       body: item.when(

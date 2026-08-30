@@ -84,10 +84,19 @@ abstract interface class TeamRepository {
 }
 
 class DriftTeamRepository implements TeamRepository {
-  DriftTeamRepository({required this.db, required this.gameRepository});
+  DriftTeamRepository({
+    required this.db,
+    required this.gameRepository,
+    required this.clock,
+  });
 
   final WbDatabase db;
   final GameRepository gameRepository;
+
+  /// Injected rather than `DateTime.now()`, because "next three fixtures" is
+  /// defined by where the clock sits: let it run and a fixture crosses the
+  /// boundary mid-test, so the same screen renders differently one hour later.
+  final DateTime Function() clock;
 
   @override
   Stream<List<Team>> watchTeams(TeamQuery query) {
@@ -170,7 +179,7 @@ class DriftTeamRepository implements TeamRepository {
           .watchGames(
             GameQuery(
               teamIds: <String>[teamId],
-              fromUtc: DateTime.now().toUtc(),
+              fromUtc: clock(),
               limit: 3,
             ),
           )
@@ -180,7 +189,7 @@ class DriftTeamRepository implements TeamRepository {
           .watchGames(
             GameQuery(
               teamIds: <String>[teamId],
-              toUtc: DateTime.now().toUtc(),
+              toUtc: clock(),
               ascending: false,
               limit: 5,
             ),
