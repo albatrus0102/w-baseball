@@ -123,12 +123,26 @@ class ContentMeta {
 
   bool get isDemo => provenance.isDemo;
 
-  /// Automated summaries are only publishable after review unless the
-  /// `autoPublishTemplateSummaries` flag is on for template summaries, which
-  /// cannot invent facts. Enforced again in `scripts/validate`.
-  bool get isPublishable =>
-      reviewStatus == ReviewStatus.reviewed ||
-      summaryMethod == SummaryMethod.template;
+  /// Whether this record may be shown.
+  ///
+  /// Deliberately identical to `_check_summary` in
+  /// `scripts/validate/validate_data.py`, which is what actually gates
+  /// publication: an `aiAssisted` summary needs a human review, a `template`
+  /// summary is generated from structured fields and cannot invent anything,
+  /// and `manual` text already had a person write it — that person *is* the
+  /// human in the loop. A record a reviewer explicitly rejected is never shown,
+  /// whatever produced it.
+  ///
+  /// It used to read `reviewed || template`, which withheld hand-written text
+  /// as if a model had produced it. Every record in the shipped seed is
+  /// `manual` + `pending`, so that rule hid whatever it was applied to — and it
+  /// was applied at exactly one of the ten content types, which is why one
+  /// section went dark while nine identical records rendered fine.
+  bool get isPublishable => switch (reviewStatus) {
+    ReviewStatus.rejected => false,
+    ReviewStatus.reviewed => true,
+    ReviewStatus.pending => summaryMethod != SummaryMethod.aiAssisted,
+  };
 }
 
 /// The rotating "what should lead the app right now" slot.

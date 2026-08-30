@@ -108,7 +108,10 @@ class DriftContentRepository implements ContentRepository {
     return select.watch().asyncMap((rows) async {
       final now = _clock().toUtc();
       final active =
-          rows.map((r) => r.toDomain()).where((t) => t.isActiveAt(now)).toList()
+          rows
+              .map((r) => r.toDomain())
+              .where((t) => t.isActiveAt(now) && t.meta.isPublishable)
+              .toList()
             ..sort(
               (a, b) => a.effectivePriority.compareTo(b.effectivePriority),
             );
@@ -127,7 +130,12 @@ class DriftContentRepository implements ContentRepository {
       ..where((t) => t.id.equals(topicId));
     return select.watchSingleOrNull().asyncMap((row) async {
       if (row == null) return null;
-      return _resolve(row.toDomain());
+      final topic = row.toDomain();
+      // A topic reachable by id — a deep link, a saved item — has to pass the
+      // same check the list does. Otherwise the way to see withheld content is
+      // simply to know its address.
+      if (!topic.meta.isPublishable) return null;
+      return _resolve(topic);
     });
   }
 
@@ -207,6 +215,7 @@ class DriftContentRepository implements ContentRepository {
                         ..limit(3))
                       .get())
                   .map((r) => r.toDomain())
+                  .where((p) => p.meta.isPublishable)
                   .toList(growable: false);
         }
 
@@ -221,6 +230,7 @@ class DriftContentRepository implements ContentRepository {
                       ..limit(6))
                     .get())
                 .map((r) => r.toDomain())
+                .where((c) => c.meta.isPublishable)
                 .toList(growable: false);
 
         links = await linksFrom(
@@ -246,7 +256,10 @@ class DriftContentRepository implements ContentRepository {
       final row = await (db.select(
         db.beginnerGuides,
       )..where((t) => t.id.equals(topic.guideId!))).getSingleOrNull();
-      guide = row?.toDomain();
+      final candidate = row?.toDomain();
+      guide = candidate != null && candidate.meta.isPublishable
+          ? candidate
+          : null;
     }
     if (topic.competitionId != null) {
       final row = await (db.select(
@@ -368,6 +381,7 @@ class DriftContentRepository implements ContentRepository {
             links: linksByCluster[r.id] ?? const <ContentEntityLink>[],
           ),
         )
+        .where((c) => c.meta.isPublishable)
         .toList(growable: false);
   }
 
@@ -386,7 +400,10 @@ class DriftContentRepository implements ContentRepository {
     }
     select.orderBy([(t) => OrderingTerm(expression: t.title)]);
     return select.watch().map(
-      (rows) => rows.map((r) => r.toDomain()).toList(growable: false),
+      (rows) => rows
+          .map((r) => r.toDomain())
+          .where((g) => g.meta.isPublishable)
+          .toList(growable: false),
     );
   }
 
@@ -399,7 +416,8 @@ class DriftContentRepository implements ContentRepository {
               )
               ..limit(1))
             .getSingleOrNull();
-    return row?.toDomain();
+    final guide = row?.toDomain();
+    return guide != null && guide.meta.isPublishable ? guide : null;
   }
 
   @override

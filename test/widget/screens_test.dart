@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:w_baseball/app/router.dart';
@@ -78,11 +80,40 @@ void main() {
       expect(find.textContaining('데모'), findsWidgets);
     });
 
-    testWidgets('검수되지 않은 리캡은 아예 보여주지 않는다', (tester) async {
-      // The other half of the same rule. A generator cannot certify its own
-      // output, so seed content sits at `pending` — and pending content is
-      // withheld rather than shown with a reassuring badge.
-      final app = await buildTestApp();
+    testWidgets('검수되지 않은 AI 리캡은 아예 보여주지 않는다', (tester) async {
+      // The rule the validator enforces before publication, enforced again at
+      // read time: a model-written summary needs a person to sign off, and
+      // until then it is withheld rather than shown with a reassuring badge.
+      //
+      // Retagging the seed's own recap is deliberate. Asserting on a
+      // hand-built record would prove the getter works; this proves the record
+      // actually travels through sync, storage, and the repository gate and
+      // still does not reach the screen.
+      // Only the recap is retagged. A blanket string replace would also
+      // demote the featured topic that carries it, and the card would then be
+      // missing because its container was withheld — the assertion would pass
+      // without the recap gate ever being consulted.
+      final docs = Map<String, String>.from(loadSeedFromDisk());
+      const path = 'content/discover.json';
+      final decoded = jsonDecode(docs[path]!) as Map<String, dynamic>;
+      var retagged = 0;
+      final bucket = (decoded['items'] as List).first as Map<String, dynamic>;
+      for (final program in bucket['programs'] as List) {
+        for (final season in (program as Map)['seasons'] as List) {
+          for (final episode in (season as Map)['episodes'] as List) {
+            final recap = (episode as Map)['recap'] as Map<String, dynamic>?;
+            if (recap == null) continue;
+            recap['summaryMethod'] = 'aiAssisted';
+            recap['reviewStatus'] = 'pending';
+            recap['generatedAt'] = '2026-08-30T00:00:00Z';
+            retagged++;
+          }
+        }
+      }
+      expect(retagged, greaterThan(0), reason: '시드에 리캡이 없으면 이 테스트는 무의미합니다');
+      docs[path] = jsonEncode(decoded);
+
+      final app = await buildTestApp(documents: docs);
       addTearDown(app.dispose);
 
       await pumpScreen(tester, app, const HomeScreen());
@@ -91,8 +122,23 @@ void main() {
       expect(
         find.byType(ProgramRecapCard),
         findsNothing,
-        reason: '검수 전 리캡이 화면에 나오면 안 됩니다',
+        reason: '검수 전 AI 리캡이 화면에 나오면 안 됩니다',
       );
+    });
+
+    testWidgets('사람이 쓴 리캡은 검수 전이라도 보여준다', (tester) async {
+      // The counterpart, and the reason the rule had to be narrowed. Every
+      // record in the shipped seed is `manual` + `pending`, so a gate keyed on
+      // review status alone hid hand-written text as if a model had produced
+      // it — and because it was applied at one of ten content types, this one
+      // section went dark while nine identical records rendered fine.
+      final app = await buildTestApp();
+      addTearDown(app.dispose);
+
+      await pumpScreen(tester, app, const HomeScreen());
+      await settle(tester);
+
+      expect(find.byType(ProgramRecapCard), findsOneWidget);
     });
 
     testWidgets('갱신 상태를 앱바에 표시한다', (tester) async {
