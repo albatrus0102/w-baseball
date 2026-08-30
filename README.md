@@ -382,4 +382,5 @@ T1~T5는 개정 명세의 두 사용자군 기준 과업이고, M1~M5는 최초 
 | [docs/task-benchmarks.md](docs/task-benchmarks.md) | 대표 과업 경로와 측정값 |
 | [docs/user-testing-plan.md](docs/user-testing-plan.md) | 사용성 점검 계획 (미수행) |
 | [docs/build-and-run.md](docs/build-and-run.md) | Android 실행·빌드·문제 해결 |
+| [docs/mobile-workflow.md](docs/mobile-workflow.md) | **폰에서만** 고치고 빌드하고 설치하기 |
 | [docs/ios-port.md](docs/ios-port.md) | iOS 확장 절차 |
