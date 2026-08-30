@@ -79,4 +79,60 @@ void main() {
     expect(semantics.label, contains('갱신'));
     expect(semantics.label, isNot(contains('확인')));
   });
+
+  // F-1a regression. Both badges together are what overflowed a narrow phone
+  // at high text scale: the Row gave the source text a Flexible, but neither
+  // badge could shrink, so at 2.0x their combined intrinsic width alone
+  // exceeded the screen before the text even mattered.
+  testWidgets(
+    '오래된 정보와 데모 배지가 동시에 떠도 좁은 화면·큰 글자에서 넘치지 않는다',
+    (tester) async {
+      final stale = Provenance(
+        sourceName: 'demo-fixture',
+        sourceUrl: 'https://example.test/detail',
+        fetchedAt: now.subtract(const Duration(days: 2)),
+        isDemo: true,
+      );
+
+      // Constrains the actual test surface, not just the MediaQuery data
+      // handed to descendants — a MediaQuery.copyWith(size: ...) override
+      // alone does not change the root RenderView's box constraints, so it
+      // would not have reproduced the overflow this test exists to catch.
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: WbTheme.light(),
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: const TextScaler.linear(2.0)),
+            child: child ?? const SizedBox.shrink(),
+          ),
+          home: Scaffold(
+            // 280 stands in for what's actually left after a real card's
+            // side padding and screen gutters eat into the 360dp probe
+            // width — a bare 360 here (no surrounding chrome) does not
+            // reproduce the overflow the audit measured on-screen.
+            body: SizedBox(
+              width: 280,
+              child: WbSourceLine(provenance: stale, now: now),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // No RenderFlex overflow was thrown during layout/paint.
+      expect(tester.takeException(), isNull);
+
+      // Not just "didn't overflow" — both labels must still be fully present.
+      // A fix that shrank or dropped a badge to avoid overflow would fail
+      // here even though the overflow assertion above would pass.
+      expect(find.text('오래된 정보'), findsOneWidget);
+      expect(find.text('데모 데이터'), findsOneWidget);
+    },
+  );
 }

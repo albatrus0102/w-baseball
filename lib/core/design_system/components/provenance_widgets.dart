@@ -45,35 +45,40 @@ class WbSourceLine extends StatelessWidget {
     final verb = provenance.isHumanConfirmed ? '확인' : '갱신';
 
     final children = <Widget>[
-      Flexible(
-        child: Text(
-          '출처 ${_sourceLabel(provenance.sourceName)} · $confirmed $verb',
-          style: WbType.micro.copyWith(color: c.inkMuted),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
+      Text(
+        '출처 ${_sourceLabel(provenance.sourceName)} · $confirmed $verb',
+        style: WbType.micro.copyWith(color: c.inkMuted),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
-      if (isStale) ...<Widget>[
-        const SizedBox(width: WbSpace.sm),
+      if (isStale)
         WbBadge(
           label: '오래된 정보',
           tone: WbBadgeTone.warning,
           icon: Icons.schedule_rounded,
           dense: true,
         ),
-      ],
-      if (provenance.isDemo) ...<Widget>[
-        const SizedBox(width: WbSpace.sm),
+      if (provenance.isDemo)
         const WbBadge(
           label: '데모 데이터',
           tone: WbBadgeTone.muted,
           icon: Icons.science_outlined,
           dense: true,
         ),
-      ],
     ];
 
-    final row = Row(mainAxisSize: MainAxisSize.min, children: children);
+    // Wrap, not Row+Flexible: the badges have no slack to give up. Shrinking
+    // '데모 데이터' to fit would risk clipping the one label the provenance
+    // policy says must never disappear, so instead a badge that doesn't fit
+    // on the text's line drops to a line of its own — same trick already
+    // used below for WbSummaryMethodBadge. Text keeps its own maxLines/
+    // ellipsis, so it still degrades before it ever pushes a badge off.
+    final row = Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: WbSpace.sm,
+      runSpacing: WbSpace.xs,
+      children: children,
+    );
 
     if (onTap == null) {
       return Semantics(
