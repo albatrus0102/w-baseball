@@ -177,6 +177,18 @@ Future<TestApp> buildTestApp({
     lastSuccessfulSyncAt: lastSync,
   );
 
+  // Built unconditionally, not only when `seedAssets` is true: any app code
+  // that reads `seedSourceProvider` directly — not only the sync engine —
+  // must get this disk-backed source rather than falling through to the
+  // provider's real default, which resolves through `rootBundle`. Seed files
+  // are read straight from disk rather than through `rootBundle` because the
+  // real asset channel resolves only once per test isolate — a second widget
+  // test that touched it would hang instead of failing.
+  final seedSource = BundledSeedDataSource(
+    contract: resolvedConfig.dataContract,
+    bundle: MapAssetBundle(documents ?? loadSeedFromDisk()),
+  );
+
   final container = ProviderContainer(
     overrides: [
       appConfigProvider.overrideWithValue(resolvedConfig),
@@ -187,6 +199,7 @@ Future<TestApp> buildTestApp({
       analyticsProvider.overrideWithValue(const NoopAnalyticsService()),
       // No network source, so nothing in a widget test can reach out.
       dataSourcesProvider.overrideWithValue(const []),
+      seedSourceProvider.overrideWithValue(seedSource),
       // Pins every screen's clock. Screens ask `clockProvider` rather than
       // `DateTime.now()`, so this is what keeps a golden containing "방금 확인"
       // from becoming "5시간 전 확인" as the afternoon wears on.
@@ -195,17 +208,9 @@ Future<TestApp> buildTestApp({
   );
 
   if (seedAssets || documents != null) {
-    // Seed files are read straight from disk rather than through `rootBundle`.
-    // The asset channel resolves only once per test isolate, so a second
-    // widget test that touched it would hang instead of failing.
-    final source = BundledSeedDataSource(
-      contract: resolvedConfig.dataContract,
-      bundle: MapAssetBundle(documents ?? loadSeedFromDisk()),
-    );
-
     final engine = SyncEngine(db: db, config: resolvedConfig);
     await engine.refreshSource(
-      source,
+      seedSource,
       // Frozen too: months are derived from the clock, so a real-time month
       // boundary would silently change which fixtures a golden contains.
       scope: GameSyncScope(
@@ -217,7 +222,7 @@ Future<TestApp> buildTestApp({
       db: db,
       supportsSchemaVersion: resolvedConfig.dataContract.supports,
     );
-    await contentEngine.syncFrom(source);
+    await contentEngine.syncFrom(seedSource);
 
     if (frozenNow != null) {
       await _freezeProvenanceClocks(db, frozenNow);

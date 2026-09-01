@@ -454,6 +454,47 @@ final leaderboardsProvider = FutureProvider.family<List<Leaderboard>, String>((
   return ref.watch(competitionRepositoryProvider).leaderboards(seasonId);
 });
 
+/// The season used by the games tab's 순위 section: the ongoing domestic
+/// season with standings if one exists, otherwise the most recent season
+/// (any level) that has standings, otherwise null.
+///
+/// Unlike `_mySeasonProvider` in `my_baseball_screen.dart`, this must resolve
+/// with no followed team at all — 순위 is a always-present sibling of 일정/결과
+/// on the 경기 tab, not something gated on having followed a team.
+///
+/// `availableStandingSeasons()` lists which seasons the bundled seed ships a
+/// standings partition for; each candidate is then read back from the synced
+/// database (via `competitionDetailProvider`) to get its level/phase and to
+/// skip a season whose file listed it but which produced no rows. A real
+/// source, once connected, would extend this by also reading
+/// `manifestSourceProvider.availableStandingSeasons()` the same way.
+final standingsSeasonProvider = FutureProvider.autoDispose<String?>((
+  ref,
+) async {
+  final seasonIds = await ref
+      .watch(seedSourceProvider)
+      .availableStandingSeasons();
+  if (seasonIds.isEmpty) return null;
+
+  Season? ongoingDomestic;
+  Season? mostRecentWithStandings;
+  for (final id in seasonIds) {
+    final detail = await ref.watch(competitionDetailProvider(id).future);
+    if (detail == null || detail.standings.isEmpty) continue;
+    final season = detail.season;
+    if (mostRecentWithStandings == null ||
+        season.year > mostRecentWithStandings.year) {
+      mostRecentWithStandings = season;
+    }
+    if (ongoingDomestic == null &&
+        detail.competition.level == CompetitionLevel.domestic &&
+        season.phase == CompetitionPhase.ongoing) {
+      ongoingDomestic = season;
+    }
+  }
+  return (ongoingDomestic ?? mostRecentWithStandings)?.id;
+});
+
 final teamRegionsProvider = StreamProvider<List<String>>((ref) {
   return ref.watch(teamRepositoryProvider).watchRegions();
 });

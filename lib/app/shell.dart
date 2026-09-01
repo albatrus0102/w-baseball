@@ -43,7 +43,7 @@ class WbAppShell extends ConsumerWidget {
       label: '경기',
       icon: Icons.sports_baseball_outlined,
       activeIcon: Icons.sports_baseball_rounded,
-      semantic: '경기 탭. 일정과 결과',
+      semantic: '경기 탭. 일정·결과·순위',
     ),
     WbTabSpec(
       label: '마이야구',

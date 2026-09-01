@@ -176,7 +176,17 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: <RouteBase>[
               GoRoute(
                 path: WbRoutes.games,
-                builder: (context, state) => const GamesScreen(),
+                // `?section=standings` selects the 순위 segment without a
+                // sub-route: `:id` below already claims the next path
+                // segment for a game id, and a `/games/standings` sub-route
+                // would push a new page over the list instead of switching
+                // the existing segmented control.
+                builder: (context, state) => GamesScreen(
+                  initialSection:
+                      state.uri.queryParameters['section'] == 'standings'
+                      ? GamesSection.standings
+                      : null,
+                ),
                 routes: <RouteBase>[
                   GoRoute(
                     path: ':id',
@@ -223,10 +233,6 @@ final routerProvider = Provider<GoRouter>((ref) {
                         const NotificationSettingsScreen(),
                   ),
                   GoRoute(
-                    path: 'sources',
-                    builder: (context, state) => const DataSourcesScreen(),
-                  ),
-                  GoRoute(
                     path: 'submit',
                     builder: (context, state) => const SubmissionsScreen(),
                   ),
@@ -261,6 +267,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) =>
             VenueScreen(venueId: state.pathParameters['id']!),
+      ),
+      // Also reachable from the games tab's 순위 section (see
+      // `_StandingsSection` in `games_screen.dart`), which is a different
+      // shell branch than 더보기. Root-navigated like the three routes above
+      // so opening it never switches the selected bottom tab out from under
+      // whichever tab the reader was actually on.
+      GoRoute(
+        path: WbRoutes.dataSources,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const DataSourcesScreen(),
       ),
 
       // Sponsor / commerce routes are deliberately absent. The feature flag is

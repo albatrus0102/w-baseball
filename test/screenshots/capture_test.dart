@@ -263,6 +263,46 @@ void main() {
         seeded: false,
       ),
     );
+
+    // The new entry point this feature adds: 순위, reachable as a segment
+    // rather than gated behind a followed team. No team is followed in any
+    // of these captures, so this is exactly the state that used to make
+    // standings unreachable — see `GamesTabState.section` in
+    // `games_screen.dart`.
+    testWidgets(
+      '순위 · 라이트',
+      (t) => capture(
+        t,
+        name: 'games_standings',
+        screen: const GamesScreen(initialSection: GamesSection.standings),
+        audience: player,
+      ),
+    );
+
+    testWidgets(
+      '순위 · 다크',
+      (t) => capture(
+        t,
+        name: 'games_standings',
+        screen: const GamesScreen(initialSection: GamesSection.standings),
+        audience: player,
+        brightness: Brightness.dark,
+      ),
+    );
+
+    // Same failure this feature exists to close, made visible: no standings
+    // anywhere, and the segment must still be there with the existing empty
+    // state rather than disappearing.
+    testWidgets(
+      '순위 · 데이터 없음',
+      (t) => capture(
+        t,
+        name: 'games_standings_empty',
+        screen: const GamesScreen(initialSection: GamesSection.standings),
+        audience: player,
+        seeded: false,
+      ),
+    );
   });
 
   group('발견', () {

@@ -9,12 +9,30 @@ import '../../app/router.dart';
 import '../../app/shell.dart';
 import '../../core/design_system/components/game_widgets.dart';
 import '../../core/design_system/components/primitives.dart';
+import '../../core/design_system/components/standings_widgets.dart';
 import '../../core/design_system/theme.dart';
 import '../../core/design_system/tokens.dart';
 import '../../core/design_system/typography.dart';
 import '../../core/utils/kst.dart';
 import '../../data/models/domain.dart';
 import '../../data/repositories/game_repository.dart';
+import '../competitions/leaderboard_boards.dart';
+
+/// `일정` / `결과` / `순위` — the three sections of the 경기 tab.
+///
+/// `순위` used to be reachable only through data-gated cards (a followed team
+/// on 홈, or 마이야구) — so with no team followed, it was not reachable at
+/// all. It is a named, always-present sibling of the other two now, exactly
+/// as `WbAppShell`'s tab semantics already claimed.
+enum GamesSection { schedule, results, standings }
+
+/// `리그 순위` / `개인 순위` — the nested choice inside the 순위 section.
+///
+/// Named `league`, not `team`, because "팀 순위" reads as "my team's row" —
+/// which is exactly the misreading that made the existing 홈 card
+/// (`내 팀 순위`) invisible as a route to the *whole* table. This view always
+/// renders every team, never scoped to a followed one; the name has to say so.
+enum GamesStandingsView { league, individual }
 
 /// Filter + date state for the games tab.
 ///
@@ -24,7 +42,8 @@ import '../../data/repositories/game_repository.dart';
 class GamesTabState {
   const GamesTabState({
     required this.dayKey,
-    this.showResults = false,
+    this.section = GamesSection.schedule,
+    this.standingsView = GamesStandingsView.league,
     this.competitionIds = const <String>[],
     this.teamIds = const <String>[],
     this.statuses = const <GameStatus>[],
@@ -40,8 +59,11 @@ class GamesTabState {
   /// user expects is worse than the empty day it avoids.
   final bool landedOnNearest;
 
-  /// `일정` vs `결과` segment.
-  final bool showResults;
+  /// `일정` / `결과` / `순위` segment.
+  final GamesSection section;
+
+  /// `리그 순위` / `개인 순위`, nested inside the `순위` segment.
+  final GamesStandingsView standingsView;
 
   final List<String> competitionIds;
   final List<String> teamIds;
@@ -51,7 +73,8 @@ class GamesTabState {
 
   GamesTabState copyWith({
     String? dayKey,
-    bool? showResults,
+    GamesSection? section,
+    GamesStandingsView? standingsView,
     List<String>? competitionIds,
     List<String>? teamIds,
     List<GameStatus>? statuses,
@@ -62,7 +85,8 @@ class GamesTabState {
   }) {
     return GamesTabState(
       dayKey: dayKey ?? this.dayKey,
-      showResults: showResults ?? this.showResults,
+      section: section ?? this.section,
+      standingsView: standingsView ?? this.standingsView,
       competitionIds: competitionIds ?? this.competitionIds,
       teamIds: teamIds ?? this.teamIds,
       statuses: statuses ?? this.statuses,
@@ -79,13 +103,16 @@ class GamesTabState {
     statuses: statuses,
     level: level,
     favoritesOnly: favoritesOnly,
-    ascending: !showResults,
+    ascending: section != GamesSection.results,
   );
 
   int get activeFilterCount => toQuery().activeFilterCount;
 
-  GamesTabState cleared() =>
-      GamesTabState(dayKey: dayKey, showResults: showResults);
+  GamesTabState cleared() => GamesTabState(
+    dayKey: dayKey,
+    section: section,
+    standingsView: standingsView,
+  );
 }
 
 class GamesTabController extends Notifier<GamesTabState> {
@@ -120,8 +147,11 @@ class GamesTabController extends Notifier<GamesTabState> {
     state = state.copyWith(dayKey: dayKey, landedOnNearest: false);
   }
 
-  void setSegment(bool showResults) =>
-      state = state.copyWith(showResults: showResults);
+  void setSection(GamesSection section) =>
+      state = state.copyWith(section: section);
+
+  void setStandingsView(GamesStandingsView view) =>
+      state = state.copyWith(standingsView: view);
 
   void toggleCompetition(String id) {
     final next = state.competitionIds.toList();
@@ -165,86 +195,139 @@ final _monthGameDaysProvider = StreamProvider.family<Set<String>, String>((
   return ref.watch(gameRepositoryProvider).watchGameDays(monthKey);
 });
 
-class GamesScreen extends ConsumerWidget {
-  const GamesScreen({super.key});
+class GamesScreen extends ConsumerStatefulWidget {
+  const GamesScreen({super.key, this.initialSection});
+
+  /// From `?section=standings` on a deep link (see `router.dart`). Applied
+  /// once per navigation to this route rather than read directly in `build`,
+  /// because `gamesTabProvider`'s selected section is meant to persist across
+  /// tab switches — a stale query parameter on a later, unrelated rebuild
+  /// must not silently flip the section back.
+  final GamesSection? initialSection;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<GamesScreen> createState() => _GamesScreenState();
+}
+
+class _GamesScreenState extends ConsumerState<GamesScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _applyInitialSection();
+  }
+
+  @override
+  void didUpdateWidget(GamesScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialSection != null &&
+        widget.initialSection != oldWidget.initialSection) {
+      _applyInitialSection();
+    }
+  }
+
+  void _applyInitialSection() {
+    final section = widget.initialSection;
+    if (section == null) return;
+    // Deferred: this can run before the first frame, and Riverpod forbids
+    // mutating a provider while the widget tree is still building.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(gamesTabProvider.notifier).setSection(section);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(gamesTabProvider);
     final controller = ref.read(gamesTabProvider.notifier);
     final now = ref.watch(clockProvider)();
-    final games = ref.watch(gamesProvider(state.toQuery()));
+    final onStandings = state.section == GamesSection.standings;
+    // Only the schedule/results sections need the game list; watching it
+    // unconditionally would run a query the 순위 section never uses.
+    final games = onStandings
+        ? null
+        : ref.watch(gamesProvider(state.toQuery()));
+
+    final double scaleBump = (MediaQuery.textScalerOf(context).scale(1) - 1)
+        .clamp(0, 1);
 
     return Scaffold(
       appBar: WbPrimaryAppBar(
         title: '경기',
         actions: <Widget>[
-          IconButton(
-            tooltip: '오늘로',
-            onPressed: controller.jumpToToday,
-            icon: const Icon(Icons.today_rounded),
-          ),
+          // Date-scoped, like the strip and filter bar below — hidden on 순위,
+          // which has no date to jump to.
+          if (!onStandings)
+            IconButton(
+              tooltip: '오늘로',
+              onPressed: controller.jumpToToday,
+              icon: const Icon(Icons.today_rounded),
+            ),
         ],
         bottom: PreferredSize(
           preferredSize: Size.fromHeight(
-            104 +
-                60 *
-                    (MediaQuery.textScalerOf(context).scale(1) - 1).clamp(0, 1),
+            onStandings ? 56 + 20 * scaleBump : 104 + 60 * scaleBump,
           ),
           child: Column(
             children: <Widget>[
               _Segment(
-                showResults: state.showResults,
-                onChanged: controller.setSegment,
+                section: state.section,
+                onChanged: controller.setSection,
               ),
-              _DateStrip(dayKey: state.dayKey, onSelect: controller.setDay),
+              // Hidden on 순위: a season table has no single date, so a date
+              // strip above it would claim a date-scope this data doesn't have.
+              if (!onStandings)
+                _DateStrip(dayKey: state.dayKey, onSelect: controller.setDay),
             ],
           ),
         ),
       ),
-      body: Column(
-        children: <Widget>[
-          // Says out loud that the app chose this date. Landing somewhere the
-          // user did not ask for is only acceptable if they can see that it
-          // happened and get back in one tap.
-          if (state.landedOnNearest)
-            _LandedNotice(
-              dayKey: state.dayKey,
-              onToday: controller.jumpToToday,
-            ),
-          _FilterBar(state: state, controller: controller),
-          Expanded(
-            child: games.when(
-              loading: () => ListView.builder(
-                padding: const EdgeInsets.all(WbSpace.screen),
-                itemCount: 4,
-                itemBuilder: (context, _) => const Padding(
-                  padding: EdgeInsets.only(bottom: WbSpace.sm),
-                  child: WbGameRowSkeleton(),
+      body: onStandings
+          ? _StandingsSection(state: state, controller: controller, now: now)
+          : Column(
+              children: <Widget>[
+                // Says out loud that the app chose this date. Landing
+                // somewhere the user did not ask for is only acceptable if
+                // they can see that it happened and get back in one tap.
+                if (state.landedOnNearest)
+                  _LandedNotice(
+                    dayKey: state.dayKey,
+                    onToday: controller.jumpToToday,
+                  ),
+                _FilterBar(state: state, controller: controller),
+                Expanded(
+                  child: games!.when(
+                    loading: () => ListView.builder(
+                      padding: const EdgeInsets.all(WbSpace.screen),
+                      itemCount: 4,
+                      itemBuilder: (context, _) => const Padding(
+                        padding: EdgeInsets.only(bottom: WbSpace.sm),
+                        child: WbGameRowSkeleton(),
+                      ),
+                    ),
+                    error: (error, _) => WbEmptyState(
+                      icon: Icons.cloud_off_rounded,
+                      tone: WbBadgeTone.danger,
+                      title: '경기 목록을 불러오지 못했습니다',
+                      message: '저장된 데이터를 다시 읽어보세요.',
+                      primaryLabel: '다시 시도',
+                      onPrimary: () => ref.invalidate(gamesProvider),
+                    ),
+                    data: (list) =>
+                        _GamesList(games: list, state: state, now: now),
+                  ),
                 ),
-              ),
-              error: (error, _) => WbEmptyState(
-                icon: Icons.cloud_off_rounded,
-                tone: WbBadgeTone.danger,
-                title: '경기 목록을 불러오지 못했습니다',
-                message: '저장된 데이터를 다시 읽어보세요.',
-                primaryLabel: '다시 시도',
-                onPrimary: () => ref.invalidate(gamesProvider),
-              ),
-              data: (list) => _GamesList(games: list, state: state, now: now),
+              ],
             ),
-          ),
-        ],
-      ),
     );
   }
 }
 
 class _Segment extends StatelessWidget {
-  const _Segment({required this.showResults, required this.onChanged});
+  const _Segment({required this.section, required this.onChanged});
 
-  final bool showResults;
-  final ValueChanged<bool> onChanged;
+  final GamesSection section;
+  final ValueChanged<GamesSection> onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -255,14 +338,202 @@ class _Segment extends StatelessWidget {
         WbSpace.screen,
         WbSpace.sm,
       ),
-      child: SegmentedButton<bool>(
-        segments: const <ButtonSegment<bool>>[
-          ButtonSegment<bool>(value: false, label: Text('일정')),
-          ButtonSegment<bool>(value: true, label: Text('결과')),
+      child: SegmentedButton<GamesSection>(
+        segments: const <ButtonSegment<GamesSection>>[
+          ButtonSegment<GamesSection>(
+            value: GamesSection.schedule,
+            label: Text('일정'),
+          ),
+          ButtonSegment<GamesSection>(
+            value: GamesSection.results,
+            label: Text('결과'),
+          ),
+          ButtonSegment<GamesSection>(
+            value: GamesSection.standings,
+            label: Text('순위'),
+          ),
         ],
-        selected: <bool>{showResults},
+        selected: <GamesSection>{section},
         onSelectionChanged: (selection) => onChanged(selection.first),
         showSelectedIcon: false,
+      ),
+    );
+  }
+}
+
+/// The 순위 section: a nested `리그 순위` / `개인 순위` choice, plus the demo
+/// notice every domestic standing currently needs.
+///
+/// Never data-gated. `standingsSeasonProvider` resolving to `null` is a
+/// legitimate, common state — a fresh bundle with no synced standings yet —
+/// and this still renders the segment plus an empty state rather than
+/// disappearing, which is the exact failure this feature exists to fix.
+class _StandingsSection extends ConsumerWidget {
+  const _StandingsSection({
+    required this.state,
+    required this.controller,
+    required this.now,
+  });
+
+  final GamesTabState state;
+  final GamesTabController controller;
+  final DateTime now;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final seasonAsync = ref.watch(standingsSeasonProvider);
+
+    return Column(
+      children: <Widget>[
+        const _StandingsDemoNotice(),
+        seasonAsync.maybeWhen(
+          data: (seasonId) => seasonId == null
+              ? const SizedBox.shrink()
+              : _StandingsViewSegment(
+                  view: state.standingsView,
+                  onChanged: controller.setStandingsView,
+                ),
+          orElse: () => const SizedBox.shrink(),
+        ),
+        Expanded(
+          child: seasonAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, _) => WbEmptyState(
+              icon: Icons.cloud_off_rounded,
+              tone: WbBadgeTone.danger,
+              title: '순위를 불러오지 못했습니다',
+            ),
+            data: (seasonId) {
+              if (seasonId == null) {
+                // The existing empty state, reused rather than hidden — see
+                // the class doc above.
+                return WbStandingsTable(
+                  standings: const <StandingRow>[],
+                  now: now,
+                );
+              }
+              return state.standingsView == GamesStandingsView.league
+                  ? _LeagueStandingsView(seasonId: seasonId, now: now)
+                  : WbLeaderboardBoards(seasonId: seasonId);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StandingsViewSegment extends StatelessWidget {
+  const _StandingsViewSegment({required this.view, required this.onChanged});
+
+  final GamesStandingsView view;
+  final ValueChanged<GamesStandingsView> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        WbSpace.screen,
+        WbSpace.sm,
+        WbSpace.screen,
+        WbSpace.sm,
+      ),
+      child: SegmentedButton<GamesStandingsView>(
+        segments: const <ButtonSegment<GamesStandingsView>>[
+          ButtonSegment<GamesStandingsView>(
+            value: GamesStandingsView.league,
+            label: Text('리그 순위'),
+          ),
+          ButtonSegment<GamesStandingsView>(
+            value: GamesStandingsView.individual,
+            label: Text('개인 순위'),
+          ),
+        ],
+        selected: <GamesStandingsView>{view},
+        onSelectionChanged: (selection) => onChanged(selection.first),
+        showSelectedIcon: false,
+      ),
+    );
+  }
+}
+
+/// The whole season's team table — every team, never scoped to a followed
+/// one. Wraps `WbStandingsTable` with this section's own loading/error states,
+/// mirroring how `CompetitionScreen`'s 순위 tab handles the same provider.
+class _LeagueStandingsView extends ConsumerWidget {
+  const _LeagueStandingsView({required this.seasonId, required this.now});
+
+  final String seasonId;
+  final DateTime now;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final detail = ref.watch(competitionDetailProvider(seasonId));
+    return detail.when(
+      loading: () => ListView.builder(
+        padding: const EdgeInsets.all(WbSpace.screen),
+        itemCount: 4,
+        itemBuilder: (context, _) => const Padding(
+          padding: EdgeInsets.only(bottom: WbSpace.sm),
+          child: WbSkeleton(height: 44, borderRadius: WbRadius.cardAll),
+        ),
+      ),
+      error: (error, _) => WbEmptyState(
+        icon: Icons.cloud_off_rounded,
+        tone: WbBadgeTone.danger,
+        title: '순위를 불러오지 못했습니다',
+      ),
+      data: (value) => WbStandingsTable(
+        standings: value?.standings ?? const <StandingRow>[],
+        now: now,
+        onTeamTap: (id) => context.push(WbRoutes.team(id)),
+      ),
+    );
+  }
+}
+
+/// Same shape as `_LandedNotice` below — a quiet inline banner with a way to
+/// act on what it says. All domestic standings are demo data today, and the
+/// 경기 tab is where that fact is easiest to miss, since the badges on the
+/// table and cards below sit past a scroll.
+class _StandingsDemoNotice extends StatelessWidget {
+  const _StandingsDemoNotice();
+
+  @override
+  Widget build(BuildContext context) {
+    final c = WbTheme.of(context);
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(
+        WbSpace.screen,
+        WbSpace.sm,
+        WbSpace.screen,
+        0,
+      ),
+      padding: const EdgeInsets.symmetric(
+        horizontal: WbSpace.md,
+        vertical: WbSpace.sm,
+      ),
+      decoration: BoxDecoration(
+        color: c.brandSoft,
+        borderRadius: WbRadius.chipAll,
+      ),
+      child: Row(
+        children: <Widget>[
+          Icon(Icons.science_outlined, size: 15, color: c.brand),
+          const SizedBox(width: WbSpace.sm),
+          Expanded(
+            child: Text(
+              '지금 보이는 순위는 앱 동작 확인용 데모 데이터입니다. '
+              '공식 기록이 연동되면 교체됩니다.',
+              style: WbType.caption.copyWith(color: c.ink),
+            ),
+          ),
+          TextButton(
+            onPressed: () => context.push(WbRoutes.dataSources),
+            child: const Text('데이터 출처'),
+          ),
+        ],
       ),
     );
   }
