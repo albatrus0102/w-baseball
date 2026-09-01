@@ -120,13 +120,13 @@ SEED_GENERATED_AT = "2026-08-30T00:00:00Z"
 
 # Measured on the dev box this gate was built on, tools resolved via
 # FLUTTER_ROOT, on a tree with real uncommitted work in it (not a clean
-# checkout): pub get ~2s, codegen check ~3s, format ~4s, analyze ~10s, Dart
-# tests ~35s, the three Python-only checks ~2s combined -- about 57s end to
-# end. Recorded here so the next person doesn't have to re-measure "is this
-# gate slow enough that people will skip it" (it isn't). If a step's typical
-# cost changes by more than a little, update this comment alongside it --
-# a stale number here is a smaller version of the same trust problem as a
-# stale contrast baseline entry.
+# checkout): declared-assets check <1s, pub get ~2s, codegen check ~3s,
+# format ~4s, analyze ~10s, Dart tests ~35s, the remaining Python-only checks
+# ~2s combined -- about 57s end to end. Recorded here so the next person
+# doesn't have to re-measure "is this gate slow enough that people will skip
+# it" (it isn't). If a step's typical cost changes by more than a little,
+# update this comment alongside it -- a stale number here is a smaller
+# version of the same trust problem as a stale contrast baseline entry.
 
 
 # --------------------------------------------------------------------------
@@ -349,6 +349,20 @@ def _python_argv(*args: str) -> Optional[List[str]]:
 
 
 STEPS: List[Step] = [
+    Step(
+        "declared_assets_tracked",
+        "선언된 asset 경로 git 추적 확인",
+        # Runs first, and before any flutter step: it's the check that would
+        # have caught `assets/icons/` (declared in pubspec.yaml, present on
+        # disk, tracked by git nowhere) before spending a minute on
+        # everything else. It answers "would a fresh clone have this path",
+        # which `flutter analyze` against *this* working tree cannot -- see
+        # scripts/validate/check_declared_assets.py's module docstring for
+        # the incident this closes and why the scope stays pubspec.yaml's
+        # assets: list rather than trying to generalise further.
+        lambda: _python_argv("scripts/validate/check_declared_assets.py"),
+        tool_kind="python",
+    ),
     Step(
         "flutter_pub_get",
         "의존성 설치",
