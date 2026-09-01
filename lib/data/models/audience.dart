@@ -207,6 +207,7 @@ class AudiencePreference {
     this.searchRadiusKm = 40,
     this.useDeviceLocation = false,
     this.densityOverride,
+    this.modeNudgeDismissed = false,
   });
 
   final AudienceMode mode;
@@ -239,14 +240,28 @@ class AudiencePreference {
   /// explicitly, so switching mode later does not silently undo their choice.
   final WbDensity? densityOverride;
 
+  /// The user closed the home "모드 바꾸기" nudge once. Only meaningful while
+  /// [isConfigured] is false — see [showsModeNudge].
+  final bool modeNudgeDismissed;
+
   /// The density the UI should actually use.
   WbDensity get density => densityOverride ?? mode.defaultDensity;
 
   bool get hasRegion => regionCode != null && regionCode!.isNotEmpty;
 
-  /// True when the user has told us anything at all. Drives whether the home
-  /// screen shows the "모드 바꾸기" nudge.
+  /// True when the user has told us anything at all through onboarding.
   bool get isConfigured => onboardingCompleted && !onboardingSkipped;
+
+  /// Drives whether the home screen shows the "모드 바꾸기" nudge.
+  ///
+  /// A user who finished onboarding already chose a mode, so the nudge would
+  /// only ever be telling them something they already know — that reading
+  /// never changes, so it must not be a permanent fixture of the number-one
+  /// position on home. Someone who *skipped* onboarding never chose, so they
+  /// still need a way in; they get the nudge, but only until they dismiss it
+  /// once, since 시작 화면 설정 (더보기 → 시작 화면과 지역) reaches the same
+  /// picker for anyone who wants it back later.
+  bool get showsModeNudge => !isConfigured && !modeNudgeDismissed;
 
   AudiencePreference copyWith({
     AudienceMode? mode,
@@ -261,6 +276,7 @@ class AudiencePreference {
     int? searchRadiusKm,
     bool? useDeviceLocation,
     WbDensity? densityOverride,
+    bool? modeNudgeDismissed,
     bool clearRegion = false,
     bool clearDensityOverride = false,
   }) {
@@ -280,6 +296,7 @@ class AudiencePreference {
       densityOverride: clearDensityOverride
           ? null
           : (densityOverride ?? this.densityOverride),
+      modeNudgeDismissed: modeNudgeDismissed ?? this.modeNudgeDismissed,
     );
   }
 }

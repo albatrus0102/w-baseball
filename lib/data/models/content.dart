@@ -447,8 +447,13 @@ class EpisodeRecap {
 
   /// [teaser] is written to be spoiler-free, so it is what we show when the
   /// user has chosen to hide results.
+  ///
+  /// A demo recap has no real result to protect, so it is never masked here
+  /// either — kept in step with `FeaturedItem.isMasked`, which this backs.
   String? maskedHeadline(SpoilerPolicy policy) =>
-      policy.shouldMask(meta.spoilerLevel) ? teaser : (whatHappened ?? teaser);
+      !meta.isDemo && policy.shouldMask(meta.spoilerLevel)
+      ? teaser
+      : (whatHappened ?? teaser);
 }
 
 /// An official clip or full-episode link. We store metadata and link out.

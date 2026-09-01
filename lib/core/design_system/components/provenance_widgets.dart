@@ -305,6 +305,9 @@ class _WbSpoilerVeilState extends State<WbSpoilerVeil> {
     if (!widget.masked || _revealed) return widget.child;
 
     final c = WbTheme.of(context);
+    final labelStyle = WbType.caption.copyWith(color: c.inkMuted);
+    final revealStyle = WbType.captionStrong.copyWith(color: c.brand);
+
     return Semantics(
       label: '${widget.label}. ${widget.revealLabel}하려면 두 번 탭하세요.',
       button: true,
@@ -325,39 +328,56 @@ class _WbSpoilerVeilState extends State<WbSpoilerVeil> {
                     widget.onRevealed?.call();
                   },
                   // The veil covers whatever it is hiding, which may be a very
-                  // short card. Scaling down rather than overflowing keeps the
-                  // message readable without clipping it.
-                  child: Center(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Padding(
-                        padding: const EdgeInsets.all(WbSpace.md),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: <Widget>[
-                            Icon(
-                              Icons.visibility_off_outlined,
-                              size: 20,
-                              color: c.inkMuted,
-                            ),
-                            const SizedBox(height: WbSpace.sm),
-                            Text(
-                              widget.label,
-                              textAlign: TextAlign.center,
-                              style: WbType.caption.copyWith(color: c.inkMuted),
-                            ),
-                            const SizedBox(height: WbSpace.sm),
-                            Text(
-                              widget.revealLabel,
-                              style: WbType.captionStrong.copyWith(
-                                color: c.brand,
-                              ),
-                            ),
-                          ],
+                  // short card — sometimes only one line tall. It used to
+                  // answer that with `FittedBox(fit: scaleDown)`, but that
+                  // counter-scales text, which cancels the system font-size
+                  // setting the same way this codebase never allows it to for
+                  // body text. It also degraded badly in practice: over a
+                  // one-line teaser the icon, explanation and reveal action
+                  // were squeezed into that single line's height, rendering as
+                  // an illegible smudge rather than a bigger veil. The mask
+                  // itself is what matters, not the explanation sentence, so
+                  // when there is not enough room for the full explanation at
+                  // its real size, this drops straight to the reveal chip
+                  // alone instead of shrinking anything.
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final fitsExplanation = _fitsFullExplanation(
+                        constraints,
+                        labelStyle: labelStyle,
+                        revealStyle: revealStyle,
+                        textScaler: MediaQuery.textScalerOf(context),
+                      );
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(WbSpace.md),
+                          child: fitsExplanation
+                              ? Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: <Widget>[
+                                    Icon(
+                                      Icons.visibility_off_outlined,
+                                      size: 20,
+                                      color: c.inkMuted,
+                                    ),
+                                    const SizedBox(height: WbSpace.sm),
+                                    Text(
+                                      widget.label,
+                                      textAlign: TextAlign.center,
+                                      style: labelStyle,
+                                    ),
+                                    const SizedBox(height: WbSpace.sm),
+                                    Text(
+                                      widget.revealLabel,
+                                      style: revealStyle,
+                                    ),
+                                  ],
+                                )
+                              : Text(widget.revealLabel, style: revealStyle),
                         ),
-                      ),
-                    ),
+                      );
+                    },
                   ),
                 ),
               ),
@@ -366,6 +386,46 @@ class _WbSpoilerVeilState extends State<WbSpoilerVeil> {
         ),
       ),
     );
+  }
+
+  /// Whether the icon, [widget.label] and [widget.revealLabel] all fit inside
+  /// [constraints] at their real (unscaled) size.
+  ///
+  /// Measured with [TextPainter] rather than assumed from a fixed pixel
+  /// threshold, so a larger system font size — which this veil must never
+  /// counter-scale away — correctly needs more room and correctly falls back
+  /// to the compact chip sooner, instead of a stale constant clipping text at
+  /// some scales and wasting space at others.
+  bool _fitsFullExplanation(
+    BoxConstraints constraints, {
+    required TextStyle labelStyle,
+    required TextStyle revealStyle,
+    required TextScaler textScaler,
+  }) {
+    const horizontalPadding = WbSpace.md * 2;
+    const verticalPadding = WbSpace.md * 2;
+    final maxWidth = constraints.maxWidth - horizontalPadding;
+    final maxHeight = constraints.maxHeight - verticalPadding;
+    if (maxWidth <= 0 || maxHeight <= 0) return false;
+
+    final labelPainter = TextPainter(
+      text: TextSpan(text: widget.label, style: labelStyle),
+      textAlign: TextAlign.center,
+      textDirection: TextDirection.ltr,
+      textScaler: textScaler,
+    )..layout(maxWidth: maxWidth);
+
+    final revealPainter = TextPainter(
+      text: TextSpan(text: widget.revealLabel, style: revealStyle),
+      textDirection: TextDirection.ltr,
+      textScaler: textScaler,
+    )..layout(maxWidth: maxWidth);
+
+    const iconSize = 20.0;
+    const gap = WbSpace.sm;
+    final neededHeight =
+        iconSize + gap + labelPainter.height + gap + revealPainter.height;
+    return neededHeight <= maxHeight;
   }
 }
 

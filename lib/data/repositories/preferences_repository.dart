@@ -58,6 +58,7 @@ class SharedPrefsRepository implements PreferencesRepository {
   static const _kRadius = 'audience.searchRadiusKm';
   static const _kUseLocation = 'audience.useDeviceLocation';
   static const _kDensity = 'audience.density';
+  static const _kModeNudgeDismissed = 'audience.modeNudgeDismissed';
 
   static const _kNotifEnabled = 'notif.enabled';
   static const _kQuietStart = 'notif.quietStart';
@@ -110,6 +111,7 @@ class SharedPrefsRepository implements PreferencesRepository {
       densityOverride: _prefs.containsKey(_kDensity)
           ? WbDensity.parse(_prefs.getString(_kDensity))
           : null,
+      modeNudgeDismissed: _prefs.getBool(_kModeNudgeDismissed) ?? false,
     );
   }
 
@@ -138,6 +140,7 @@ class SharedPrefsRepository implements PreferencesRepository {
     } else {
       await _prefs.setString(_kDensity, p.densityOverride!.wireValue);
     }
+    await _prefs.setBool(_kModeNudgeDismissed, p.modeNudgeDismissed);
     _audience = p;
     _audienceController.add(p);
   }

@@ -120,7 +120,16 @@ void main() {
     AudienceMode.both: <HomeModule>[
       HomeModule.myNextGame,
       HomeModule.weekendNearby,
-      HomeModule.myStanding,
+      // Not myStanding here: this fixture follows no team, so myStanding has
+      // no standings to show in any mode — it only ever renders its "팀을
+      // 선택하면..." absence, never real content. In `bothOrder` that absence
+      // lands right after weekendNearby's own (this fixture has no weekend
+      // games either), so the consecutive-empty-state cap — home_screen.dart's
+      // `_EmptyRun` — correctly collapses it to a heading-less line instead of
+      // its own "내 팀 순위" heading. That is the intended behaviour, not a
+      // regression: capping the run is the whole point of that mechanism. In
+      // `playerOrder` nothing empty precedes it, so it keeps its heading
+      // there, which is why it still appears in the player-mode list above.
       HomeModule.leaguePulse,
     ],
   };
@@ -152,6 +161,85 @@ void main() {
           reason: '${module.name}: 시드에 데이터가 있는데 홈에 나타나지 않습니다',
         );
       }
+    });
+  });
+
+  group('연속된 빈 상태 압축', () {
+    // Designed by Fable: three (or more) fully-illustrated "없습니다" cards in
+    // a row read as "this app knows nothing" three times over. Only the first
+    // empty module in a run keeps its icon, message and heading; every
+    // consecutive one after it collapses to one heading-less line.
+    testWidgets('빈 상태 화면에서 첫 번째만 큰 카드로, 나머지는 한 줄로 압축된다', (tester) async {
+      final app = await buildTestApp(
+        seedAssets: false,
+        audience: audience(AudienceMode.discover),
+      );
+      addTearDown(app.dispose);
+      await pumpScreen(tester, app, const HomeScreen());
+      await settle(tester);
+
+      final seen = tester
+          .widgetList<Text>(find.byType(Text))
+          .map((t) => t.data ?? '')
+          .toSet();
+
+      // featuredTopic is the first module in `discoverOrder`, so it alone
+      // keeps its heading, icon-card message and primary action.
+      expect(seen, contains('지금 화제'));
+      expect(seen, contains('지금 진행 중인 화제 콘텐츠가 없습니다'));
+      expect(seen, contains('경기 보기'));
+
+      // weekendNearby, upcomingGames and recentResults are each empty too
+      // (nothing seeded, and this fixture sets a region), but none of them is
+      // first in the run any more — each shows one compact, self-naming line
+      // instead of its own heading and illustrated card.
+      expect(seen, contains('이번 주말 서울 경기 없음'));
+      expect(seen, contains('다가오는 경기 없음'));
+      expect(seen, contains('최근 결과 없음'));
+
+      expect(
+        seen,
+        isNot(contains('이번 주말 가까운 경기')),
+        reason: '두 번째 이후 빈 모듈은 자기 헤딩을 다시 보여주면 안 됩니다',
+      );
+      expect(seen, isNot(contains('다가오는 경기')));
+      expect(seen, isNot(contains('최근 결과')));
+      // Only the first module's full explanation and button carry over — a
+      // second "경기 보기"/"근처 경기 찾기" primary action would mean a later
+      // module was not actually compacted.
+      expect(seen, isNot(contains('근처 경기 찾기')));
+      expect(seen, isNot(contains('전체 일정 보기')));
+    });
+
+    testWidgets('실제 콘텐츠가 사이에 있으면 압축이 이어지지 않는다', (tester) async {
+      // both 모드: myNextGame과 featuredTopic이 실제 콘텐츠를 갖고 있어, 그 사이/이후의
+      // 빈 모듈이 앞선 빈 모듈과 하나로 묶여 계속 압축되면 안 됩니다.
+      final app = await buildTestApp(audience: audience(AudienceMode.both));
+      addTearDown(app.dispose);
+      await pumpScreen(tester, app, const HomeScreen(), phone: TestPhone.large);
+      await settle(tester);
+
+      final seen = <String>{};
+      void collect() => seen.addAll(
+        tester.widgetList<Text>(find.byType(Text)).map((t) => t.data ?? ''),
+      );
+      collect();
+      for (var i = 0; i < 10; i++) {
+        await tester.drag(find.byType(Scrollable).first, const Offset(0, -400));
+        await settle(tester);
+        collect();
+      }
+
+      // weekendNearby is the first empty module in `bothOrder` (myNextGame
+      // and weatherOutlook, both before it, have real seeded content), so it
+      // keeps its own heading and full card.
+      expect(seen, contains('이번 주말 가까운 경기'));
+      expect(seen, contains('서울에 이번 주말 경기가 없습니다'));
+      // myStanding follows it with no real content of its own (no team is
+      // followed in this fixture) and no real content in between, so it is
+      // the second empty module in that same run — compacted, no heading.
+      expect(seen, contains('팔로우한 팀 없음'));
+      expect(seen, isNot(contains('내 팀 순위')));
     });
   });
 

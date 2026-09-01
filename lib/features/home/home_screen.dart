@@ -34,6 +34,14 @@ class HomeScreen extends ConsumerWidget {
     final sync = ref.watch(syncControllerProvider);
     final now = ref.watch(clockProvider)();
     final modules = HomeModule.resolveOrder(audience);
+    // Computed once, here, for the whole screen — see `_EmptyRun.compute` for
+    // why this cannot be decided by each module widget on its own.
+    final emptyRun = _EmptyRun.compute(
+      ref,
+      modules: modules,
+      audience: audience,
+      now: now,
+    );
 
     // Three states, not two: an install with nothing configured to sync from
     // must never say "아직 갱신되지 않음", because that reads as "wait and it
@@ -64,6 +72,7 @@ class HomeScreen extends ConsumerWidget {
             module: modules[index],
             audience: audience,
             now: now,
+            emptyRun: emptyRun,
           ),
         ),
       ),
@@ -76,18 +85,28 @@ class _HomeModuleView extends ConsumerWidget {
     required this.module,
     required this.audience,
     required this.now,
+    required this.emptyRun,
   });
 
   final HomeModule module;
   final AudiencePreference audience;
   final DateTime now;
+  final _EmptyRun emptyRun;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final collapsed = audience.collapsedModules.contains(module.key);
 
     if (module == HomeModule.modeNudge) {
-      return _ModeNudge(audience: audience);
+      // Gated on `showsModeNudge`, not rendered unconditionally: someone who
+      // finished onboarding already chose a mode, and this banner previously
+      // showed regardless — a nudge that is right once and never re-checked
+      // is furniture for the rest of that person's time in the app. Someone
+      // who skipped onboarding still sees it, since they never chose, but can
+      // dismiss it — see `AudiencePreference.showsModeNudge`.
+      return audience.showsModeNudge
+          ? _ModeNudge(audience: audience)
+          : const SizedBox.shrink();
     }
 
     // Built even when collapsed: the module is what knows whether it has
@@ -118,8 +137,200 @@ class _HomeModuleView extends ConsumerWidget {
     // anything to show and only it can say so, so it renders its own frame —
     // see [_ModuleFrame]. Drawing the heading unconditionally left eleven
     // modules able to produce a title with blank space under it.
-    return _ModuleScope(module: module, collapsed: collapsed, child: body);
+    return _ModuleScope(
+      module: module,
+      collapsed: collapsed,
+      emptyRun: emptyRun,
+      child: body,
+    );
   }
+}
+
+/// For every module that can render a full illustrated "nothing here" card
+/// (see [_Absence]), whether it is the first one in the current on-screen
+/// run of empty modules — computed once per `HomeScreen` build, from the
+/// same providers each module's own widget reads.
+///
+/// This cannot be decided by having each module flip a shared counter as it
+/// happens to build: Riverpod rebuilds a module widget on whatever schedule
+/// *that module's own* provider resolves on, which has nothing to do with
+/// top-to-bottom screen order — a module further down the list can easily
+/// settle before one above it. An earlier version did exactly that and it
+/// showed: on the empty-state screen, the games list above a followed team's
+/// standings sometimes settled after the standings did, so the standings
+/// card — visually second — mutated the counter first and came out "first in
+/// the run" instead. Recomputing the whole answer here, fresh, in list
+/// order, from whatever each provider's *current* value is, is what ties the
+/// answer to screen position instead of network timing. A module whose data
+/// has not resolved yet reports `null` and is skipped entirely for this
+/// pass — it is rendering a skeleton, not a card, so it neither starts a run
+/// nor breaks one; once it resolves, watching the same providers here makes
+/// `HomeScreen` itself rebuild and recompute with the settled value.
+class _EmptyRun {
+  const _EmptyRun(this._firstOfRun);
+
+  final Set<String> _firstOfRun;
+
+  bool isFirst(HomeModule module) => _firstOfRun.contains(module.key);
+
+  static _EmptyRun compute(
+    WidgetRef ref, {
+    required List<HomeModule> modules,
+    required AudiencePreference audience,
+    required DateTime now,
+  }) {
+    var runningEmpty = false;
+    final firstOfRun = <String>{};
+
+    // `null` means "unknown/still loading" and is left out of the run
+    // entirely. `true`/`false` extend or break it, and only a transition
+    // into `true` while nothing was already running marks a first.
+    void step(HomeModule module, bool? isEmpty) {
+      if (isEmpty == null) return;
+      if (!isEmpty) {
+        runningEmpty = false;
+        return;
+      }
+      if (!runningEmpty) firstOfRun.add(module.key);
+      runningEmpty = true;
+    }
+
+    bool? listEmpty<T>(AsyncValue<List<T>> async) =>
+        async.hasValue ? async.value!.isEmpty : null;
+
+    for (final module in modules) {
+      switch (module) {
+        case HomeModule.featuredTopic:
+          step(module, listEmpty(ref.watch(featuredProvider)));
+        case HomeModule.programRecap:
+          final featured = ref.watch(featuredProvider);
+          step(
+            module,
+            featured.hasValue
+                ? !featured.value!.any(
+                    (i) => i.latestRecap != null && i.program != null,
+                  )
+                : null,
+          );
+        case HomeModule.weekendNearby:
+          final weekend = Kst.upcomingWeekendUtc(now);
+          final query = GameQuery(
+            fromUtc: weekend.startUtc,
+            toUtc: weekend.endUtc,
+            regionCodes: audience.regionCode == null
+                ? const []
+                : <String>[audience.regionCode!],
+            limit: 3,
+          );
+          step(module, listEmpty(ref.watch(gamesProvider(query))));
+        case HomeModule.topStories:
+          step(module, listEmpty(ref.watch(topStoriesProvider)));
+        case HomeModule.storiesForYou:
+        case HomeModule.myTeamNews:
+          // Same provider either way — neither ever renders the full-card
+          // pattern, but both can still hold or break a run around them.
+          step(module, listEmpty(ref.watch(storiesForYouProvider)));
+        case HomeModule.beginnerGuide:
+          step(module, listEmpty(ref.watch(_guidesProvider)));
+        case HomeModule.officialVideos:
+          step(module, listEmpty(ref.watch(_videosProvider)));
+        case HomeModule.myNextGame:
+          final next = ref.watch(nextGameProvider);
+          step(module, next.hasValue ? next.value == null : null);
+        case HomeModule.weatherOutlook:
+        case HomeModule.scheduleSummary:
+        case HomeModule.leaguePulse:
+          // None of these ever render the full-card pattern: weatherOutlook
+          // piggybacks on myNextGame and otherwise collapses invisibly,
+          // scheduleSummary always shows its small summary card (even at
+          // zero games), and leaguePulse collapses invisibly. Nothing to
+          // report either way.
+          break;
+        case HomeModule.myStanding:
+          final followed = ref.watch(followedTeamIdsProvider).value;
+          if (followed == null) break;
+          if (followed.isEmpty) {
+            step(module, true);
+            break;
+          }
+          final detail = ref.watch(teamDetailProvider(followed.first));
+          step(
+            module,
+            detail.hasValue
+                ? (detail.value == null || detail.value!.standings.isEmpty)
+                : null,
+          );
+        case HomeModule.leaderboardHighlights:
+          final seasonId = ref.watch(_firstSeasonProvider);
+          if (!seasonId.hasValue) break;
+          final id = seasonId.value;
+          if (id == null) {
+            step(module, true);
+            break;
+          }
+          step(module, listEmpty(ref.watch(leaderboardsProvider(id))));
+        case HomeModule.officialNotices:
+          step(module, listEmpty(ref.watch(_noticesProvider)));
+        case HomeModule.recentResults:
+          step(
+            module,
+            listEmpty(
+              ref.watch(
+                gamesProvider(
+                  GameQuery(
+                    toUtc: Kst.hourBucket(now),
+                    ascending: false,
+                    limit: 3,
+                  ),
+                ),
+              ),
+            ),
+          );
+        case HomeModule.upcomingGames:
+          step(
+            module,
+            listEmpty(
+              ref.watch(
+                gamesProvider(
+                  GameQuery(fromUtc: Kst.hourBucket(now), limit: 3),
+                ),
+              ),
+            ),
+          );
+        case HomeModule.startPlaying:
+          step(module, false); // Static content, always present.
+        case HomeModule.modeNudge:
+          break; // Handled separately in `_HomeModuleView`; not part of this.
+      }
+    }
+
+    return _EmptyRun(firstOfRun);
+  }
+}
+
+/// Everything needed to describe a module's empty state, so [_ModuleFrame]
+/// can render either the full card (first in a run) or a single heading-less
+/// line (every consecutive one after it) without the module choosing which.
+@immutable
+class _Absence {
+  const _Absence({
+    required this.icon,
+    required this.title,
+    required this.compactLabel,
+    this.message,
+    this.primaryLabel,
+    this.onPrimary,
+  });
+
+  final IconData icon;
+  final String title;
+  final String? message;
+  final String? primaryLabel;
+  final VoidCallback? onPrimary;
+
+  /// Stands alone with no section heading above it, e.g. "이번 주말 서울 경기
+  /// 없음" — so unlike [title], it has to name what it is about itself.
+  final String compactLabel;
 }
 
 /// Carries the current module down to the [_ModuleFrame] inside it.
@@ -130,11 +341,13 @@ class _ModuleScope extends InheritedWidget {
   const _ModuleScope({
     required this.module,
     required this.collapsed,
+    required this.emptyRun,
     required super.child,
   });
 
   final HomeModule module;
   final bool collapsed;
+  final _EmptyRun emptyRun;
 
   static _ModuleScope of(BuildContext context) {
     final scope = context.dependOnInheritedWidgetOfExactType<_ModuleScope>();
@@ -144,7 +357,9 @@ class _ModuleScope extends InheritedWidget {
 
   @override
   bool updateShouldNotify(_ModuleScope oldWidget) =>
-      oldWidget.module != module || oldWidget.collapsed != collapsed;
+      oldWidget.module != module ||
+      oldWidget.collapsed != collapsed ||
+      oldWidget.emptyRun != emptyRun;
 }
 
 /// Placeholder shown while a module's query is still running.
@@ -179,45 +394,109 @@ Widget? _moduleAsync<T>(
   error: (_, _) => null,
 );
 
+/// Like [_moduleAsync], for a module whose data branch decides between real
+/// content and an [_Absence] rather than between a widget and null — so the
+/// [_ModuleFrame] it builds can flow straight out of nested async lookups
+/// (e.g. "which season" before "which leaderboard") without an intermediate
+/// widget losing that decision along the way.
+Widget _moduleFrameAsync<T>(
+  AsyncValue<T> async,
+  Widget Function(T data) onData, {
+  Widget? skeleton,
+}) => async.when(
+  data: onData,
+  loading: () => _ModuleFrame(child: skeleton ?? const _ModuleSkeleton()),
+  error: (_, _) => const _ModuleFrame(),
+);
+
 /// The heading plus a module's content, or nothing at all.
 ///
-/// Every home module returns one of these. Passing `child: null` is how a
-/// module says it has nothing — and what that means is decided here, once,
-/// from [HomeModule.statesItsAbsence]: either the whole section disappears, or
-/// the heading stays and the absence is stated.
+/// Every home module returns one of these. `child: null` with no [absence] is
+/// how a module says it has nothing worth mentioning at all — the whole
+/// section disappears, heading included. [absence] is how a module says it
+/// has nothing *worth naming* — see [_Absence] — and only the first module to
+/// say that in a row gets the full illustrated card; every consecutive one
+/// after it collapses to one heading-less line, via `_EmptyRunTracker`.
 class _ModuleFrame extends StatelessWidget {
-  const _ModuleFrame({this.child});
+  const _ModuleFrame({this.child, this.absence});
 
   final Widget? child;
+  final _Absence? absence;
 
   @override
   Widget build(BuildContext context) {
     final scope = _ModuleScope.of(context);
     final module = scope.module;
     final c = WbTheme.of(context);
+    final absence = this.absence;
+
+    if (scope.collapsed) {
+      // Still a real heading either way — the user chose to collapse this,
+      // which is not the same question as whether it currently has anything.
+      return _ModuleHeader(module: module, collapsed: true);
+    }
+
+    if (absence != null) {
+      final isFirstInRun = scope.emptyRun.isFirst(module);
+      if (!isFirstInRun) {
+        // A repeat of "there is nothing here" does not need its own section
+        // heading — the sentence names what it is about on its own, e.g.
+        // "이번 주말 서울 경기 없음".
+        final density = WbDensityScope.of(context);
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            WbSpace.screen,
+            density.sectionGap,
+            WbSpace.screen,
+            density.blockGap,
+          ),
+          child: Text(
+            absence.compactLabel,
+            style: WbType.caption.copyWith(color: c.inkMuted, height: 1.5),
+          ),
+        );
+      }
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          _ModuleHeader(module: module, collapsed: false),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: WbSpace.screen),
+            child: WbEmptyState(
+              compact: true,
+              icon: absence.icon,
+              title: absence.title,
+              message: absence.message,
+              primaryLabel: absence.primaryLabel,
+              onPrimary: absence.onPrimary,
+            ),
+          ),
+        ],
+      );
+    }
 
     if (child == null && !module.statesItsAbsence) {
+      // Nothing renders at all — no heading, no line, nothing visible.
       return const SizedBox.shrink();
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        _ModuleHeader(module: module, collapsed: scope.collapsed),
-        if (!scope.collapsed)
-          child ??
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  WbSpace.screen,
-                  0,
-                  WbSpace.screen,
-                  WbSpace.sm,
-                ),
-                child: Text(
-                  module.emptyMessageKo,
-                  style: WbType.body.copyWith(color: c.inkMuted, height: 1.5),
-                ),
+        _ModuleHeader(module: module, collapsed: false),
+        child ??
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                WbSpace.screen,
+                0,
+                WbSpace.screen,
+                WbSpace.sm,
               ),
+              child: Text(
+                module.emptyMessageKo,
+                style: WbType.body.copyWith(color: c.inkMuted, height: 1.5),
+              ),
+            ),
       ],
     );
   }
@@ -273,6 +552,12 @@ class _ModuleHeader extends ConsumerWidget {
 }
 
 /// A quiet way back to mode selection for users who skipped onboarding.
+///
+/// Only ever built while [AudiencePreference.showsModeNudge] is true, i.e. for
+/// someone who skipped onboarding and has not dismissed this yet — see the
+/// gate in [_HomeModuleView.build]. The close button is that one-time
+/// dismissal: 시작 화면과 지역 in 더보기 still reaches the same picker
+/// afterwards, so nothing is actually lost by closing it.
 class _ModeNudge extends ConsumerWidget {
   const _ModeNudge({required this.audience});
 
@@ -312,6 +597,13 @@ class _ModeNudge extends ConsumerWidget {
                 Text(
                   '바꾸기',
                   style: WbType.captionStrong.copyWith(color: c.brand),
+                ),
+                const SizedBox(width: WbSpace.xs),
+                WbTapTarget(
+                  onTap: () =>
+                      ref.read(audienceControllerProvider).dismissModeNudge(),
+                  semanticLabel: '이 안내 닫기',
+                  child: Icon(Icons.close_rounded, size: 16, color: c.inkMuted),
                 ),
               ],
             ),
@@ -380,53 +672,52 @@ class _FeaturedModule extends ConsumerWidget {
   final DateTime now;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) =>
-      _ModuleFrame(child: _content(context, ref));
-
-  /// Null means "nothing to show". [_ModuleFrame] decides what that looks
-  /// like; this method only reports it.
-  Widget? _content(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final featured = ref.watch(featuredProvider);
     final policy = ref.watch(spoilerPolicyProvider);
 
     return featured.when(
-      loading: () => const Padding(
-        padding: EdgeInsets.symmetric(horizontal: WbSpace.screen),
-        child: WbSkeleton(height: 180, borderRadius: WbRadius.heroAll),
+      loading: () => const _ModuleFrame(
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: WbSpace.screen),
+          child: WbSkeleton(height: 180, borderRadius: WbRadius.heroAll),
+        ),
       ),
-      error: (_, _) => null,
+      error: (_, _) => const _ModuleFrame(),
       data: (items) {
         if (items.isEmpty) {
           // A season ending must not leave a hole. When nothing is active the
-          // module explains itself and points at what is available.
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: WbSpace.screen),
-            child: WbEmptyState(
-              compact: true,
+          // module explains itself and points at what is available — the
+          // first time this happens in a row of empty modules; see `_Absence`.
+          return _ModuleFrame(
+            absence: _Absence(
               icon: Icons.local_fire_department_outlined,
               title: '지금 진행 중인 화제 콘텐츠가 없습니다',
               message: '새 방송이나 대회가 시작되면 여기에 표시됩니다. 그동안 다가오는 경기를 살펴보세요.',
               primaryLabel: '경기 보기',
               onPrimary: () => context.go(WbRoutes.games),
+              compactLabel: '지금 화제 콘텐츠 없음',
             ),
           );
         }
         final lead = items.first;
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: WbSpace.screen),
-          child: FeaturedHeroCard(
-            item: lead,
-            policy: policy,
-            now: now,
-            onTap: () {
-              ref
-                  .read(analyticsProvider)
-                  .log(
-                    AnalyticsEvent.featuredTopicOpened,
-                    properties: <String, Object?>{'screen': 'home'},
-                  );
-              context.push(WbRoutes.featuredTopic(lead.topic.id));
-            },
+        return _ModuleFrame(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: WbSpace.screen),
+            child: FeaturedHeroCard(
+              item: lead,
+              policy: policy,
+              now: now,
+              onTap: () {
+                ref
+                    .read(analyticsProvider)
+                    .log(
+                      AnalyticsEvent.featuredTopicOpened,
+                      properties: <String, Object?>{'screen': 'home'},
+                    );
+                context.push(WbRoutes.featuredTopic(lead.topic.id));
+              },
+            ),
           ),
         );
       },
@@ -474,12 +765,7 @@ class _WeekendNearbyModule extends ConsumerWidget {
   final DateTime now;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) =>
-      _ModuleFrame(child: _content(context, ref));
-
-  /// Null means "nothing to show". [_ModuleFrame] decides what that looks
-  /// like; this method only reports it.
-  Widget? _content(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final audience = ref.watch(audienceProvider);
     final weekend = Kst.upcomingWeekendUtc(now);
     final query = GameQuery(
@@ -493,48 +779,52 @@ class _WeekendNearbyModule extends ConsumerWidget {
     final games = ref.watch(gamesProvider(query));
 
     return games.when(
-      loading: () => const _RowSkeletons(count: 2),
-      error: (_, _) => null,
+      loading: () => const _ModuleFrame(child: _RowSkeletons(count: 2)),
+      error: (_, _) => const _ModuleFrame(),
       data: (list) {
         if (list.isEmpty) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: WbSpace.screen),
-            child: WbEmptyState(
-              compact: true,
+          final regionName = audience.regionLabel ?? '선택한 지역';
+          return _ModuleFrame(
+            absence: _Absence(
               icon: Icons.event_available_outlined,
               title: audience.hasRegion
-                  ? '${audience.regionLabel ?? '선택한 지역'}에 이번 주말 경기가 없습니다'
+                  ? '$regionName에 이번 주말 경기가 없습니다'
                   : '이번 주말 등록된 경기가 없습니다',
               message: audience.hasRegion
                   ? '지역을 넓히거나 다른 날짜의 경기를 확인해 보세요.'
                   : '지역을 설정하면 가까운 경기를 먼저 보여드립니다.',
               primaryLabel: '근처 경기 찾기',
               onPrimary: () => context.push(WbRoutes.nearby),
+              compactLabel: audience.hasRegion
+                  ? '이번 주말 $regionName 경기 없음'
+                  : '이번 주말 경기 없음',
             ),
           );
         }
-        return Column(
-          children: <Widget>[
-            for (final card in list)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  WbSpace.screen,
-                  0,
-                  WbSpace.screen,
-                  WbSpace.sm,
+        return _ModuleFrame(
+          child: Column(
+            children: <Widget>[
+              for (final card in list)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    WbSpace.screen,
+                    0,
+                    WbSpace.screen,
+                    WbSpace.sm,
+                  ),
+                  child: WbGameRow(
+                    card: card,
+                    now: now,
+                    showDate: true,
+                    onTap: () => context.push(WbRoutes.game(card.game.id)),
+                  ),
                 ),
-                child: WbGameRow(
-                  card: card,
-                  now: now,
-                  showDate: true,
-                  onTap: () => context.push(WbRoutes.game(card.game.id)),
-                ),
+              _SeeAllButton(
+                label: '근처 경기 전체 보기',
+                onTap: () => context.push(WbRoutes.nearby),
               ),
-            _SeeAllButton(
-              label: '근처 경기 전체 보기',
-              onTap: () => context.push(WbRoutes.nearby),
-            ),
-          ],
+            ],
+          ),
         );
       },
     );
@@ -661,15 +951,29 @@ class _BeginnerGuideModule extends ConsumerWidget {
   }
 }
 
-final _guidesProvider = StreamProvider.autoDispose((ref) {
+// Not `.autoDispose`: `_EmptyRun.compute` now watches these from `HomeScreen`
+// itself, alongside each module's own watch, so it can tell whether a module
+// between two absences rendered real content and broke the run (see
+// `_EmptyRun`'s doc comment). Two independent watchers of an `autoDispose`
+// provider whose subscriber count drops to zero and immediately climbs back
+// up — which happens on every rebuild here — repeatedly re-arms Riverpod's
+// dispose-grace-period timer; one was still pending when a widget-tree swap
+// (as in `density_test.dart`, which builds a screen twice in one test) tore
+// the tree down before that timer fired, tripping flutter_test's
+// `!timersPending` invariant. Every sibling provider `_EmptyRun` also reads
+// (`featuredProvider`, `topStoriesProvider`, `gamesProvider`, ...) is already
+// plain for the same reason: home data that more than one widget needs to
+// watch independently is kept alive for the container's lifetime rather than
+// torn down and recreated between watchers.
+final _guidesProvider = StreamProvider((ref) {
   return ref.watch(contentRepositoryProvider).watchGuides();
 });
 
-final _videosProvider = StreamProvider.autoDispose((ref) {
+final _videosProvider = StreamProvider((ref) {
   return ref.watch(contentRepositoryProvider).watchVideos(limit: 6);
 });
 
-final _noticesProvider = StreamProvider.autoDispose((ref) {
+final _noticesProvider = StreamProvider((ref) {
   return ref.watch(contentRepositoryProvider).watchNotices(limit: 3);
 });
 
@@ -758,40 +1062,39 @@ class _MyNextGameModule extends ConsumerWidget {
   final DateTime now;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) =>
-      _ModuleFrame(child: _content(context, ref));
-
-  /// Null means "nothing to show". [_ModuleFrame] decides what that looks
-  /// like; this method only reports it.
-  Widget? _content(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final next = ref.watch(nextGameProvider);
     final followed =
         ref.watch(followedTeamIdsProvider).value ?? const <String>{};
 
     return next.when(
-      loading: () => const Padding(
-        padding: EdgeInsets.symmetric(horizontal: WbSpace.screen),
-        child: WbSkeleton(height: 170, borderRadius: WbRadius.heroAll),
+      loading: () => const _ModuleFrame(
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: WbSpace.screen),
+          child: WbSkeleton(height: 170, borderRadius: WbRadius.heroAll),
+        ),
       ),
-      error: (_, _) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: WbSpace.screen),
-        child: WbEmptyState(
-          compact: true,
-          icon: Icons.error_outline_rounded,
-          tone: WbBadgeTone.danger,
-          title: '경기 정보를 불러오지 못했습니다',
-          message: '저장된 데이터로 다른 화면은 계속 사용할 수 있습니다.',
-          primaryLabel: '다시 시도',
-          onPrimary: () =>
-              ref.read(syncControllerProvider.notifier).refresh(force: true),
+      // An error is not an absence — it does not participate in the empty-run
+      // cap, since there really is something to say about it every time.
+      error: (_, _) => _ModuleFrame(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: WbSpace.screen),
+          child: WbEmptyState(
+            compact: true,
+            icon: Icons.error_outline_rounded,
+            tone: WbBadgeTone.danger,
+            title: '경기 정보를 불러오지 못했습니다',
+            message: '저장된 데이터로 다른 화면은 계속 사용할 수 있습니다.',
+            primaryLabel: '다시 시도',
+            onPrimary: () =>
+                ref.read(syncControllerProvider.notifier).refresh(force: true),
+          ),
         ),
       ),
       data: (summary) {
         if (summary == null) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: WbSpace.screen),
-            child: WbEmptyState(
-              compact: true,
+          return _ModuleFrame(
+            absence: _Absence(
               icon: Icons.event_note_outlined,
               title: '예정된 경기가 없습니다',
               message: followed.isEmpty
@@ -801,6 +1104,7 @@ class _MyNextGameModule extends ConsumerWidget {
               onPrimary: () => context.push(
                 followed.isEmpty ? WbRoutes.teams : WbRoutes.games,
               ),
+              compactLabel: '예정된 다음 경기 없음',
             ),
           );
         }
@@ -814,24 +1118,26 @@ class _MyNextGameModule extends ConsumerWidget {
           ),
         );
 
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: WbSpace.screen),
-          child: WbHeroGameCard(
-            card: card,
-            now: now,
-            isFavoriteDriven: summary.isFavoriteDriven,
-            weatherRisk: risks.value?[card.game.id],
-            onTap: () => context.push(WbRoutes.game(card.game.id)),
-            onToggleFollow: () async {
-              await ref
-                  .read(followRepositoryProvider)
-                  .toggleFollow(
-                    FollowKind.team,
-                    card.homeTeam.id,
-                    label: card.homeTeam.displayName,
-                  );
-              await ref.read(platformServicesProvider).haptics.selection();
-            },
+        return _ModuleFrame(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: WbSpace.screen),
+            child: WbHeroGameCard(
+              card: card,
+              now: now,
+              isFavoriteDriven: summary.isFavoriteDriven,
+              weatherRisk: risks.value?[card.game.id],
+              onTap: () => context.push(WbRoutes.game(card.game.id)),
+              onToggleFollow: () async {
+                await ref
+                    .read(followRepositoryProvider)
+                    .toggleFollow(
+                      FollowKind.team,
+                      card.homeTeam.id,
+                      label: card.homeTeam.displayName,
+                    );
+                await ref.read(platformServicesProvider).haptics.selection();
+              },
+            ),
           ),
         );
       },
@@ -1053,76 +1359,71 @@ class _MyStandingModule extends ConsumerWidget {
   final DateTime now;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) =>
-      _ModuleFrame(child: _content(context, ref));
-
-  /// Null means "nothing to show". [_ModuleFrame] decides what that looks
-  /// like; this method only reports it.
-  Widget? _content(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final followed =
         ref.watch(followedTeamIdsProvider).value ?? const <String>{};
     if (followed.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: WbSpace.screen),
-        child: WbEmptyState(
-          compact: true,
+      return _ModuleFrame(
+        absence: _Absence(
           icon: Icons.emoji_events_outlined,
           title: '팀을 선택하면 순위를 보여드립니다',
           primaryLabel: '팀 찾기',
           onPrimary: () => context.push(WbRoutes.teams),
+          compactLabel: '팔로우한 팀 없음',
         ),
       );
     }
     final detail = ref.watch(teamDetailProvider(followed.first));
     final c = WbTheme.of(context);
 
-    return _moduleAsync(detail, (team) {
+    return _moduleFrameAsync(detail, (team) {
       if (team == null || team.standings.isEmpty) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: WbSpace.screen),
-          child: WbEmptyState(
-            compact: true,
+        return _ModuleFrame(
+          absence: const _Absence(
             icon: Icons.emoji_events_outlined,
             title: '순위 정보가 아직 없습니다',
             message: '대회가 시작되면 순위와 최근 흐름을 보여드립니다.',
+            compactLabel: '순위 정보 없음',
           ),
         );
       }
       final snapshot = team.standings.first;
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: WbSpace.screen),
-        child: WbCard(
-          accentColor: WbTeamMark.parseHex(team.team.colorHex),
-          onTap: () => context.push(WbRoutes.team(team.team.id)),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: Text(
-                      team.team.displayName,
-                      style: WbType.headline.copyWith(color: c.ink),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+      return _ModuleFrame(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: WbSpace.screen),
+          child: WbCard(
+            accentColor: WbTeamMark.parseHex(team.team.colorHex),
+            onTap: () => context.push(WbRoutes.team(team.team.id)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Text(
+                        team.team.displayName,
+                        style: WbType.headline.copyWith(color: c.ink),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
-                  if (snapshot.rank != null)
-                    Text(
-                      '${snapshot.rank}위',
-                      style: WbType.scoreRow.copyWith(color: c.brand),
-                    ),
-                ],
-              ),
-              const SizedBox(height: WbSpace.sm),
-              Text(
-                '${snapshot.played}경기 ${snapshot.wins}승 ${snapshot.losses}패'
-                '${snapshot.draws > 0 ? ' ${snapshot.draws}무' : ''}',
-                style: WbType.tabular.copyWith(color: c.ink),
-              ),
-              const SizedBox(height: WbSpace.sm),
-              WbSourceLine(provenance: snapshot.provenance, now: now),
-            ],
+                    if (snapshot.rank != null)
+                      Text(
+                        '${snapshot.rank}위',
+                        style: WbType.scoreRow.copyWith(color: c.brand),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: WbSpace.sm),
+                Text(
+                  '${snapshot.played}경기 ${snapshot.wins}승 ${snapshot.losses}패'
+                  '${snapshot.draws > 0 ? ' ${snapshot.draws}무' : ''}',
+                  style: WbType.tabular.copyWith(color: c.ink),
+                ),
+                const SizedBox(height: WbSpace.sm),
+                WbSourceLine(provenance: snapshot.provenance, now: now),
+              ],
+            ),
           ),
         ),
       );
@@ -1211,87 +1512,85 @@ class _LeaderboardModule extends ConsumerWidget {
   const _LeaderboardModule();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) =>
-      _ModuleFrame(child: _content(context, ref));
-
-  /// Null means "nothing to show". [_ModuleFrame] decides what that looks
-  /// like; this method only reports it.
-  Widget? _content(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final c = WbTheme.of(context);
 
     // The season lookup is itself async; reading `.value` here made the whole
     // section vanish while it resolved, and it never came back in a test that
     // stopped pumping first.
-    return _moduleAsync(ref.watch(_firstSeasonProvider), (seasonId) {
-      if (seasonId == null) return null;
-      return _moduleAsync(ref.watch(leaderboardsProvider(seasonId)), (list) {
+    return _moduleFrameAsync(ref.watch(_firstSeasonProvider), (seasonId) {
+      if (seasonId == null) return const _ModuleFrame();
+      return _moduleFrameAsync(ref.watch(leaderboardsProvider(seasonId)), (
+        list,
+      ) {
         if (list.isEmpty) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: WbSpace.screen),
-            child: WbEmptyState(
-              compact: true,
+          return _ModuleFrame(
+            absence: const _Absence(
               icon: Icons.leaderboard_outlined,
               title: '공개된 개인 기록이 아직 없습니다',
               message: '공식 기록지가 등록되면 부문별 순위를 보여드립니다.',
+              compactLabel: '공개된 기록 없음',
             ),
           );
         }
-        return Column(
-          children: <Widget>[
-            for (final board in list.take(2))
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  WbSpace.screen,
-                  0,
-                  WbSpace.screen,
-                  WbSpace.sm,
-                ),
-                child: WbCard(
-                  onTap: () => context.push(WbRoutes.leaderboard(seasonId)),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        board.definition.fullLabelKo,
-                        style: WbType.captionStrong.copyWith(color: c.brand),
-                      ),
-                      const SizedBox(height: WbSpace.sm),
-                      for (final entry in board.entries.take(3))
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: WbSpace.xs),
-                          child: Row(
-                            children: <Widget>[
-                              SizedBox(
-                                width: 22,
-                                child: Text(
-                                  '${entry.rank ?? '-'}',
-                                  style: WbType.tabularSmall.copyWith(
-                                    color: c.inkMuted,
+        return _ModuleFrame(
+          child: Column(
+            children: <Widget>[
+              for (final board in list.take(2))
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    WbSpace.screen,
+                    0,
+                    WbSpace.screen,
+                    WbSpace.sm,
+                  ),
+                  child: WbCard(
+                    onTap: () => context.push(WbRoutes.leaderboard(seasonId)),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          board.definition.fullLabelKo,
+                          style: WbType.captionStrong.copyWith(color: c.brand),
+                        ),
+                        const SizedBox(height: WbSpace.sm),
+                        for (final entry in board.entries.take(3))
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: WbSpace.xs),
+                            child: Row(
+                              children: <Widget>[
+                                SizedBox(
+                                  width: 22,
+                                  child: Text(
+                                    '${entry.rank ?? '-'}',
+                                    style: WbType.tabularSmall.copyWith(
+                                      color: c.inkMuted,
+                                    ),
                                   ),
                                 ),
-                              ),
-                              Expanded(
-                                child: Text(
-                                  entry.playerName,
-                                  style: WbType.body.copyWith(color: c.ink),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                                Expanded(
+                                  child: Text(
+                                    entry.playerName,
+                                    style: WbType.body.copyWith(color: c.ink),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
-                              ),
-                              Text(
-                                board.definition.format(entry.value),
-                                style: WbType.tabular.copyWith(color: c.ink),
-                              ),
-                            ],
+                                Text(
+                                  board.definition.format(entry.value),
+                                  style: WbType.tabular.copyWith(color: c.ink),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      const SizedBox(height: WbSpace.xs),
-                      WbCoverageNote(coverage: board.coverage, dense: true),
-                    ],
+                        const SizedBox(height: WbSpace.xs),
+                        WbCoverageNote(coverage: board.coverage, dense: true),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         );
       }, skeleton: const _RowSkeletons(count: 1));
     });
@@ -1375,12 +1674,7 @@ class _GameListModule extends ConsumerWidget {
   final bool upcoming;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) =>
-      _ModuleFrame(child: _content(context, ref));
-
-  /// Null means "nothing to show". [_ModuleFrame] decides what that looks
-  /// like; this method only reports it.
-  Widget? _content(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context, WidgetRef ref) {
     // Hour-aligned so the key is stable between rebuilds.
     final bound = Kst.hourBucket(now);
     final query = upcoming
@@ -1389,44 +1683,45 @@ class _GameListModule extends ConsumerWidget {
     final games = ref.watch(gamesProvider(query));
 
     return games.when(
-      loading: () => const _RowSkeletons(count: 3),
-      error: (_, _) => null,
+      loading: () => const _ModuleFrame(child: _RowSkeletons(count: 3)),
+      error: (_, _) => const _ModuleFrame(),
       data: (list) {
         if (list.isEmpty) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: WbSpace.screen),
-            child: WbEmptyState(
-              compact: true,
+          return _ModuleFrame(
+            absence: _Absence(
               icon: Icons.sports_baseball_outlined,
               title: upcoming ? '예정된 경기가 없습니다' : '최근 경기 결과가 없습니다',
               message: '데이터가 등록되면 여기에 표시됩니다.',
               primaryLabel: '전체 일정 보기',
               onPrimary: () => context.go(WbRoutes.games),
+              compactLabel: upcoming ? '다가오는 경기 없음' : '최근 결과 없음',
             ),
           );
         }
-        return Column(
-          children: <Widget>[
-            for (final card in list)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  WbSpace.screen,
-                  0,
-                  WbSpace.screen,
-                  WbSpace.sm,
+        return _ModuleFrame(
+          child: Column(
+            children: <Widget>[
+              for (final card in list)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    WbSpace.screen,
+                    0,
+                    WbSpace.screen,
+                    WbSpace.sm,
+                  ),
+                  child: WbGameRow(
+                    card: card,
+                    now: now,
+                    showDate: true,
+                    onTap: () => context.push(WbRoutes.game(card.game.id)),
+                  ),
                 ),
-                child: WbGameRow(
-                  card: card,
-                  now: now,
-                  showDate: true,
-                  onTap: () => context.push(WbRoutes.game(card.game.id)),
-                ),
+              _SeeAllButton(
+                label: upcoming ? '일정 전체 보기' : '결과 전체 보기',
+                onTap: () => context.go(WbRoutes.games),
               ),
-            _SeeAllButton(
-              label: upcoming ? '일정 전체 보기' : '결과 전체 보기',
-              onTap: () => context.go(WbRoutes.games),
-            ),
-          ],
+            ],
+          ),
         );
       },
     );

@@ -49,9 +49,17 @@ class FeaturedItem {
   }
 
   /// Whether the card must render its summary behind a "결과 보기" veil.
+  ///
+  /// Demo recaps are exempt: there is no real result behind a demo veil to
+  /// protect, and masking one anyway teaches the user that a veil can hide
+  /// nothing, which cheapens it for the real broadcast results it exists to
+  /// cover. This only narrows *which provenance gets masked* — the fail-closed
+  /// default for a missing `spoilerLevel` (treated as `result` at sync time,
+  /// see `_spoilerOrResult` in `content_sync.dart`) is untouched, and still
+  /// applies in full to every non-demo record.
   bool isMasked(SpoilerPolicy policy) {
     final recap = latestRecap;
-    if (recap == null) return false;
+    if (recap == null || recap.meta.isDemo) return false;
     return policy.shouldMask(recap.meta.spoilerLevel);
   }
 

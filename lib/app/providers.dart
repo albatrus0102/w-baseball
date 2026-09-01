@@ -302,6 +302,13 @@ class AudienceController {
 
   Future<void> setHomeModuleOrder(List<String> order) =>
       _prefs.saveAudience(_prefs.audience.copyWith(homeModuleOrder: order));
+
+  /// One-time dismissal of the home "모드 바꾸기" nudge, for someone who
+  /// skipped onboarding and does not want the reminder any more. Does not
+  /// touch onboarding state — 시작 화면과 지역 in 더보기 still opens the same
+  /// picker, so this only removes the unsolicited banner, not the feature.
+  Future<void> dismissModeNudge() =>
+      _prefs.saveAudience(_prefs.audience.copyWith(modeNudgeDismissed: true));
 }
 
 final audienceControllerProvider = Provider<AudienceController>(

@@ -6,6 +6,7 @@ import 'package:w_baseball/data/models/audience.dart';
 import 'package:w_baseball/data/models/content.dart';
 import 'package:w_baseball/data/models/domain.dart';
 import 'package:w_baseball/data/models/stats.dart';
+import 'package:w_baseball/data/repositories/content_repository.dart';
 import 'package:w_baseball/features/web_source/source_web_view_screen.dart';
 
 void main() {
@@ -444,6 +445,135 @@ void main() {
       );
       expect(recap.maskedHeadline(SpoilerPolicy.hide), '수비 훈련이 중심입니다.');
       expect(recap.maskedHeadline(SpoilerPolicy.reveal), '블랙퀸즈가 이겼습니다.');
+    });
+
+    // A demo recap has no real result behind it, so masking it protects
+    // nothing — and teaches the user that a veil can hide nothing, which
+    // devalues the veil for the real broadcast results it exists to cover.
+    group('데모 콘텐츠는 가리지 않는다', () {
+      Provenance provenance({required bool isDemo}) => Provenance(
+        sourceName: isDemo ? 'demo-fixture' : 's',
+        sourceUrl: 'https://example.org',
+        fetchedAt: DateTime.utc(2026),
+        isDemo: isDemo,
+      );
+
+      FeaturedItem itemWithRecap({
+        required bool isDemo,
+        required SpoilerLevel spoilerLevel,
+      }) {
+        final topic = FeaturedTopic(
+          id: 't',
+          kind: FeaturedTopicKind.broadcast,
+          title: '제목',
+          meta: ContentMeta(
+            provenance: provenance(isDemo: isDemo),
+            publishedAt: DateTime.utc(2026),
+          ),
+        );
+        final recap = EpisodeRecap(
+          id: 'r',
+          episodeId: 'e',
+          teaser: '스포일러 없는 티저',
+          whatHappened: '실제 결과',
+          meta: ContentMeta(
+            provenance: provenance(isDemo: isDemo),
+            publishedAt: DateTime.utc(2026),
+            spoilerLevel: spoilerLevel,
+          ),
+        );
+        return FeaturedItem(topic: topic, latestRecap: recap);
+      }
+
+      test('실제(비데모) 결과는 정책대로 가려진다', () {
+        // Both directions matter: a change that merely stops masking demo
+        // content, without still masking a real one, would pass a one-
+        // directional test and be wrong.
+        final item = itemWithRecap(
+          isDemo: false,
+          spoilerLevel: SpoilerLevel.result,
+        );
+        expect(item.isMasked(SpoilerPolicy.hide), isTrue);
+      });
+
+      test('데모 결과는 스포일러 정책과 무관하게 가려지지 않는다', () {
+        final item = itemWithRecap(
+          isDemo: true,
+          spoilerLevel: SpoilerLevel.result,
+        );
+        expect(item.isMasked(SpoilerPolicy.hide), isFalse);
+      });
+
+      test('바로 보기 설정에서는 데모든 실제든 원래 가려지지 않는다', () {
+        expect(
+          itemWithRecap(
+            isDemo: false,
+            spoilerLevel: SpoilerLevel.result,
+          ).isMasked(SpoilerPolicy.reveal),
+          isFalse,
+        );
+        expect(
+          itemWithRecap(
+            isDemo: true,
+            spoilerLevel: SpoilerLevel.result,
+          ).isMasked(SpoilerPolicy.reveal),
+          isFalse,
+        );
+      });
+
+      test('결과 미만 스포일러 수준은 데모 여부와 무관하게 원래도 가려지지 않는다', () {
+        expect(
+          itemWithRecap(
+            isDemo: false,
+            spoilerLevel: SpoilerLevel.mild,
+          ).isMasked(SpoilerPolicy.hide),
+          isFalse,
+        );
+      });
+    });
+  });
+
+  group('모드 바꾸기 안내', () {
+    // A user who finished onboarding already chose a mode, so re-showing
+    // "지금 화면: … 바꾸기" forever at the top of home tells them nothing new —
+    // it must gate closed permanently once they are configured.
+    test('온보딩을 마친 사용자에게는 보이지 않는다', () {
+      const configured = AudiencePreference(onboardingCompleted: true);
+      expect(configured.isConfigured, isTrue);
+      expect(configured.showsModeNudge, isFalse);
+    });
+
+    // Someone who skipped never chose, so they still need a way in — but
+    // only until they say they have seen it once.
+    test('건너뛴 사용자에게는 닫기 전까지 보인다', () {
+      const skipped = AudiencePreference(
+        onboardingCompleted: true,
+        onboardingSkipped: true,
+      );
+      expect(skipped.isConfigured, isFalse);
+      expect(skipped.showsModeNudge, isTrue);
+    });
+
+    test('건너뛴 사용자가 닫으면 다시 보이지 않는다', () {
+      const dismissed = AudiencePreference(
+        onboardingCompleted: true,
+        onboardingSkipped: true,
+        modeNudgeDismissed: true,
+      );
+      expect(dismissed.showsModeNudge, isFalse);
+    });
+
+    test('닫힘 여부는 copyWith로 명시할 때만 바뀐다', () {
+      const base = AudiencePreference(
+        onboardingCompleted: true,
+        onboardingSkipped: true,
+      );
+      expect(base.modeNudgeDismissed, isFalse);
+      final dismissed = base.copyWith(modeNudgeDismissed: true);
+      expect(dismissed.showsModeNudge, isFalse);
+      // Unrelated copyWith calls must not silently un-dismiss it.
+      final afterUnrelatedChange = dismissed.copyWith(regionCode: '26');
+      expect(afterUnrelatedChange.modeNudgeDismissed, isTrue);
     });
   });
 
