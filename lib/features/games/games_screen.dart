@@ -8,6 +8,7 @@ import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../app/shell.dart';
 import '../../core/design_system/components/game_widgets.dart';
+import '../../core/design_system/components/notice_widgets.dart';
 import '../../core/design_system/components/primitives.dart';
 import '../../core/design_system/components/standings_widgets.dart';
 import '../../core/design_system/theme.dart';
@@ -496,13 +497,13 @@ class _LeagueStandingsView extends ConsumerWidget {
   }
 }
 
-/// Same container shape as `_LandedNotice` below — a quiet inline banner —
-/// but the action sits on its own line under the sentence rather than beside
-/// it. `_LandedNotice`'s text is short enough to share a line with its button
-/// at every scale; this sentence is not, and an inline action wedged into
-/// wrapped text lands in a different, sometimes mid-clause, spot at every
-/// width and text scale (this app allows up to 2.0x). Putting the button
-/// below removes that failure mode entirely rather than tuning around it.
+/// Same container shape as `_LandedNotice` above; both hand the layout
+/// decision to `WbNoticeWithAction` rather than assuming a same-row action
+/// is safe. An earlier version of this doc comment claimed `_LandedNotice`'s
+/// sentence was "short enough to share a line with its button at every
+/// scale" — that turned out to be false (see `_LandedNotice`'s history), so
+/// this widget no longer hand-writes the same claim about its own,
+/// fixed-length sentence either; `WbNoticeWithAction` measures instead.
 ///
 /// All domestic standings are demo data today, and the 경기 tab is where
 /// that fact is easiest to miss, since the badges on the table and cards
@@ -529,35 +530,17 @@ class _StandingsDemoNotice extends StatelessWidget {
         color: c.brandSoft,
         borderRadius: WbRadius.chipAll,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Padding(
-                padding: const EdgeInsets.only(top: 2),
-                child: Icon(Icons.science_outlined, size: 15, color: c.brand),
-              ),
-              const SizedBox(width: WbSpace.sm),
-              Expanded(
-                child: Text(
-                  '지금 보이는 순위는 앱 동작 확인용 데모 데이터입니다. '
-                  '공식 기록이 연동되면 교체됩니다.',
-                  style: WbType.caption.copyWith(color: c.ink),
-                ),
-              ),
-            ],
-          ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: () => context.push(WbRoutes.dataSources),
-              child: const Text('데이터 출처'),
-            ),
-          ),
-        ],
+      child: WbNoticeWithAction(
+        leading: Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Icon(Icons.science_outlined, size: 15, color: c.brand),
+        ),
+        text:
+            '지금 보이는 순위는 앱 동작 확인용 데모 데이터입니다. '
+            '공식 기록이 연동되면 교체됩니다.',
+        textStyle: WbType.caption.copyWith(color: c.ink),
+        actionLabel: '데이터 출처',
+        onAction: () => context.push(WbRoutes.dataSources),
       ),
     );
   }
@@ -924,6 +907,14 @@ class _EmptyDayState extends ConsumerState<_EmptyDay> {
 }
 
 /// Explains an automatic date change, and offers the way back.
+///
+/// Same container shape as `_StandingsDemoNotice` below; both hand the
+/// sentence/action arrangement itself to `WbNoticeWithAction`, which decides
+/// per build whether the action fits beside the sentence or needs its own
+/// line. This one interpolates a date (`KoDate.monthDay`), so its length is
+/// not fixed — an earlier hand-written version of this widget assumed a
+/// same-row button was always safe here and was wrong: at 2.0x text scale on
+/// a 360dp screen it wrapped to four lines and broke "보여드립니다" mid-word.
 class _LandedNotice extends StatelessWidget {
   const _LandedNotice({required this.dayKey, required this.onToday});
 
@@ -945,24 +936,21 @@ class _LandedNotice extends StatelessWidget {
       ),
       padding: const EdgeInsets.symmetric(
         horizontal: WbSpace.md,
-        vertical: WbSpace.sm,
+        vertical: WbSpace.xs,
       ),
       decoration: BoxDecoration(
         color: c.brandSoft,
         borderRadius: WbRadius.chipAll,
       ),
-      child: Row(
-        children: <Widget>[
-          Icon(Icons.event_available_outlined, size: 15, color: c.brand),
-          const SizedBox(width: WbSpace.sm),
-          Expanded(
-            child: Text(
-              '오늘은 경기가 없어 ${KoDate.monthDay(day)} 일정을 보여드립니다.',
-              style: WbType.caption.copyWith(color: c.ink),
-            ),
-          ),
-          TextButton(onPressed: onToday, child: const Text('오늘로')),
-        ],
+      child: WbNoticeWithAction(
+        leading: Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Icon(Icons.event_available_outlined, size: 15, color: c.brand),
+        ),
+        text: '오늘은 경기가 없어 ${KoDate.monthDay(day)} 일정을 보여드립니다.',
+        textStyle: WbType.caption.copyWith(color: c.ink),
+        actionLabel: '오늘로',
+        onAction: onToday,
       ),
     );
   }

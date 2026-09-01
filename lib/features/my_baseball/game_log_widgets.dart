@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../core/analytics/analytics.dart';
+import '../../core/design_system/components/notice_widgets.dart';
 import '../../core/design_system/components/primitives.dart';
 import '../../core/design_system/theme.dart';
 import '../../core/design_system/tokens.dart';
@@ -172,6 +173,12 @@ class _GameLogCompactPrompt extends ConsumerWidget {
 
 /// How many games, and her own last note surfaced back to her — never advice
 /// the app authored. See the feature brief's "no coaching" rule.
+///
+/// The count and the add-entry button go through `WbNoticeWithAction`,
+/// which shares a row when they fit and stacks them when they don't — even
+/// "1게임 기록" broke mid-syllable ("1게 / 임") against the button at 2.0x
+/// text scale on a 360dp screen, since `WbType.title` is large enough that
+/// the two together no longer fit one line at that scale.
 class _GameLogSummary extends ConsumerWidget {
   const _GameLogSummary({required this.entries});
 
@@ -188,21 +195,13 @@ class _GameLogSummary extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: Text(
-                    '${entries.length}게임 기록',
-                    style: WbType.title.copyWith(color: c.ink),
-                  ),
-                ),
-                FilledButton.icon(
-                  onPressed: () =>
-                      showGameLogEntrySheet(context, ref, entries: entries),
-                  icon: const Icon(Icons.add_rounded, size: 18),
-                  label: const Text('기록 추가'),
-                ),
-              ],
+            WbNoticeWithAction(
+              text: '${entries.length}게임 기록',
+              textStyle: WbType.title.copyWith(color: c.ink),
+              actionLabel: '기록 추가',
+              actionIcon: Icons.add_rounded,
+              onAction: () =>
+                  showGameLogEntrySheet(context, ref, entries: entries),
             ),
             if (last.note != null && last.note!.trim().isNotEmpty) ...<Widget>[
               const SizedBox(height: WbSpace.sm),
@@ -428,6 +427,10 @@ class _GameLogEntryTile extends ConsumerWidget {
 /// action. Never call this a 백업 — it explicitly is not one (there is no
 /// server copy; the exported file is the only copy that survives a reinstall
 /// until Stage 2's import exists).
+///
+/// Goes through `WbNoticeWithAction` — this sentence is long enough that an
+/// inline button squeezes it to a narrow column at large text scales and
+/// breaks a word mid-syllable (confirmed at 2.0x / 360dp: "이 기 / 기에만").
 class _GameLogPrivacyNote extends ConsumerWidget {
   const _GameLogPrivacyNote();
 
@@ -436,23 +439,17 @@ class _GameLogPrivacyNote extends ConsumerWidget {
     final c = WbTheme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: WbSpace.screen),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Icon(Icons.smartphone_rounded, size: 14, color: c.inkMuted),
-          const SizedBox(width: WbSpace.xs),
-          Expanded(
-            child: Text(
-              '이 기록은 이 기기에만 저장됩니다. 기기를 바꾸면 옮겨지지 않으니, '
-              '내보내기로 보관해 두세요.',
-              style: WbType.micro.copyWith(color: c.inkMuted, height: 1.5),
-            ),
-          ),
-          TextButton(
-            onPressed: () => exportGameLog(context, ref),
-            child: const Text('내보내기'),
-          ),
-        ],
+      child: WbNoticeWithAction(
+        leading: Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Icon(Icons.smartphone_rounded, size: 14, color: c.inkMuted),
+        ),
+        text:
+            '이 기록은 이 기기에만 저장됩니다. 기기를 바꾸면 옮겨지지 않으니, '
+            '내보내기로 보관해 두세요.',
+        textStyle: WbType.micro.copyWith(color: c.inkMuted, height: 1.5),
+        actionLabel: '내보내기',
+        onAction: () => exportGameLog(context, ref),
       ),
     );
   }

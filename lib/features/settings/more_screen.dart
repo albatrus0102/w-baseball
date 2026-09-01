@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../app/shell.dart';
+import '../../core/design_system/components/notice_widgets.dart';
 import '../../core/design_system/components/primitives.dart';
 import '../../core/design_system/theme.dart';
 import '../../core/design_system/tokens.dart';
@@ -46,34 +47,46 @@ class MoreScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Row(
-                    children: <Widget>[
-                      Icon(Icons.sync_rounded, size: 17, color: c.brand),
-                      const SizedBox(width: WbSpace.sm),
-                      Expanded(
-                        child: Text(switch (freshness) {
-                          FreshnessState.noRemoteConfigured =>
-                            '앱 기본 데이터로 동작 중입니다',
-                          FreshnessState.neverSynced => '아직 갱신되지 않았습니다',
-                          FreshnessState.synced =>
-                            '${KoDate.relative(sync.lastSuccessAt!, now)} 갱신됨',
-                        }, style: WbType.body.copyWith(color: c.ink)),
-                      ),
-                      if (sync.isSyncing)
-                        const SizedBox(
+                  // `WbNoticeWithAction` decides whether "지금 갱신" fits
+                  // beside the message or needs its own line — at 2.0x text
+                  // scale on a 360dp screen, "앱 기본 데이터로 동작
+                  // 중입니다" squeezed against that button used to wrap to
+                  // four lines and break "중입니다" mid-word. While syncing
+                  // there is no action to measure against (the spinner is a
+                  // transient status, not a tappable action this sentence
+                  // needs to share room with), so it renders separately,
+                  // right-aligned below.
+                  WbNoticeWithAction(
+                    leading: Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Icon(Icons.sync_rounded, size: 17, color: c.brand),
+                    ),
+                    text: switch (freshness) {
+                      FreshnessState.noRemoteConfigured => '앱 기본 데이터로 동작 중입니다',
+                      FreshnessState.neverSynced => '아직 갱신되지 않았습니다',
+                      FreshnessState.synced =>
+                        '${KoDate.relative(sync.lastSuccessAt!, now)} 갱신됨',
+                    },
+                    textStyle: WbType.body.copyWith(color: c.ink),
+                    actionLabel: sync.isSyncing ? null : '지금 갱신',
+                    onAction: sync.isSyncing
+                        ? null
+                        : () => ref
+                              .read(syncControllerProvider.notifier)
+                              .refresh(force: true),
+                  ),
+                  if (sync.isSyncing)
+                    const Align(
+                      alignment: Alignment.centerRight,
+                      child: Padding(
+                        padding: EdgeInsets.all(WbSpace.sm),
+                        child: SizedBox(
                           width: 14,
                           height: 14,
                           child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      else
-                        TextButton(
-                          onPressed: () => ref
-                              .read(syncControllerProvider.notifier)
-                              .refresh(force: true),
-                          child: const Text('지금 갱신'),
                         ),
-                    ],
-                  ),
+                      ),
+                    ),
                   // A partial refresh is reported honestly rather than as
                   // a clean success.
                   if (sync.isPartial) ...<Widget>[

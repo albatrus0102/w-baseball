@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/providers.dart';
 import '../../../app/router.dart';
+import '../../../core/design_system/components/notice_widgets.dart';
 import '../../../core/design_system/components/primitives.dart';
 import '../../../core/design_system/components/provenance_widgets.dart';
 import '../../../core/design_system/theme.dart';
@@ -236,27 +237,22 @@ class _InfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = WbTheme.of(context);
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Icon(icon, size: 18, color: c.inkMuted),
-        const SizedBox(width: WbSpace.md),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(label, style: WbType.bodyStrong.copyWith(color: c.ink)),
-              const SizedBox(height: WbSpace.xxs),
-              Text(
-                value,
-                style: WbType.caption.copyWith(color: c.inkMuted, height: 1.5),
-              ),
-            ],
-          ),
-        ),
-        if (onTap != null && actionLabel != null)
-          TextButton(onPressed: onTap, child: Text(actionLabel!)),
-      ],
+    // `label` here is a venue name with no length limit, and at 2.0x text
+    // scale on a 360dp screen a same-row 길찾기 button squeezed one ("수원
+    // 스포츠파크 야구장") into breaking mid-word ("스포 / 츠파크").
+    // `WbNoticeWithAction` decides whether it fits inline per build; `value`
+    // (the address) rides along as `secondary`, always on its own line(s) —
+    // it was already expected to wrap regardless of the action.
+    return WbNoticeWithAction(
+      leading: Icon(icon, size: 18, color: c.inkMuted),
+      text: label,
+      textStyle: WbType.bodyStrong.copyWith(color: c.ink),
+      secondary: Text(
+        value,
+        style: WbType.caption.copyWith(color: c.inkMuted, height: 1.5),
+      ),
+      actionLabel: actionLabel,
+      onAction: onTap,
     );
   }
 }
