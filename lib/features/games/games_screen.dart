@@ -382,19 +382,23 @@ class _StandingsSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final seasonAsync = ref.watch(standingsSeasonProvider);
+    // Loading and error both fall through as "nothing to show yet" here —
+    // `.value` is null in both those states, same as a resolved `null`.
+    final resolvedSeasonId = seasonAsync.value;
+    final hasStandings = resolvedSeasonId != null;
 
     return Column(
       children: <Widget>[
-        const _StandingsDemoNotice(),
-        seasonAsync.maybeWhen(
-          data: (seasonId) => seasonId == null
-              ? const SizedBox.shrink()
-              : _StandingsViewSegment(
-                  view: state.standingsView,
-                  onChanged: controller.setStandingsView,
-                ),
-          orElse: () => const SizedBox.shrink(),
-        ),
+        // Only shown once there is an actual season of standings to label —
+        // a sentence claiming "the numbers you see are demo" when there are
+        // no numbers on screen would say more than is true. The empty state
+        // below already says what is true ("순위 정보가 아직 없습니다").
+        if (hasStandings) const _StandingsDemoNotice(),
+        if (hasStandings)
+          _StandingsViewSegment(
+            view: state.standingsView,
+            onChanged: controller.setStandingsView,
+          ),
         Expanded(
           child: seasonAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
@@ -492,10 +496,17 @@ class _LeagueStandingsView extends ConsumerWidget {
   }
 }
 
-/// Same shape as `_LandedNotice` below — a quiet inline banner with a way to
-/// act on what it says. All domestic standings are demo data today, and the
-/// 경기 tab is where that fact is easiest to miss, since the badges on the
-/// table and cards below sit past a scroll.
+/// Same container shape as `_LandedNotice` below — a quiet inline banner —
+/// but the action sits on its own line under the sentence rather than beside
+/// it. `_LandedNotice`'s text is short enough to share a line with its button
+/// at every scale; this sentence is not, and an inline action wedged into
+/// wrapped text lands in a different, sometimes mid-clause, spot at every
+/// width and text scale (this app allows up to 2.0x). Putting the button
+/// below removes that failure mode entirely rather than tuning around it.
+///
+/// All domestic standings are demo data today, and the 경기 tab is where
+/// that fact is easiest to miss, since the badges on the table and cards
+/// below sit past a scroll.
 class _StandingsDemoNotice extends StatelessWidget {
   const _StandingsDemoNotice();
 
@@ -512,26 +523,39 @@ class _StandingsDemoNotice extends StatelessWidget {
       ),
       padding: const EdgeInsets.symmetric(
         horizontal: WbSpace.md,
-        vertical: WbSpace.sm,
+        vertical: WbSpace.xs,
       ),
       decoration: BoxDecoration(
         color: c.brandSoft,
         borderRadius: WbRadius.chipAll,
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Icon(Icons.science_outlined, size: 15, color: c.brand),
-          const SizedBox(width: WbSpace.sm),
-          Expanded(
-            child: Text(
-              '지금 보이는 순위는 앱 동작 확인용 데모 데이터입니다. '
-              '공식 기록이 연동되면 교체됩니다.',
-              style: WbType.caption.copyWith(color: c.ink),
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Icon(Icons.science_outlined, size: 15, color: c.brand),
+              ),
+              const SizedBox(width: WbSpace.sm),
+              Expanded(
+                child: Text(
+                  '지금 보이는 순위는 앱 동작 확인용 데모 데이터입니다. '
+                  '공식 기록이 연동되면 교체됩니다.',
+                  style: WbType.caption.copyWith(color: c.ink),
+                ),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () => context.push(WbRoutes.dataSources),
-            child: const Text('데이터 출처'),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: () => context.push(WbRoutes.dataSources),
+              child: const Text('데이터 출처'),
+            ),
           ),
         ],
       ),

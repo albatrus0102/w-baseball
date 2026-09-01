@@ -21,6 +21,7 @@ void main() {
     WidgetTester tester, {
     required AudiencePreference audience,
     bool seedAssets = true,
+    double textScale = 1.0,
   }) async {
     final app = await buildTestApp(audience: audience, seedAssets: seedAssets);
     addTearDown(app.dispose);
@@ -40,8 +41,14 @@ void main() {
               GlobalWidgetsLocalizations.delegate,
               GlobalCupertinoLocalizations.delegate,
             ],
-            builder: (context, widget) => WbDensityHost(
-              child: WbFreshnessHost(child: widget ?? const SizedBox.shrink()),
+            builder: (context, widget) => MediaQuery(
+              data: MediaQuery.of(context)
+                  .copyWith(textScaler: TextScaler.linear(textScale)),
+              child: WbDensityHost(
+                child: WbFreshnessHost(
+                  child: widget ?? const SizedBox.shrink(),
+                ),
+              ),
             ),
           ),
         ),
@@ -212,7 +219,50 @@ void main() {
       await tester.tap(find.text('순위'));
       await settle(tester);
       expect(find.text('순위 정보가 아직 없습니다'), findsOneWidget);
+
+      // The demo notice describes numbers on screen. With none shown, the
+      // notice would be asserting something about data that does not exist
+      // — so it must not appear here, unlike the seeded case above.
+      expect(find.textContaining('앱 동작 확인용 데모 데이터'), findsNothing);
+      expect(find.text('데이터 출처'), findsNothing);
+      // The nested toggle has nothing to switch between either.
+      expect(find.text('리그 순위'), findsNothing);
+      expect(find.text('개인 순위'), findsNothing);
     });
+
+    for (final scale in <double>[1.0, 2.0]) {
+      testWidgets('데모 안내 문구는 글자 배율 ${scale}x에서도 넘치지 않는다', (tester) async {
+        final seen = <String>[];
+        final previous = FlutterError.onError;
+        FlutterError.onError = (details) {
+          final text = details.exception.toString();
+          if (text.contains('overflowed')) {
+            seen.add(text);
+          } else {
+            previous?.call(details);
+          }
+        };
+        addTearDown(() => FlutterError.onError = previous);
+
+        await pumpApp(tester, audience: noTeamFollowed, textScale: scale);
+        await tester.tap(find.text('경기'));
+        await settle(tester);
+        await tester.tap(find.text('순위'));
+        await settle(tester);
+        tester.takeException();
+
+        expect(
+          seen,
+          isEmpty,
+          reason: '데모 안내 배너가 ${scale}x에서 넘칩니다: ${seen.join(" || ")}',
+        );
+        // The button is on its own line below the sentence (see
+        // `_StandingsDemoNotice`), so it always reads as a whole label —
+        // never a fragment wedged where a line happened to wrap.
+        expect(find.text('데이터 출처'), findsOneWidget);
+        expect(find.textContaining('앱 동작 확인용 데모 데이터'), findsOneWidget);
+      });
+    }
 
     testWidgets('?section=standings 딥링크는 탭 전환 없이 순위를 바로 연다', (tester) async {
       final app = await pumpApp(tester, audience: noTeamFollowed);

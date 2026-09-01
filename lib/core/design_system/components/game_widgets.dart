@@ -109,20 +109,35 @@ class WbHeroGameCard extends StatelessWidget {
     super.key,
     required this.card,
     required this.now,
-    required this.onTap,
+    this.onTap,
     this.weatherRisk,
     this.onToggleFollow,
     this.isFavoriteDriven = false,
+    this.onTeamTap,
   });
 
   final GameCard card;
   final DateTime now;
-  final VoidCallback onTap;
+
+  /// What the *rest* of the card does when tapped. Null where there is
+  /// nothing left to go to — the game detail screen is the one place this
+  /// card appears without a "go to the game" destination, because it is
+  /// already that destination.
+  final VoidCallback? onTap;
   final WeatherRisk? weatherRisk;
   final VoidCallback? onToggleFollow;
 
   /// True when this fixture leads because the user follows one of the clubs.
   final bool isFavoriteDriven;
+
+  /// Called with a team id when that team's block is tapped.
+  ///
+  /// Null (the default) leaves both team blocks passive labels, which is
+  /// what the home screen and 마이야구 hero cards need: their whole card is
+  /// already one target to the game, and a second, nested target inside it
+  /// would fight that promise. Only the game detail screen — where the two
+  /// clubs are the subject, not part of a fixture row — sets this.
+  final ValueChanged<String>? onTeamTap;
 
   @override
   Widget build(BuildContext context) {
@@ -130,10 +145,20 @@ class WbHeroGameCard extends StatelessWidget {
     final game = card.game;
     final hasScore = game.hasScore && game.status.hasResult;
 
+    // WbCard's `semanticLabel` collapses the whole subtree into one spoken
+    // sentence (it wraps descendants in `ExcludeSemantics` so a screen reader
+    // does not also read every internal Text separately). That is right for
+    // the home/마이야구 cards, which have exactly one target. Once the team
+    // blocks below become their own targets they need their own reachable
+    // semantics, which that collapse would swallow — so this variant skips
+    // it and lets each piece (including the two team buttons) announce
+    // itself individually instead.
+    final hasTeamTap = onTeamTap != null;
+
     return WbCard(
       emphasized: true,
       onTap: onTap,
-      semanticLabel: _semanticLabel(),
+      semanticLabel: hasTeamTap ? null : _semanticLabel(),
       padding: const EdgeInsets.fromLTRB(
         WbSpace.lg,
         WbSpace.lg,
