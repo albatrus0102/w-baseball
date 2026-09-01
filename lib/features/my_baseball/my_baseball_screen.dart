@@ -101,11 +101,24 @@ class _EmptySetup extends ConsumerWidget {
     final c = WbTheme.of(context);
     // No overall horizontal padding here (unlike the old version of this
     // screen): `GameLogModule`'s children apply their own `WbSpace.screen`
-    // gutter, matching the followed-team branch's `ListView`. The two
-    // existing blocks below apply the same gutter explicitly instead.
+    // gutter, matching the followed-team branch's `ListView`. The other
+    // blocks below apply the same gutter explicitly instead.
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: WbSpace.screen),
       children: <Widget>[
+        // 내 기록 leads here, ahead of the 팀 선택 card. A player who just
+        // finished a game opened this screen to log it, not to be asked
+        // again about a team she has already chosen not to follow. With a
+        // team followed the dashboard still leads with the next fixture
+        // (`_NextGameBlock` in `MyBaseballScreen.build`): that is the one
+        // time-sensitive question a player with a followed team is likely
+        // asking, and 내 기록 already sits ahead of standings/리그 현황/개인
+        // 기록 there, which is as far forward as a "what's next" screen
+        // should push it.
+        if (showGameLog) ...<Widget>[
+          const GameLogModule(),
+          const SizedBox(height: WbSpace.xl),
+        ],
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: WbSpace.screen),
           child: WbCard(
@@ -152,6 +165,9 @@ class _EmptySetup extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: WbSpace.lg),
+        // Describes the dashboard a chosen team unlocks, so it reads best
+        // directly under the card that offers to choose one — not above
+        // 내 기록, which is not what this text is describing.
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: WbSpace.screen),
           child: WbEmptyState(
@@ -163,10 +179,6 @@ class _EmptySetup extends ConsumerWidget {
                 '리그 진행 상황, 부문별 개인 기록 순위입니다.',
           ),
         ),
-        if (showGameLog) ...<Widget>[
-          const SizedBox(height: WbSpace.xl),
-          const GameLogModule(),
-        ],
       ],
     );
   }
