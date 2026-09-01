@@ -645,12 +645,19 @@ class GameWeatherPanel extends ConsumerWidget {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Row(
+                  // Wrap, not Row: the risk badge, temperature and
+                  // precipitation chance are three independent facts with no
+                  // slack to give up, so at large text scale — or a long risk
+                  // label — a piece that doesn't fit the line drops to a line
+                  // of its own instead of pushing past the screen edge. Same
+                  // technique as `WbSourceLine`.
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: WbSpace.sm,
+                    runSpacing: WbSpace.xs,
                     children: <Widget>[
-                      if (risk.level != WeatherRiskLevel.clear) ...<Widget>[
+                      if (risk.level != WeatherRiskLevel.clear)
                         WbWeatherRiskBadge(risk: risk, dense: false),
-                        const SizedBox(width: WbSpace.sm),
-                      ],
                       if (exact != null)
                         Text(
                           '${exact.toStringAsFixed(0)}℃',
@@ -662,13 +669,11 @@ class GameWeatherPanel extends ConsumerWidget {
                           '${range.max.toStringAsFixed(0)}℃',
                           style: WbType.tabular.copyWith(color: c.ink),
                         ),
-                      if (pop != null) ...<Widget>[
-                        const SizedBox(width: WbSpace.md),
+                      if (pop != null)
                         Text(
                           '강수 $pop%',
                           style: WbType.tabular.copyWith(color: c.ink),
                         ),
-                      ],
                     ],
                   ),
                   if (risk.detail != null) ...<Widget>[

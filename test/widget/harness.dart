@@ -361,10 +361,49 @@ Future<void> settle(WidgetTester tester, {int rounds = 6}) async {
 
 /// Asserts nothing overflows at the current size — the check that catches
 /// clipped Korean text and cramped cards on a small screen.
+///
+/// This only sees what has actually been built. A screen built inside a
+/// `CustomScrollView` (or any lazy `Scrollable`) does not build slivers past
+/// the viewport and cache extent at all, so calling this right after
+/// `pumpScreen` can only ever catch overflow in whatever fit on the first
+/// screen. Call [scrollToEnd] first to reach the rest — "not scrolled" and
+/// "scrolled and found nothing" are different findings, and this function
+/// cannot tell them apart on its own.
 void expectNoOverflow(WidgetTester tester) {
   final exception = tester.takeException();
   if (exception != null) {
     fail('Layout threw: $exception');
+  }
+}
+
+/// Drags every `Scrollable` in the tree toward its end, repeatedly, so
+/// content a lazy scroll view has not built yet gets built and can be
+/// measured by [expectNoOverflow].
+///
+/// Re-queries `find.byType(Scrollable)` on every round rather than resolving
+/// it once, since scrolling can mount new scrollables (e.g. a tab that lazily
+/// builds its own list) that were not in the tree on round one. Every
+/// scrollable found is dragged, not just the first: a screen commonly has a
+/// horizontal carousel or filter strip ahead of its main vertical list in
+/// build order, and a vertical drag against a horizontal-only `Scrollable` is
+/// simply not recognised by its drag recognizer — it does not move, but it
+/// also does not error, so dragging it alongside the real vertical list costs
+/// nothing. A `Scrollable` that unmounts mid-round (e.g. behind a tab
+/// transition) is skipped rather than failing the drag.
+Future<void> scrollToEnd(WidgetTester tester, {int rounds = 20}) async {
+  for (var round = 0; round < rounds; round++) {
+    final scrollables = find.byType(Scrollable);
+    final count = scrollables.evaluate().length;
+    if (count == 0) return;
+    for (var i = 0; i < count; i++) {
+      try {
+        await tester.drag(scrollables.at(i), const Offset(0, -200));
+      } on FlutterError {
+        // Unmounted between the count above and this drag — not this
+        // screen's overflow to find.
+      }
+    }
+    await tester.pump();
   }
 }
 

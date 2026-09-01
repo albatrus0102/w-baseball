@@ -35,10 +35,12 @@ class WbApp extends ConsumerWidget {
       builder: (context, child) {
         // Android's accessibility font setting reaches 2.0, and someone who
         // needs it needs it — so the ceiling matches the platform rather than
-        // capping what the OS offers. The layouts are checked at 1.3 / 1.4 /
-        // 1.7 / 2.0 on a 360dp screen in `text_scale_probe_test.dart`; the
-        // previous 1.4 cap was hiding real overflows rather than preventing
-        // them.
+        // capping what the OS offers. Checked at 1.3 / 1.4 / 1.7 / 2.0 on a
+        // 360dp screen, scrolled to the end before measuring, in
+        // `text_scale_probe_test.dart` (currently: home, games, my-baseball,
+        // game detail — every screen that test can mount, not necessarily
+        // every screen in the app). The previous 1.4 cap was hiding real
+        // overflows rather than preventing them.
         //
         // The floor stays: below ~0.85 the tabular score figures stop being
         // legible, and nothing is gained by honouring it.

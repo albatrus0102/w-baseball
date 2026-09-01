@@ -10,6 +10,7 @@ import 'package:w_baseball/core/design_system/components/primitives.dart';
 import 'package:w_baseball/data/models/audience.dart';
 import 'package:w_baseball/data/models/domain.dart';
 import 'package:w_baseball/features/discover/discover_screen.dart';
+import 'package:w_baseball/features/games/game_detail_screen.dart';
 import 'package:w_baseball/features/games/games_screen.dart';
 import 'package:w_baseball/features/discover/widgets/featured_card.dart';
 import 'package:w_baseball/features/home/home_screen.dart';
@@ -442,6 +443,11 @@ void main() {
         final app = await buildTestApp();
         addTearDown(app.dispose);
         await pumpScreen(tester, app, const HomeScreen(), phone: phone);
+        // Scrolled, not just the first screen: a `CustomScrollView` never
+        // builds the slivers below the fold until something asks for them, so
+        // checking right after `pumpScreen` can only ever prove the first
+        // screenful is clean.
+        await scrollToEnd(tester);
         expectNoOverflow(tester);
       });
 
@@ -449,6 +455,43 @@ void main() {
         final app = await buildTestApp();
         addTearDown(app.dispose);
         await pumpScreen(tester, app, const GamesScreen(), phone: phone);
+        await scrollToEnd(tester);
+        expectNoOverflow(tester);
+      });
+    }
+
+    // `GameDetailScreen` is a `CustomScrollView`: below-the-fold sections
+    // (`AttendanceSection`'s status badges, the weather forecast row) are
+    // never built by a plain `pumpScreen`, so nothing there can be measured
+    // for overflow without scrolling first. See `attendance_section.dart` and
+    // `GameWeatherPanel` in `game_detail_screen.dart` for the two rows this
+    // caught, both fixed by switching `Row` to `Wrap`.
+    for (final scale in <double>[1.0, 1.4, 2.0]) {
+      testWidgets('경기 상세가 360dp @ ${scale}x 에서 깨지지 않는다 (스크롤 포함)', (
+        tester,
+      ) async {
+        final app = await buildTestApp(
+          audience: const AudiencePreference(
+            mode: AudienceMode.player,
+            onboardingCompleted: true,
+            regionCode: '11',
+            regionLabel: '서울',
+          ),
+          frozenNow: DateTime.utc(2026, 9, 2, 9),
+        );
+        addTearDown(app.dispose);
+        await pumpScreen(
+          tester,
+          app,
+          const GameDetailScreen(gameId: 'game-demo-20260902-23'),
+          phone: TestPhone(
+            'detail_360_$scale',
+            const Size(360, 640),
+            textScale: scale,
+          ),
+        );
+        await settle(tester);
+        await scrollToEnd(tester);
         expectNoOverflow(tester);
       });
     }

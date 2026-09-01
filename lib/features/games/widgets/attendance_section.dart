@@ -62,7 +62,15 @@ class AttendanceSection extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Row(
+                // Wrap, not Row: an unconstrained Row sizes each badge to its
+                // natural width, and at large text scale two status badges
+                // together no longer fit a 360dp line. A badge that doesn't
+                // fit drops to a line of its own instead of pushing past the
+                // screen edge — same technique as `WbSourceLine` below.
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: WbSpace.sm,
+                  runSpacing: WbSpace.xs,
                   children: <Widget>[
                     WbBadge(
                       label: status.labelKo,
@@ -78,15 +86,12 @@ class AttendanceSection extends ConsumerWidget {
                           Icons.help_outline_rounded,
                       },
                     ),
-                    if (attendance?.familyFriendlyConfirmed ??
-                        false) ...<Widget>[
-                      const SizedBox(width: WbSpace.sm),
+                    if (attendance?.familyFriendlyConfirmed ?? false)
                       const WbBadge(
                         label: '가족 관람 확인됨',
                         tone: WbBadgeTone.positive,
                         dense: true,
                       ),
-                    ],
                   ],
                 ),
                 const SizedBox(height: WbSpace.md),
