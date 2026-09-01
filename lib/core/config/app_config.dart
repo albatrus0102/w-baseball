@@ -228,12 +228,29 @@ class OfficialLinksConfig {
     this.kbsaHome = 'https://kbsa.or.kr/',
     this.wbscWomensWorldCup = 'https://www.wbsc.org/en/events/2026-x-womens-baseball-world-cup-group-stage-rockford/home',
     this.wpblStats = 'https://stats.womensprobaseballleague.com/',
+    this.officialVideosChannel =
+        'https://www.youtube.com/channel/UCbHZ_ylnH0zdbRZjfRxrBjg',
   });
 
   final String wbakHome;
   final String kbsaHome;
   final String wbscWomensWorldCup;
   final String wpblStats;
+
+  /// Fallback offered by the `공식 영상` home module's empty state, while it has
+  /// no video records of its own: `content/videos.json` syncs like any other
+  /// document, but nothing populates it — a YouTube Data API adapter that
+  /// would fill it needs an API key nobody has yet, so the shipped file has
+  /// zero items.
+  ///
+  /// This is a verified channel id, not a search result: `야구여왕`, the
+  /// channel belonging to the 채널A programme this app already features as its
+  /// lead broadcast topic (`featured-program-yaguyeowang` / `program-yaguyeowang`
+  /// in `assets/seed/content/discover.json`). The field name is generic on
+  /// purpose so it can outlive that pairing, but the *value* is not — if the
+  /// featured programme ever changes, this URL needs updating to match, and
+  /// so does the channel name string next to it in `home_screen.dart`.
+  final String officialVideosChannel;
 }
 
 /// Feature flags. Anything experimental, licence-blocked, or commercial is

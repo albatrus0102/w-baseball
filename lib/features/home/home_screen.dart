@@ -981,74 +981,103 @@ class _VideosModule extends ConsumerWidget {
   const _VideosModule();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) =>
-      _ModuleFrame(child: _content(context, ref));
-
-  /// Null means "nothing to show". [_ModuleFrame] decides what that looks
-  /// like; this method only reports it.
-  Widget? _content(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final videos = ref.watch(_videosProvider);
+    final channelUrl = ref
+        .watch(appConfigProvider)
+        .officialLinks
+        .officialVideosChannel;
     final c = WbTheme.of(context);
 
-    return _moduleAsync(videos, (list) {
-      if (list.isEmpty) return null;
-      return SizedBox(
-        height: 132,
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: WbSpace.screen),
-          itemCount: list.length,
-          separatorBuilder: (_, _) => const SizedBox(width: WbSpace.md),
-          itemBuilder: (context, i) {
-            final video = list[i];
-            return SizedBox(
-              width: 220,
-              child: WbCard(
-                padding: const EdgeInsets.all(WbSpace.md),
-                onTap: () => openSource(
-                  context,
-                  url: video.url,
-                  title: video.title,
-                  sourceLabel: video.channelName ?? '공식 영상',
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Row(
+    return videos.when(
+      // Same default `_moduleAsync` used before this module needed its own
+      // `.when` to add the empty-state channel offer below.
+      loading: () => const _ModuleFrame(child: _ModuleSkeleton()),
+      error: (_, _) => const _ModuleFrame(),
+      data: (list) {
+        if (list.isEmpty) {
+          // No video records yet — see `OfficialLinksConfig.officialVideosChannel`
+          // for why. This offer disappears the moment the ingest adapter (or
+          // any other source) actually fills the module with real records,
+          // since this branch only runs while `list` is empty.
+          return _ModuleFrame(
+            absence: _Absence(
+              icon: Icons.smart_display_outlined,
+              title: '공식 영상이 아직 없습니다',
+              message:
+                  '이 화면에 모아 보여줄 영상은 아직 없지만, '
+                  '방송사 유튜브 채널 야구여왕에서 영상을 볼 수 있습니다.',
+              primaryLabel: '야구여왕 채널 열기',
+              onPrimary: () => openSource(
+                context,
+                url: channelUrl,
+                title: '야구여왕',
+                sourceLabel: 'YouTube · 야구여왕 공식 채널',
+              ),
+              compactLabel: '공식 영상 없음',
+            ),
+          );
+        }
+        return _ModuleFrame(
+          child: SizedBox(
+            height: 132,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: WbSpace.screen),
+              itemCount: list.length,
+              separatorBuilder: (_, _) => const SizedBox(width: WbSpace.md),
+              itemBuilder: (context, i) {
+                final video = list[i];
+                return SizedBox(
+                  width: 220,
+                  child: WbCard(
+                    padding: const EdgeInsets.all(WbSpace.md),
+                    onTap: () => openSource(
+                      context,
+                      url: video.url,
+                      title: video.title,
+                      sourceLabel: video.channelName ?? '공식 영상',
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        Icon(
-                          Icons.play_circle_outline_rounded,
-                          size: 16,
-                          color: c.action,
+                        Row(
+                          children: <Widget>[
+                            Icon(
+                              Icons.play_circle_outline_rounded,
+                              size: 16,
+                              color: c.action,
+                            ),
+                            const SizedBox(width: WbSpace.xs),
+                            Expanded(
+                              child: Text(
+                                video.channelName ?? '공식 채널',
+                                style: WbType.micro.copyWith(color: c.inkMuted),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: WbSpace.xs),
+                        const SizedBox(height: WbSpace.sm),
                         Expanded(
                           child: Text(
-                            video.channelName ?? '공식 채널',
-                            style: WbType.micro.copyWith(color: c.inkMuted),
-                            maxLines: 1,
+                            video.title,
+                            style: WbType.bodyStrong.copyWith(color: c.ink),
+                            maxLines: 3,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: WbSpace.sm),
-                    Expanded(
-                      child: Text(
-                        video.title,
-                        style: WbType.bodyStrong.copyWith(color: c.ink),
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-      );
-    });
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
   }
 }
 
