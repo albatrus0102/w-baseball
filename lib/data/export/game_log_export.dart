@@ -1,0 +1,220 @@
+import 'dart:convert';
+
+import '../models/game_log.dart';
+
+/// Export/import format for 출전 일지.
+///
+/// This is the layer that protects a season of someone's own work: there is
+/// no server and no account (see the feature brief's "phone-change
+/// problem"), so a versioned, round-trippable file is the only thing standing
+/// between a reinstall and losing every entry. [GameLogJsonCodec] is
+/// therefore built and tested as an encode/decode pair *now*, in Stage 1,
+/// even though the app does not yet offer an import screen — Stage 2's
+/// import path, and the "총무의 엑셀" bulk path, both read this same shape.
+///
+/// [GameLogCsvCodec] is encode-only for Stage 1: it exists so the export is
+/// something a person can actually open and read (or hand to someone doing
+/// bulk entry in a spreadsheet), not so this build can parse it back in.
+class GameLogJsonCodec {
+  const GameLogJsonCodec._();
+
+  /// The format tag written into every export and checked on import. Bumping
+  /// this is a breaking change to the file shape; a new field on an existing
+  /// entry is not (see [decode]'s handling of unknown/missing keys).
+  static const String formatTag = 'wb-myrecords-v1';
+
+  static String encode(
+    List<GameLogEntry> entries, {
+    required DateTime exportedAt,
+  }) {
+    final json = <String, Object?>{
+      'format': formatTag,
+      'exportedAt': exportedAt.toUtc().toIso8601String(),
+      'entries': entries.map(_encodeEntry).toList(growable: false),
+    };
+    return const JsonEncoder.withIndent('  ').convert(json);
+  }
+
+  static Map<String, Object?> _encodeEntry(GameLogEntry e) => <String, Object?>{
+    'id': e.id,
+    'playedAt': e.playedAt.toUtc().toIso8601String(),
+    'dayKey': e.dayKey,
+    'gameId': e.gameId,
+    'competitionLabel': e.competitionLabel,
+    'opponentLabel': e.opponentLabel,
+    'venueLabel': e.venueLabel,
+    'positions': e.positions.map((p) => p.wireValue).toList(growable: false),
+    'result': e.result.wireValue,
+    'note': e.note,
+    'createdAt': e.createdAt.toUtc().toIso8601String(),
+    'updatedAt': e.updatedAt?.toUtc().toIso8601String(),
+  };
+
+  /// Parses an export file back into entries.
+  ///
+  /// Never throws on a malformed *entry* — one bad row must not sink an
+  /// otherwise-good file, which is exactly the situation a hand-edited or
+  /// partially-corrupted backup produces. A malformed *envelope* (not valid
+  /// JSON, no `entries` array, or an unrecognised `format`) is reported as
+  /// [GameLogImportResult.formatError] instead, since there is nothing safe
+  /// to salvage from that.
+  static GameLogImportResult decode(String raw) {
+    final Object? parsed;
+    try {
+      parsed = jsonDecode(raw);
+    } on FormatException {
+      return const GameLogImportResult(
+        entries: <GameLogEntry>[],
+        skippedCount: 0,
+        formatError: '파일을 읽을 수 없습니다.',
+      );
+    }
+    if (parsed is! Map<String, Object?>) {
+      return const GameLogImportResult(
+        entries: <GameLogEntry>[],
+        skippedCount: 0,
+        formatError: '알 수 없는 파일 형식입니다.',
+      );
+    }
+    final format = parsed['format'];
+    if (format != formatTag) {
+      return GameLogImportResult(
+        entries: const <GameLogEntry>[],
+        skippedCount: 0,
+        formatError: '지원하지 않는 형식입니다 ($format).',
+      );
+    }
+    final rawEntries = parsed['entries'];
+    if (rawEntries is! List) {
+      return const GameLogImportResult(
+        entries: <GameLogEntry>[],
+        skippedCount: 0,
+        formatError: '기록 목록을 찾을 수 없습니다.',
+      );
+    }
+
+    final entries = <GameLogEntry>[];
+    var skipped = 0;
+    for (final item in rawEntries) {
+      final entry = _decodeEntry(item);
+      if (entry == null) {
+        skipped++;
+      } else {
+        entries.add(entry);
+      }
+    }
+    return GameLogImportResult(entries: entries, skippedCount: skipped);
+  }
+
+  static GameLogEntry? _decodeEntry(Object? raw) {
+    if (raw is! Map) return null;
+    final id = raw['id'];
+    final playedAtRaw = raw['playedAt'];
+    final createdAtRaw = raw['createdAt'];
+    if (id is! int || playedAtRaw is! String || createdAtRaw is! String) {
+      return null;
+    }
+    final playedAt = DateTime.tryParse(playedAtRaw)?.toUtc();
+    final createdAt = DateTime.tryParse(createdAtRaw)?.toUtc();
+    if (playedAt == null || createdAt == null) return null;
+
+    final dayKey = raw['dayKey'];
+    final updatedAtRaw = raw['updatedAt'];
+    final positionsRaw = raw['positions'];
+
+    return GameLogEntry(
+      id: id,
+      playedAt: playedAt,
+      dayKey: dayKey is String && dayKey.isNotEmpty
+          ? dayKey
+          : _fallbackDayKey(playedAt),
+      gameId: raw['gameId'] as String?,
+      competitionLabel: raw['competitionLabel'] as String?,
+      opponentLabel: raw['opponentLabel'] as String?,
+      venueLabel: raw['venueLabel'] as String?,
+      positions: positionsRaw is List
+          ? positionsRaw
+                .whereType<String>()
+                .map(GameLogPosition.parse)
+                .whereType<GameLogPosition>()
+                .toList(growable: false)
+          : const <GameLogPosition>[],
+      result: GameLogResult.parse(raw['result'] as String?),
+      note: raw['note'] as String?,
+      createdAt: createdAt,
+      updatedAt: updatedAtRaw is String
+          ? DateTime.tryParse(updatedAtRaw)?.toUtc()
+          : null,
+    );
+  }
+
+  static String _fallbackDayKey(DateTime utc) {
+    String p2(int v) => v.toString().padLeft(2, '0');
+    return '${utc.year.toString().padLeft(4, '0')}-${p2(utc.month)}-${p2(utc.day)}';
+  }
+}
+
+/// Result of parsing an export file.
+class GameLogImportResult {
+  const GameLogImportResult({
+    required this.entries,
+    required this.skippedCount,
+    this.formatError,
+  });
+
+  final List<GameLogEntry> entries;
+
+  /// Individual rows that could not be parsed and were dropped, not the
+  /// whole file — see [GameLogJsonCodec.decode].
+  final int skippedCount;
+
+  /// Set only when the envelope itself is unreadable; [entries] is then
+  /// always empty.
+  final String? formatError;
+
+  bool get isValid => formatError == null;
+}
+
+/// Human-readable CSV, for opening in a spreadsheet or for the "총무의 엑셀"
+/// bulk-entry path later. See the class doc above for why this is
+/// encode-only in Stage 1.
+class GameLogCsvCodec {
+  const GameLogCsvCodec._();
+
+  static const List<String> _header = <String>[
+    '날짜',
+    '대회',
+    '상대',
+    '구장',
+    '포지션',
+    '결과',
+    '메모',
+  ];
+
+  static String encode(List<GameLogEntry> entries) {
+    final buffer = StringBuffer()..writeln(_header.map(_quote).join(','));
+    for (final e in entries) {
+      final row = <String>[
+        e.dayKey,
+        e.competitionLabel ?? '',
+        e.opponentLabel ?? '',
+        e.venueLabel ?? '',
+        e.positions.map((p) => p.labelKo).join('/'),
+        e.result.labelKo,
+        e.note ?? '',
+      ];
+      buffer.writeln(row.map(_quote).join(','));
+    }
+    return buffer.toString();
+  }
+
+  /// RFC 4180-style quoting: wrap in quotes and double any embedded quote
+  /// whenever the field could otherwise be misread — a comma, a quote, or a
+  /// newline in a free-text 메모 must not silently break the column count.
+  static String _quote(String field) {
+    final needsQuoting =
+        field.contains(',') || field.contains('"') || field.contains('\n');
+    if (!needsQuoting) return field;
+    return '"${field.replaceAll('"', '""')}"';
+  }
+}

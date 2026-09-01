@@ -13,12 +13,15 @@ import '../core/platform/platform_services.dart';
 import '../data/models/audience.dart';
 import '../data/models/content.dart';
 import '../data/models/domain.dart';
+import '../data/models/game_log.dart';
 import '../data/models/reminder_status.dart';
 import '../data/models/stats.dart';
 import '../data/models/weather.dart';
+import '../data/export/game_log_export_service.dart';
 import '../data/repositories/competition_repository.dart';
 import '../data/repositories/content_repository.dart';
 import '../data/repositories/follow_repository.dart';
+import '../data/repositories/game_log_repository.dart';
 import '../data/repositories/game_repository.dart';
 import '../data/repositories/preferences_repository.dart';
 import '../data/repositories/search_repository.dart';
@@ -183,6 +186,17 @@ final followRepositoryProvider = Provider<FollowRepository>((ref) {
   return DriftFollowRepository(db: ref.watch(databaseProvider));
 });
 
+final gameLogRepositoryProvider = Provider<GameLogRepository>((ref) {
+  return DriftGameLogRepository(
+    db: ref.watch(databaseProvider),
+    clock: ref.watch(clockProvider),
+  );
+});
+
+final gameLogExportServiceProvider = Provider<GameLogExportService>(
+  (ref) => const GameLogExportService(),
+);
+
 final weatherRepositoryProvider = Provider<WeatherRepository>((ref) {
   return DriftWeatherRepository(db: ref.watch(databaseProvider));
 });
@@ -309,6 +323,14 @@ class AudienceController {
   /// picker, so this only removes the unsolicited banner, not the feature.
   Future<void> dismissModeNudge() =>
       _prefs.saveAudience(_prefs.audience.copyWith(modeNudgeDismissed: true));
+
+  /// One-time dismissal of the 출전 일지 "경기 하고 오셨나요?" card for someone
+  /// who has not logged a game yet and does not want the reminder. Logging a
+  /// first entry makes the card disappear on its own (see `GameLogModule`);
+  /// this only covers the "I saw it and don't want it right now" path.
+  Future<void> dismissGameLogNudge() => _prefs.saveAudience(
+    _prefs.audience.copyWith(gameLogNudgeDismissed: true),
+  );
 }
 
 final audienceControllerProvider = Provider<AudienceController>(
@@ -391,6 +413,13 @@ final followedTeamIdsProvider = StreamProvider<Set<String>>((ref) {
 
 final savedGameIdsProvider = StreamProvider<Set<String>>((ref) {
   return ref.watch(followRepositoryProvider).watchSavedIds(SavedItemKind.game);
+});
+
+/// The player's own 출전 일지, most recent game first. Watched rather than
+/// fetched once, so a new entry (or a deletion) updates the module, the
+/// count, and the derived 포지션 히스토리 in the same frame.
+final gameLogEntriesProvider = StreamProvider<List<GameLogEntry>>((ref) {
+  return ref.watch(gameLogRepositoryProvider).watchEntries();
 });
 
 final featuredProvider = StreamProvider<List<FeaturedItem>>((ref) {

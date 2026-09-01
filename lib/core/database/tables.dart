@@ -833,6 +833,65 @@ class JourneyEvents extends Table {
   TextColumn get properties => text().nullable()();
 }
 
+/// A player's own 출전 일지 entry — a game she attended, in her own words.
+///
+/// Device-local and never uploaded, deliberately sitting here with
+/// [LocalFollows] / [SavedItems] / [SeenItems] rather than among the synced
+/// tables that carry `ProvenanceColumns`: nothing here was published by
+/// anyone. It is the user's own record of her own game, so there is no
+/// source to cite and no quality/licence status to track.
+///
+/// Stage 1 only — see the feature brief. Deliberately **not** a stat table:
+/// no 타수/안타/타율 columns exist here (Stage 2), and nothing here is ever
+/// aggregated into a ranking against anyone else.
+@DataClassName('GameLogEntryRow')
+class GameLogEntries extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  /// The KST calendar day of the game, stored as the UTC instant of that
+  /// day's KST midnight (see `Kst.fromKst`) — the same convention `games`
+  /// uses for its own timestamps.
+  DateTimeColumn get playedAt => dateTime()();
+
+  /// `yyyy-MM-dd` in KST — the grouping/sort key, mirroring `games.day_key`.
+  TextColumn get dayKey => text()();
+
+  /// Present only once a real fixture exists to bind to. Deliberately not a
+  /// foreign key: every league fixture bundled with this build is demo data,
+  /// so there is normally nothing real to reference yet. An entry stands on
+  /// its free-text labels alone today; a later build can start writing this
+  /// column without a migration, since it already exists.
+  TextColumn get gameId => text().nullable()();
+
+  /// Free text — 대회. There is no competition table to join against here on
+  /// purpose; see `gameId`.
+  TextColumn get competitionLabel => text().nullable()();
+
+  /// Free text — 상대.
+  TextColumn get opponentLabel => text().nullable()();
+
+  /// Free text — 구장.
+  TextColumn get venueLabel => text().nullable()();
+
+  /// Comma-joined `GameLogPosition.wireValue`s, e.g. `catcher,leftField`. A
+  /// personal log entry, never joined against anything, so a delimited
+  /// column is enough — no junction table needed.
+  TextColumn get positions => text().withDefault(const Constant(''))();
+
+  /// `GameLogResult.wireValue`. Chosen from a fixed short list, not typed —
+  /// see the feature brief's "steppers and chips" rule.
+  TextColumn get result => text().withDefault(const Constant('unspecified'))();
+
+  /// One line, in her own words. Shown only on her own screens and her own
+  /// export — never search, never any surface anyone else can see. See the
+  /// feature brief: a record about herself is not what the minor-safety
+  /// rules for shared surfaces exist to guard against.
+  TextColumn get note => text().nullable()();
+
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime().nullable()();
+}
+
 /// Cached "how complete is this?" figures per scope.
 @DataClassName('DataCoverageRow')
 class DataCoverages extends Table {

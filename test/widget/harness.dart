@@ -168,6 +168,7 @@ Future<TestApp> buildTestApp({
   DateTime? lastSync,
   Map<String, String>? documents,
   DateTime? frozenNow,
+  PlatformServices? platformServices,
 }) async {
   final resolvedConfig = config ?? AppConfig.fromEnvironment();
   final db = WbDatabase(NativeDatabase.memory());
@@ -194,8 +195,12 @@ Future<TestApp> buildTestApp({
       appConfigProvider.overrideWithValue(resolvedConfig),
       databaseProvider.overrideWithValue(db),
       preferencesProvider.overrideWithValue(preferences),
-      // Platform edges are inert: no channels exist in a widget test.
-      platformServicesProvider.overrideWithValue(PlatformServices.noop()),
+      // Platform edges are inert by default: no channels exist in a widget
+      // test. A caller can pass its own (e.g. a recording `SharingService`)
+      // to observe a specific edge without hand-assembling every other field.
+      platformServicesProvider.overrideWithValue(
+        platformServices ?? PlatformServices.noop(),
+      ),
       analyticsProvider.overrideWithValue(const NoopAnalyticsService()),
       // No network source, so nothing in a widget test can reach out.
       dataSourcesProvider.overrideWithValue(const []),

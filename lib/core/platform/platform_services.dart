@@ -168,6 +168,17 @@ class UrlMapsService implements MapsService {
 
 abstract interface class SharingService {
   Future<void> shareText({required String text, String? subject});
+
+  /// Hands one or more files to the OS share sheet — the 내보내기 mechanism
+  /// for 출전 일지. No storage permission is requested: `share_plus` reads
+  /// the files itself and only the target app the user picks ever receives
+  /// them, which is what keeps the privacy policy's permission table
+  /// unchanged by this feature.
+  Future<void> shareFiles({
+    required List<XFile> files,
+    String? text,
+    String? subject,
+  });
 }
 
 class PlatformSharingService implements SharingService {
@@ -181,6 +192,21 @@ class PlatformSharingService implements SharingService {
       // Nothing to share with (headless test host). Silently ignore.
     }
   }
+
+  @override
+  Future<void> shareFiles({
+    required List<XFile> files,
+    String? text,
+    String? subject,
+  }) async {
+    try {
+      await SharePlus.instance.share(
+        ShareParams(files: files, text: text, subject: subject),
+      );
+    } on MissingPluginException {
+      // Nothing to share with (headless test host). Silently ignore.
+    }
+  }
 }
 
 class NoopSharingService implements SharingService {
@@ -188,6 +214,13 @@ class NoopSharingService implements SharingService {
 
   @override
   Future<void> shareText({required String text, String? subject}) async {}
+
+  @override
+  Future<void> shareFiles({
+    required List<XFile> files,
+    String? text,
+    String? subject,
+  }) async {}
 }
 
 /// Opens a URL outside the app.
@@ -341,6 +374,25 @@ class PlatformServices {
     externalLinks: _NoopLinkService(),
     haptics: NoopHapticsService(),
     systemSettings: UnsupportedSystemSettingsService(),
+  );
+
+  /// Swaps out one or more services. Used by tests that need to observe a
+  /// single edge (e.g. a recording [SharingService]) without hand-assembling
+  /// every other field.
+  PlatformServices copyWith({
+    CalendarService? calendar,
+    MapsService? maps,
+    SharingService? sharing,
+    ExternalLinkService? externalLinks,
+    HapticsService? haptics,
+    SystemSettingsService? systemSettings,
+  }) => PlatformServices(
+    calendar: calendar ?? this.calendar,
+    maps: maps ?? this.maps,
+    sharing: sharing ?? this.sharing,
+    externalLinks: externalLinks ?? this.externalLinks,
+    haptics: haptics ?? this.haptics,
+    systemSettings: systemSettings ?? this.systemSettings,
   );
 }
 

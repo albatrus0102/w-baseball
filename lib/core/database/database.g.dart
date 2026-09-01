@@ -43010,6 +43010,739 @@ class JourneyEventsCompanion extends UpdateCompanion<JourneyEventRow> {
   }
 }
 
+class $GameLogEntriesTable extends GameLogEntries
+    with TableInfo<$GameLogEntriesTable, GameLogEntryRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $GameLogEntriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _playedAtMeta = const VerificationMeta(
+    'playedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> playedAt = GeneratedColumn<DateTime>(
+    'played_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _dayKeyMeta = const VerificationMeta('dayKey');
+  @override
+  late final GeneratedColumn<String> dayKey = GeneratedColumn<String>(
+    'day_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _gameIdMeta = const VerificationMeta('gameId');
+  @override
+  late final GeneratedColumn<String> gameId = GeneratedColumn<String>(
+    'game_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _competitionLabelMeta = const VerificationMeta(
+    'competitionLabel',
+  );
+  @override
+  late final GeneratedColumn<String> competitionLabel = GeneratedColumn<String>(
+    'competition_label',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _opponentLabelMeta = const VerificationMeta(
+    'opponentLabel',
+  );
+  @override
+  late final GeneratedColumn<String> opponentLabel = GeneratedColumn<String>(
+    'opponent_label',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _venueLabelMeta = const VerificationMeta(
+    'venueLabel',
+  );
+  @override
+  late final GeneratedColumn<String> venueLabel = GeneratedColumn<String>(
+    'venue_label',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _positionsMeta = const VerificationMeta(
+    'positions',
+  );
+  @override
+  late final GeneratedColumn<String> positions = GeneratedColumn<String>(
+    'positions',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _resultMeta = const VerificationMeta('result');
+  @override
+  late final GeneratedColumn<String> result = GeneratedColumn<String>(
+    'result',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('unspecified'),
+  );
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+    'note',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    playedAt,
+    dayKey,
+    gameId,
+    competitionLabel,
+    opponentLabel,
+    venueLabel,
+    positions,
+    result,
+    note,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'game_log_entries';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<GameLogEntryRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('played_at')) {
+      context.handle(
+        _playedAtMeta,
+        playedAt.isAcceptableOrUnknown(data['played_at']!, _playedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_playedAtMeta);
+    }
+    if (data.containsKey('day_key')) {
+      context.handle(
+        _dayKeyMeta,
+        dayKey.isAcceptableOrUnknown(data['day_key']!, _dayKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dayKeyMeta);
+    }
+    if (data.containsKey('game_id')) {
+      context.handle(
+        _gameIdMeta,
+        gameId.isAcceptableOrUnknown(data['game_id']!, _gameIdMeta),
+      );
+    }
+    if (data.containsKey('competition_label')) {
+      context.handle(
+        _competitionLabelMeta,
+        competitionLabel.isAcceptableOrUnknown(
+          data['competition_label']!,
+          _competitionLabelMeta,
+        ),
+      );
+    }
+    if (data.containsKey('opponent_label')) {
+      context.handle(
+        _opponentLabelMeta,
+        opponentLabel.isAcceptableOrUnknown(
+          data['opponent_label']!,
+          _opponentLabelMeta,
+        ),
+      );
+    }
+    if (data.containsKey('venue_label')) {
+      context.handle(
+        _venueLabelMeta,
+        venueLabel.isAcceptableOrUnknown(data['venue_label']!, _venueLabelMeta),
+      );
+    }
+    if (data.containsKey('positions')) {
+      context.handle(
+        _positionsMeta,
+        positions.isAcceptableOrUnknown(data['positions']!, _positionsMeta),
+      );
+    }
+    if (data.containsKey('result')) {
+      context.handle(
+        _resultMeta,
+        result.isAcceptableOrUnknown(data['result']!, _resultMeta),
+      );
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+        _noteMeta,
+        note.isAcceptableOrUnknown(data['note']!, _noteMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  GameLogEntryRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return GameLogEntryRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      playedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}played_at'],
+      )!,
+      dayKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}day_key'],
+      )!,
+      gameId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}game_id'],
+      ),
+      competitionLabel: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}competition_label'],
+      ),
+      opponentLabel: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}opponent_label'],
+      ),
+      venueLabel: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}venue_label'],
+      ),
+      positions: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}positions'],
+      )!,
+      result: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}result'],
+      )!,
+      note: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      ),
+    );
+  }
+
+  @override
+  $GameLogEntriesTable createAlias(String alias) {
+    return $GameLogEntriesTable(attachedDatabase, alias);
+  }
+}
+
+class GameLogEntryRow extends DataClass implements Insertable<GameLogEntryRow> {
+  final int id;
+
+  /// The KST calendar day of the game, stored as the UTC instant of that
+  /// day's KST midnight (see `Kst.fromKst`) — the same convention `games`
+  /// uses for its own timestamps.
+  final DateTime playedAt;
+
+  /// `yyyy-MM-dd` in KST — the grouping/sort key, mirroring `games.day_key`.
+  final String dayKey;
+
+  /// Present only once a real fixture exists to bind to. Deliberately not a
+  /// foreign key: every league fixture bundled with this build is demo data,
+  /// so there is normally nothing real to reference yet. An entry stands on
+  /// its free-text labels alone today; a later build can start writing this
+  /// column without a migration, since it already exists.
+  final String? gameId;
+
+  /// Free text — 대회. There is no competition table to join against here on
+  /// purpose; see `gameId`.
+  final String? competitionLabel;
+
+  /// Free text — 상대.
+  final String? opponentLabel;
+
+  /// Free text — 구장.
+  final String? venueLabel;
+
+  /// Comma-joined `GameLogPosition.wireValue`s, e.g. `catcher,leftField`. A
+  /// personal log entry, never joined against anything, so a delimited
+  /// column is enough — no junction table needed.
+  final String positions;
+
+  /// `GameLogResult.wireValue`. Chosen from a fixed short list, not typed —
+  /// see the feature brief's "steppers and chips" rule.
+  final String result;
+
+  /// One line, in her own words. Shown only on her own screens and her own
+  /// export — never search, never any surface anyone else can see. See the
+  /// feature brief: a record about herself is not what the minor-safety
+  /// rules for shared surfaces exist to guard against.
+  final String? note;
+  final DateTime createdAt;
+  final DateTime? updatedAt;
+  const GameLogEntryRow({
+    required this.id,
+    required this.playedAt,
+    required this.dayKey,
+    this.gameId,
+    this.competitionLabel,
+    this.opponentLabel,
+    this.venueLabel,
+    required this.positions,
+    required this.result,
+    this.note,
+    required this.createdAt,
+    this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['played_at'] = Variable<DateTime>(playedAt);
+    map['day_key'] = Variable<String>(dayKey);
+    if (!nullToAbsent || gameId != null) {
+      map['game_id'] = Variable<String>(gameId);
+    }
+    if (!nullToAbsent || competitionLabel != null) {
+      map['competition_label'] = Variable<String>(competitionLabel);
+    }
+    if (!nullToAbsent || opponentLabel != null) {
+      map['opponent_label'] = Variable<String>(opponentLabel);
+    }
+    if (!nullToAbsent || venueLabel != null) {
+      map['venue_label'] = Variable<String>(venueLabel);
+    }
+    map['positions'] = Variable<String>(positions);
+    map['result'] = Variable<String>(result);
+    if (!nullToAbsent || note != null) {
+      map['note'] = Variable<String>(note);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    if (!nullToAbsent || updatedAt != null) {
+      map['updated_at'] = Variable<DateTime>(updatedAt);
+    }
+    return map;
+  }
+
+  GameLogEntriesCompanion toCompanion(bool nullToAbsent) {
+    return GameLogEntriesCompanion(
+      id: Value(id),
+      playedAt: Value(playedAt),
+      dayKey: Value(dayKey),
+      gameId: gameId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(gameId),
+      competitionLabel: competitionLabel == null && nullToAbsent
+          ? const Value.absent()
+          : Value(competitionLabel),
+      opponentLabel: opponentLabel == null && nullToAbsent
+          ? const Value.absent()
+          : Value(opponentLabel),
+      venueLabel: venueLabel == null && nullToAbsent
+          ? const Value.absent()
+          : Value(venueLabel),
+      positions: Value(positions),
+      result: Value(result),
+      note: note == null && nullToAbsent ? const Value.absent() : Value(note),
+      createdAt: Value(createdAt),
+      updatedAt: updatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(updatedAt),
+    );
+  }
+
+  factory GameLogEntryRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return GameLogEntryRow(
+      id: serializer.fromJson<int>(json['id']),
+      playedAt: serializer.fromJson<DateTime>(json['playedAt']),
+      dayKey: serializer.fromJson<String>(json['dayKey']),
+      gameId: serializer.fromJson<String?>(json['gameId']),
+      competitionLabel: serializer.fromJson<String?>(json['competitionLabel']),
+      opponentLabel: serializer.fromJson<String?>(json['opponentLabel']),
+      venueLabel: serializer.fromJson<String?>(json['venueLabel']),
+      positions: serializer.fromJson<String>(json['positions']),
+      result: serializer.fromJson<String>(json['result']),
+      note: serializer.fromJson<String?>(json['note']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'playedAt': serializer.toJson<DateTime>(playedAt),
+      'dayKey': serializer.toJson<String>(dayKey),
+      'gameId': serializer.toJson<String?>(gameId),
+      'competitionLabel': serializer.toJson<String?>(competitionLabel),
+      'opponentLabel': serializer.toJson<String?>(opponentLabel),
+      'venueLabel': serializer.toJson<String?>(venueLabel),
+      'positions': serializer.toJson<String>(positions),
+      'result': serializer.toJson<String>(result),
+      'note': serializer.toJson<String?>(note),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime?>(updatedAt),
+    };
+  }
+
+  GameLogEntryRow copyWith({
+    int? id,
+    DateTime? playedAt,
+    String? dayKey,
+    Value<String?> gameId = const Value.absent(),
+    Value<String?> competitionLabel = const Value.absent(),
+    Value<String?> opponentLabel = const Value.absent(),
+    Value<String?> venueLabel = const Value.absent(),
+    String? positions,
+    String? result,
+    Value<String?> note = const Value.absent(),
+    DateTime? createdAt,
+    Value<DateTime?> updatedAt = const Value.absent(),
+  }) => GameLogEntryRow(
+    id: id ?? this.id,
+    playedAt: playedAt ?? this.playedAt,
+    dayKey: dayKey ?? this.dayKey,
+    gameId: gameId.present ? gameId.value : this.gameId,
+    competitionLabel: competitionLabel.present
+        ? competitionLabel.value
+        : this.competitionLabel,
+    opponentLabel: opponentLabel.present
+        ? opponentLabel.value
+        : this.opponentLabel,
+    venueLabel: venueLabel.present ? venueLabel.value : this.venueLabel,
+    positions: positions ?? this.positions,
+    result: result ?? this.result,
+    note: note.present ? note.value : this.note,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
+  );
+  GameLogEntryRow copyWithCompanion(GameLogEntriesCompanion data) {
+    return GameLogEntryRow(
+      id: data.id.present ? data.id.value : this.id,
+      playedAt: data.playedAt.present ? data.playedAt.value : this.playedAt,
+      dayKey: data.dayKey.present ? data.dayKey.value : this.dayKey,
+      gameId: data.gameId.present ? data.gameId.value : this.gameId,
+      competitionLabel: data.competitionLabel.present
+          ? data.competitionLabel.value
+          : this.competitionLabel,
+      opponentLabel: data.opponentLabel.present
+          ? data.opponentLabel.value
+          : this.opponentLabel,
+      venueLabel: data.venueLabel.present
+          ? data.venueLabel.value
+          : this.venueLabel,
+      positions: data.positions.present ? data.positions.value : this.positions,
+      result: data.result.present ? data.result.value : this.result,
+      note: data.note.present ? data.note.value : this.note,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GameLogEntryRow(')
+          ..write('id: $id, ')
+          ..write('playedAt: $playedAt, ')
+          ..write('dayKey: $dayKey, ')
+          ..write('gameId: $gameId, ')
+          ..write('competitionLabel: $competitionLabel, ')
+          ..write('opponentLabel: $opponentLabel, ')
+          ..write('venueLabel: $venueLabel, ')
+          ..write('positions: $positions, ')
+          ..write('result: $result, ')
+          ..write('note: $note, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    playedAt,
+    dayKey,
+    gameId,
+    competitionLabel,
+    opponentLabel,
+    venueLabel,
+    positions,
+    result,
+    note,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GameLogEntryRow &&
+          other.id == this.id &&
+          other.playedAt == this.playedAt &&
+          other.dayKey == this.dayKey &&
+          other.gameId == this.gameId &&
+          other.competitionLabel == this.competitionLabel &&
+          other.opponentLabel == this.opponentLabel &&
+          other.venueLabel == this.venueLabel &&
+          other.positions == this.positions &&
+          other.result == this.result &&
+          other.note == this.note &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class GameLogEntriesCompanion extends UpdateCompanion<GameLogEntryRow> {
+  final Value<int> id;
+  final Value<DateTime> playedAt;
+  final Value<String> dayKey;
+  final Value<String?> gameId;
+  final Value<String?> competitionLabel;
+  final Value<String?> opponentLabel;
+  final Value<String?> venueLabel;
+  final Value<String> positions;
+  final Value<String> result;
+  final Value<String?> note;
+  final Value<DateTime> createdAt;
+  final Value<DateTime?> updatedAt;
+  const GameLogEntriesCompanion({
+    this.id = const Value.absent(),
+    this.playedAt = const Value.absent(),
+    this.dayKey = const Value.absent(),
+    this.gameId = const Value.absent(),
+    this.competitionLabel = const Value.absent(),
+    this.opponentLabel = const Value.absent(),
+    this.venueLabel = const Value.absent(),
+    this.positions = const Value.absent(),
+    this.result = const Value.absent(),
+    this.note = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  GameLogEntriesCompanion.insert({
+    this.id = const Value.absent(),
+    required DateTime playedAt,
+    required String dayKey,
+    this.gameId = const Value.absent(),
+    this.competitionLabel = const Value.absent(),
+    this.opponentLabel = const Value.absent(),
+    this.venueLabel = const Value.absent(),
+    this.positions = const Value.absent(),
+    this.result = const Value.absent(),
+    this.note = const Value.absent(),
+    required DateTime createdAt,
+    this.updatedAt = const Value.absent(),
+  }) : playedAt = Value(playedAt),
+       dayKey = Value(dayKey),
+       createdAt = Value(createdAt);
+  static Insertable<GameLogEntryRow> custom({
+    Expression<int>? id,
+    Expression<DateTime>? playedAt,
+    Expression<String>? dayKey,
+    Expression<String>? gameId,
+    Expression<String>? competitionLabel,
+    Expression<String>? opponentLabel,
+    Expression<String>? venueLabel,
+    Expression<String>? positions,
+    Expression<String>? result,
+    Expression<String>? note,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (playedAt != null) 'played_at': playedAt,
+      if (dayKey != null) 'day_key': dayKey,
+      if (gameId != null) 'game_id': gameId,
+      if (competitionLabel != null) 'competition_label': competitionLabel,
+      if (opponentLabel != null) 'opponent_label': opponentLabel,
+      if (venueLabel != null) 'venue_label': venueLabel,
+      if (positions != null) 'positions': positions,
+      if (result != null) 'result': result,
+      if (note != null) 'note': note,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  GameLogEntriesCompanion copyWith({
+    Value<int>? id,
+    Value<DateTime>? playedAt,
+    Value<String>? dayKey,
+    Value<String?>? gameId,
+    Value<String?>? competitionLabel,
+    Value<String?>? opponentLabel,
+    Value<String?>? venueLabel,
+    Value<String>? positions,
+    Value<String>? result,
+    Value<String?>? note,
+    Value<DateTime>? createdAt,
+    Value<DateTime?>? updatedAt,
+  }) {
+    return GameLogEntriesCompanion(
+      id: id ?? this.id,
+      playedAt: playedAt ?? this.playedAt,
+      dayKey: dayKey ?? this.dayKey,
+      gameId: gameId ?? this.gameId,
+      competitionLabel: competitionLabel ?? this.competitionLabel,
+      opponentLabel: opponentLabel ?? this.opponentLabel,
+      venueLabel: venueLabel ?? this.venueLabel,
+      positions: positions ?? this.positions,
+      result: result ?? this.result,
+      note: note ?? this.note,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (playedAt.present) {
+      map['played_at'] = Variable<DateTime>(playedAt.value);
+    }
+    if (dayKey.present) {
+      map['day_key'] = Variable<String>(dayKey.value);
+    }
+    if (gameId.present) {
+      map['game_id'] = Variable<String>(gameId.value);
+    }
+    if (competitionLabel.present) {
+      map['competition_label'] = Variable<String>(competitionLabel.value);
+    }
+    if (opponentLabel.present) {
+      map['opponent_label'] = Variable<String>(opponentLabel.value);
+    }
+    if (venueLabel.present) {
+      map['venue_label'] = Variable<String>(venueLabel.value);
+    }
+    if (positions.present) {
+      map['positions'] = Variable<String>(positions.value);
+    }
+    if (result.present) {
+      map['result'] = Variable<String>(result.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GameLogEntriesCompanion(')
+          ..write('id: $id, ')
+          ..write('playedAt: $playedAt, ')
+          ..write('dayKey: $dayKey, ')
+          ..write('gameId: $gameId, ')
+          ..write('competitionLabel: $competitionLabel, ')
+          ..write('opponentLabel: $opponentLabel, ')
+          ..write('venueLabel: $venueLabel, ')
+          ..write('positions: $positions, ')
+          ..write('result: $result, ')
+          ..write('note: $note, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$WbDatabase extends GeneratedDatabase {
   _$WbDatabase(QueryExecutor e) : super(e);
   $WbDatabaseManager get managers => $WbDatabaseManager(this);
@@ -43070,6 +43803,7 @@ abstract class _$WbDatabase extends GeneratedDatabase {
   );
   late final $SeenItemsTable seenItems = $SeenItemsTable(this);
   late final $JourneyEventsTable journeyEvents = $JourneyEventsTable(this);
+  late final $GameLogEntriesTable gameLogEntries = $GameLogEntriesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -43121,6 +43855,7 @@ abstract class _$WbDatabase extends GeneratedDatabase {
     weatherForecasts,
     seenItems,
     journeyEvents,
+    gameLogEntries,
   ];
 }
 
@@ -62764,6 +63499,339 @@ typedef $$JourneyEventsTableProcessedTableManager =
       JourneyEventRow,
       PrefetchHooks Function()
     >;
+typedef $$GameLogEntriesTableCreateCompanionBuilder =
+    GameLogEntriesCompanion Function({
+      Value<int> id,
+      required DateTime playedAt,
+      required String dayKey,
+      Value<String?> gameId,
+      Value<String?> competitionLabel,
+      Value<String?> opponentLabel,
+      Value<String?> venueLabel,
+      Value<String> positions,
+      Value<String> result,
+      Value<String?> note,
+      required DateTime createdAt,
+      Value<DateTime?> updatedAt,
+    });
+typedef $$GameLogEntriesTableUpdateCompanionBuilder =
+    GameLogEntriesCompanion Function({
+      Value<int> id,
+      Value<DateTime> playedAt,
+      Value<String> dayKey,
+      Value<String?> gameId,
+      Value<String?> competitionLabel,
+      Value<String?> opponentLabel,
+      Value<String?> venueLabel,
+      Value<String> positions,
+      Value<String> result,
+      Value<String?> note,
+      Value<DateTime> createdAt,
+      Value<DateTime?> updatedAt,
+    });
+
+class $$GameLogEntriesTableFilterComposer
+    extends Composer<_$WbDatabase, $GameLogEntriesTable> {
+  $$GameLogEntriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get playedAt => $composableBuilder(
+    column: $table.playedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get dayKey => $composableBuilder(
+    column: $table.dayKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get gameId => $composableBuilder(
+    column: $table.gameId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get competitionLabel => $composableBuilder(
+    column: $table.competitionLabel,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get opponentLabel => $composableBuilder(
+    column: $table.opponentLabel,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get venueLabel => $composableBuilder(
+    column: $table.venueLabel,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get positions => $composableBuilder(
+    column: $table.positions,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get result => $composableBuilder(
+    column: $table.result,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$GameLogEntriesTableOrderingComposer
+    extends Composer<_$WbDatabase, $GameLogEntriesTable> {
+  $$GameLogEntriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get playedAt => $composableBuilder(
+    column: $table.playedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get dayKey => $composableBuilder(
+    column: $table.dayKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get gameId => $composableBuilder(
+    column: $table.gameId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get competitionLabel => $composableBuilder(
+    column: $table.competitionLabel,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get opponentLabel => $composableBuilder(
+    column: $table.opponentLabel,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get venueLabel => $composableBuilder(
+    column: $table.venueLabel,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get positions => $composableBuilder(
+    column: $table.positions,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get result => $composableBuilder(
+    column: $table.result,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$GameLogEntriesTableAnnotationComposer
+    extends Composer<_$WbDatabase, $GameLogEntriesTable> {
+  $$GameLogEntriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get playedAt =>
+      $composableBuilder(column: $table.playedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get dayKey =>
+      $composableBuilder(column: $table.dayKey, builder: (column) => column);
+
+  GeneratedColumn<String> get gameId =>
+      $composableBuilder(column: $table.gameId, builder: (column) => column);
+
+  GeneratedColumn<String> get competitionLabel => $composableBuilder(
+    column: $table.competitionLabel,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get opponentLabel => $composableBuilder(
+    column: $table.opponentLabel,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get venueLabel => $composableBuilder(
+    column: $table.venueLabel,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get positions =>
+      $composableBuilder(column: $table.positions, builder: (column) => column);
+
+  GeneratedColumn<String> get result =>
+      $composableBuilder(column: $table.result, builder: (column) => column);
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$GameLogEntriesTableTableManager
+    extends
+        RootTableManager<
+          _$WbDatabase,
+          $GameLogEntriesTable,
+          GameLogEntryRow,
+          $$GameLogEntriesTableFilterComposer,
+          $$GameLogEntriesTableOrderingComposer,
+          $$GameLogEntriesTableAnnotationComposer,
+          $$GameLogEntriesTableCreateCompanionBuilder,
+          $$GameLogEntriesTableUpdateCompanionBuilder,
+          (
+            GameLogEntryRow,
+            BaseReferences<_$WbDatabase, $GameLogEntriesTable, GameLogEntryRow>,
+          ),
+          GameLogEntryRow,
+          PrefetchHooks Function()
+        > {
+  $$GameLogEntriesTableTableManager(_$WbDatabase db, $GameLogEntriesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$GameLogEntriesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$GameLogEntriesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$GameLogEntriesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<DateTime> playedAt = const Value.absent(),
+                Value<String> dayKey = const Value.absent(),
+                Value<String?> gameId = const Value.absent(),
+                Value<String?> competitionLabel = const Value.absent(),
+                Value<String?> opponentLabel = const Value.absent(),
+                Value<String?> venueLabel = const Value.absent(),
+                Value<String> positions = const Value.absent(),
+                Value<String> result = const Value.absent(),
+                Value<String?> note = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime?> updatedAt = const Value.absent(),
+              }) => GameLogEntriesCompanion(
+                id: id,
+                playedAt: playedAt,
+                dayKey: dayKey,
+                gameId: gameId,
+                competitionLabel: competitionLabel,
+                opponentLabel: opponentLabel,
+                venueLabel: venueLabel,
+                positions: positions,
+                result: result,
+                note: note,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required DateTime playedAt,
+                required String dayKey,
+                Value<String?> gameId = const Value.absent(),
+                Value<String?> competitionLabel = const Value.absent(),
+                Value<String?> opponentLabel = const Value.absent(),
+                Value<String?> venueLabel = const Value.absent(),
+                Value<String> positions = const Value.absent(),
+                Value<String> result = const Value.absent(),
+                Value<String?> note = const Value.absent(),
+                required DateTime createdAt,
+                Value<DateTime?> updatedAt = const Value.absent(),
+              }) => GameLogEntriesCompanion.insert(
+                id: id,
+                playedAt: playedAt,
+                dayKey: dayKey,
+                gameId: gameId,
+                competitionLabel: competitionLabel,
+                opponentLabel: opponentLabel,
+                venueLabel: venueLabel,
+                positions: positions,
+                result: result,
+                note: note,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$GameLogEntriesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$WbDatabase,
+      $GameLogEntriesTable,
+      GameLogEntryRow,
+      $$GameLogEntriesTableFilterComposer,
+      $$GameLogEntriesTableOrderingComposer,
+      $$GameLogEntriesTableAnnotationComposer,
+      $$GameLogEntriesTableCreateCompanionBuilder,
+      $$GameLogEntriesTableUpdateCompanionBuilder,
+      (
+        GameLogEntryRow,
+        BaseReferences<_$WbDatabase, $GameLogEntriesTable, GameLogEntryRow>,
+      ),
+      GameLogEntryRow,
+      PrefetchHooks Function()
+    >;
 
 class $WbDatabaseManager {
   final _$WbDatabase _db;
@@ -62863,4 +63931,6 @@ class $WbDatabaseManager {
       $$SeenItemsTableTableManager(_db, _db.seenItems);
   $$JourneyEventsTableTableManager get journeyEvents =>
       $$JourneyEventsTableTableManager(_db, _db.journeyEvents);
+  $$GameLogEntriesTableTableManager get gameLogEntries =>
+      $$GameLogEntriesTableTableManager(_db, _db.gameLogEntries);
 }

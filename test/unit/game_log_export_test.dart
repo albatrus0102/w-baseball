@@ -1,0 +1,143 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:w_baseball/data/export/game_log_export.dart';
+import 'package:w_baseball/data/models/game_log.dart';
+
+/// Round-trips 출전 일지's export format.
+///
+/// This is the layer that protects a season of someone's own work when there
+/// is no server and no account — see the feature brief's "phone-change
+/// problem". If a field silently drops on the way out (or back in), a
+/// reinstalled app loses it for good, so every field is asserted here, not
+/// just the ones that happen to be convenient to check.
+void main() {
+  final entries = <GameLogEntry>[
+    GameLogEntry(
+      id: 1,
+      playedAt: DateTime.utc(2026, 8, 15),
+      dayKey: '2026-08-15',
+      gameId: 'game-demo-1',
+      competitionLabel: '동호인 리그',
+      opponentLabel: '한강 리버베어스',
+      venueLabel: '잠실보조경기장',
+      positions: const <GameLogPosition>[
+        GameLogPosition.catcher,
+        GameLogPosition.leftField,
+      ],
+      result: GameLogResult.win,
+      note: '병살 하나 잡음, "좋았다"',
+      createdAt: DateTime.utc(2026, 8, 15, 21, 5),
+      updatedAt: DateTime.utc(2026, 8, 16, 8),
+    ),
+    // Every optional field left unset — the far more common real entry,
+    // since 대회/상대/구장 and 메모 are all free text a first-time user may
+    // skip entirely.
+    GameLogEntry(
+      id: 2,
+      playedAt: DateTime.utc(2026, 8, 22),
+      dayKey: '2026-08-22',
+      createdAt: DateTime.utc(2026, 8, 22, 20),
+    ),
+  ];
+
+  group('JSON 왕복', () {
+    test('내보낸 뒤 다시 읽으면 모든 필드가 그대로 남는다', () {
+      final encoded = GameLogJsonCodec.encode(
+        entries,
+        exportedAt: DateTime.utc(2026, 9, 1),
+      );
+      final result = GameLogJsonCodec.decode(encoded);
+
+      expect(result.isValid, isTrue);
+      expect(result.skippedCount, 0);
+      expect(result.entries, hasLength(2));
+
+      final full = result.entries.firstWhere((e) => e.id == 1);
+      expect(full.playedAt, entries[0].playedAt);
+      expect(full.dayKey, '2026-08-15');
+      expect(full.gameId, 'game-demo-1');
+      expect(full.competitionLabel, '동호인 리그');
+      expect(full.opponentLabel, '한강 리버베어스');
+      expect(full.venueLabel, '잠실보조경기장');
+      expect(full.positions, <GameLogPosition>[
+        GameLogPosition.catcher,
+        GameLogPosition.leftField,
+      ]);
+      expect(full.result, GameLogResult.win);
+      expect(full.note, '병살 하나 잡음, "좋았다"');
+      expect(full.createdAt, entries[0].createdAt);
+      expect(full.updatedAt, entries[0].updatedAt);
+
+      final sparse = result.entries.firstWhere((e) => e.id == 2);
+      expect(sparse.gameId, isNull);
+      expect(sparse.competitionLabel, isNull);
+      expect(sparse.positions, isEmpty);
+      expect(sparse.result, GameLogResult.unspecified);
+      expect(sparse.note, isNull);
+      expect(sparse.updatedAt, isNull);
+    });
+
+    test('형식 태그를 담는다', () {
+      final encoded = GameLogJsonCodec.encode(
+        entries,
+        exportedAt: DateTime.utc(2026, 9, 1),
+      );
+      expect(encoded, contains('"format": "wb-myrecords-v1"'));
+    });
+
+    test('알 수 없는 형식은 항목 없이 오류로 보고한다', () {
+      final result = GameLogJsonCodec.decode(
+        '{"format": "something-else", "entries": []}',
+      );
+      expect(result.isValid, isFalse);
+      expect(result.entries, isEmpty);
+    });
+
+    test('깨진 JSON은 오류로 보고하고 던지지 않는다', () {
+      final result = GameLogJsonCodec.decode('not json at all {{{');
+      expect(result.isValid, isFalse);
+      expect(result.entries, isEmpty);
+    });
+
+    test('한 항목이 깨져도 나머지는 살아남는다', () {
+      final encoded = GameLogJsonCodec.encode(
+        entries,
+        exportedAt: DateTime.utc(2026, 9, 1),
+      );
+      // Corrupt one entry's `id` (a required field) so it is unparsable,
+      // without touching the envelope or the other entry.
+      final corrupted = encoded.replaceFirst('"id": 2,', '"id": "oops",');
+      final result = GameLogJsonCodec.decode(corrupted);
+
+      expect(result.isValid, isTrue);
+      expect(result.entries, hasLength(1));
+      expect(result.skippedCount, 1);
+    });
+
+    test('알 수 없는 포지션 값은 조용히 걸러진다', () {
+      final encoded = GameLogJsonCodec.encode(
+        entries,
+        exportedAt: DateTime.utc(2026, 9, 1),
+      ).replaceFirst('"catcher"', '"someNewPositionFromTheFuture"');
+      final result = GameLogJsonCodec.decode(encoded);
+
+      final full = result.entries.firstWhere((e) => e.id == 1);
+      expect(full.positions, <GameLogPosition>[GameLogPosition.leftField]);
+    });
+  });
+
+  group('CSV 내보내기', () {
+    test('머리글과 한 항목당 한 행을 만든다', () {
+      final csv = GameLogCsvCodec.encode(entries);
+      final lines = csv.trim().split('\n');
+      expect(lines, hasLength(3)); // header + 2 entries
+      expect(lines.first, contains('날짜'));
+      expect(lines.first, contains('메모'));
+    });
+
+    test('쉼표와 따옴표가 든 메모를 안전하게 인용한다', () {
+      final csv = GameLogCsvCodec.encode(entries);
+      // The first entry's note contains a comma and embedded quotes.
+      expect(csv, contains('"병살 하나 잡음, ""좋았다"""'));
+    });
+  });
+}

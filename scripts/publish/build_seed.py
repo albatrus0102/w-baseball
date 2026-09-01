@@ -901,6 +901,23 @@ def _discover_bundle(
             "reviewStatus": REVIEW_DEFAULT,
             "source": editorial_source(generated_at),
         },
+        {
+            # Linked from 내 기록 (출전 일지) via the anchor mechanism — see
+            # `_ObpGuideLink` in game_log_widgets.dart. The app never explains
+            # a stat inline; it only ever links to a guide like this one.
+            "id": "guide-stat-obp",
+            "kind": "statExplainer",
+            "title": "출루율(OBP)이란?",
+            "body": "타자가 타석에서 아웃되지 않고 1루 이상으로 살아나간 비율입니다. "
+                    "(안타+볼넷+몸에 맞는 공) ÷ (타수+볼넷+몸에 맞는 공+희생플라이)로 계산하며, "
+                    "높을수록 좋은 기록입니다. 타율과 달리 볼넷으로 걸어 나간 것도 인정합니다.",
+            "anchorKey": "stat:obp",
+            "readSeconds": 25,
+            "publishedAt": generated_at,
+            "summaryMethod": "manual",
+            "reviewStatus": REVIEW_DEFAULT,
+            "source": editorial_source(generated_at),
+        },
     ]
 
     featured_topics = [

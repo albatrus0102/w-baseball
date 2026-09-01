@@ -16,6 +16,7 @@ import '../../core/utils/kst.dart';
 import '../../data/models/audience.dart';
 import '../../data/models/stats.dart';
 import '../../data/repositories/game_repository.dart';
+import 'game_log_widgets.dart';
 
 /// A season the user's followed team plays in, used for standings/leaderboards.
 final _mySeasonProvider = FutureProvider.autoDispose<String?>((ref) async {
@@ -51,10 +52,18 @@ class MyBaseballScreen extends ConsumerWidget {
         ref.watch(followedTeamIdsProvider).value ?? const <String>{};
     final now = ref.watch(clockProvider)();
 
+    // 내 기록 (출전 일지) is a player-authored module: discover-mode users are
+    // mostly not players, so it never appears for them. Gated on mode alone,
+    // not on a followed team — a player can log her own games with no team
+    // followed at all, since `gameId` is nullable and every label is free
+    // text (see the feature brief).
+    final showGameLog =
+        ref.watch(audienceProvider).mode != AudienceMode.discover;
+
     return Scaffold(
       appBar: const WbPrimaryAppBar(title: '마이야구'),
       body: followed.isEmpty
-          ? const _EmptySetup()
+          ? _EmptySetup(showGameLog: showGameLog)
           : RefreshIndicator(
               onRefresh: () => ref
                   .read(syncControllerProvider.notifier)
@@ -66,6 +75,10 @@ class MyBaseballScreen extends ConsumerWidget {
                   _MyTeamHeader(teamId: followed.first),
                   _NextGameBlock(teamId: followed.first, now: now),
                   const _ScheduleBoardEntry(),
+                  if (showGameLog) ...<Widget>[
+                    const SizedBox(height: WbSpace.lg),
+                    const GameLogModule(),
+                  ],
                   _StandingBlock(now: now),
                   _LeaguePulseBlock(now: now),
                   const _LeaderboardEntry(),
@@ -78,62 +91,82 @@ class MyBaseballScreen extends ConsumerWidget {
 
 /// No team followed yet — never a dead end.
 class _EmptySetup extends ConsumerWidget {
-  const _EmptySetup();
+  const _EmptySetup({required this.showGameLog});
+
+  /// See `MyBaseballScreen.build` — mode-gated, not team-gated.
+  final bool showGameLog;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = WbTheme.of(context);
+    // No overall horizontal padding here (unlike the old version of this
+    // screen): `GameLogModule`'s children apply their own `WbSpace.screen`
+    // gutter, matching the followed-team branch's `ListView`. The two
+    // existing blocks below apply the same gutter explicitly instead.
     return ListView(
-      padding: const EdgeInsets.all(WbSpace.screen),
+      padding: const EdgeInsets.symmetric(vertical: WbSpace.screen),
       children: <Widget>[
-        WbCard(
-          emphasized: true,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text('내 팀을 선택해 주세요', style: WbType.title.copyWith(color: c.ink)),
-              const SizedBox(height: WbSpace.sm),
-              Text(
-                '팀을 하나 고르면 다음 일정과 구장, 경기일 날씨 위험, 팀 순위와 기록을 '
-                '이 화면에서 바로 볼 수 있습니다. 로그인은 필요 없어요.',
-                style: WbType.body.copyWith(color: c.inkMuted, height: 1.6),
-              ),
-              const SizedBox(height: WbSpace.lg),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: () async {
-                    await ref
-                        .read(analyticsProvider)
-                        .log(AnalyticsEvent.myBaseballConfigured);
-                    if (context.mounted) context.push(WbRoutes.teams);
-                  },
-                  icon: const Icon(Icons.search_rounded, size: 18),
-                  label: const Text('팀 찾기'),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: WbSpace.screen),
+          child: WbCard(
+            emphasized: true,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  '내 팀을 선택해 주세요',
+                  style: WbType.title.copyWith(color: c.ink),
                 ),
-              ),
-              const SizedBox(height: WbSpace.sm),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
-                  // If their team is not in the data set, the answer is to add
-                  // it — not to leave them stuck.
-                  onPressed: () => context.push(WbRoutes.submissions),
-                  child: const Text('우리 팀이 없어요 · 등록하기'),
+                const SizedBox(height: WbSpace.sm),
+                Text(
+                  '팀을 하나 고르면 다음 일정과 구장, 경기일 날씨 위험, 팀 순위와 기록을 '
+                  '이 화면에서 바로 볼 수 있습니다. 로그인은 필요 없어요.',
+                  style: WbType.body.copyWith(color: c.inkMuted, height: 1.6),
                 ),
-              ),
-            ],
+                const SizedBox(height: WbSpace.lg),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () async {
+                      await ref
+                          .read(analyticsProvider)
+                          .log(AnalyticsEvent.myBaseballConfigured);
+                      if (context.mounted) context.push(WbRoutes.teams);
+                    },
+                    icon: const Icon(Icons.search_rounded, size: 18),
+                    label: const Text('팀 찾기'),
+                  ),
+                ),
+                const SizedBox(height: WbSpace.sm),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    // If their team is not in the data set, the answer is to
+                    // add it — not to leave them stuck.
+                    onPressed: () => context.push(WbRoutes.submissions),
+                    child: const Text('우리 팀이 없어요 · 등록하기'),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
         const SizedBox(height: WbSpace.lg),
-        WbEmptyState(
-          compact: true,
-          icon: Icons.info_outline_rounded,
-          title: '무엇을 볼 수 있나요?',
-          message:
-              '30일 일정 달력, 경기일 날씨 위험, 팀 순위와 최근 흐름, '
-              '리그 진행 상황, 부문별 개인 기록 순위입니다.',
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: WbSpace.screen),
+          child: WbEmptyState(
+            compact: true,
+            icon: Icons.info_outline_rounded,
+            title: '무엇을 볼 수 있나요?',
+            message:
+                '30일 일정 달력, 경기일 날씨 위험, 팀 순위와 최근 흐름, '
+                '리그 진행 상황, 부문별 개인 기록 순위입니다.',
+          ),
         ),
+        if (showGameLog) ...<Widget>[
+          const SizedBox(height: WbSpace.xl),
+          const GameLogModule(),
+        ],
       ],
     );
   }

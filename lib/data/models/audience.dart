@@ -208,6 +208,7 @@ class AudiencePreference {
     this.useDeviceLocation = false,
     this.densityOverride,
     this.modeNudgeDismissed = false,
+    this.gameLogNudgeDismissed = false,
   });
 
   final AudienceMode mode;
@@ -244,6 +245,12 @@ class AudiencePreference {
   /// [isConfigured] is false — see [showsModeNudge].
   final bool modeNudgeDismissed;
 
+  /// The user closed the "경기 하고 오셨나요?" 출전 일지 card without logging
+  /// anything. Only meaningful before the first entry exists — once an entry
+  /// exists the card is replaced by the log itself, so there is nothing left
+  /// to dismiss. See `GameLogModule` in `my_baseball_screen.dart`.
+  final bool gameLogNudgeDismissed;
+
   /// The density the UI should actually use.
   WbDensity get density => densityOverride ?? mode.defaultDensity;
 
@@ -277,6 +284,7 @@ class AudiencePreference {
     bool? useDeviceLocation,
     WbDensity? densityOverride,
     bool? modeNudgeDismissed,
+    bool? gameLogNudgeDismissed,
     bool clearRegion = false,
     bool clearDensityOverride = false,
   }) {
@@ -297,6 +305,8 @@ class AudiencePreference {
           ? null
           : (densityOverride ?? this.densityOverride),
       modeNudgeDismissed: modeNudgeDismissed ?? this.modeNudgeDismissed,
+      gameLogNudgeDismissed:
+          gameLogNudgeDismissed ?? this.gameLogNudgeDismissed,
     );
   }
 }

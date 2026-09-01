@@ -63,6 +63,8 @@ part 'database.g.dart';
     WeatherForecasts,
     SeenItems,
     JourneyEvents,
+    // --- device-local state (schema v3) ---
+    GameLogEntries,
   ],
 )
 class WbDatabase extends _$WbDatabase {
@@ -76,12 +78,15 @@ class WbDatabase extends _$WbDatabase {
   ///    story clusters, beginner guides, attendance info, weather forecasts,
   ///    seen items and local journey events. Adds `articles.story_cluster_id`
   ///    and `standings.previous_rank`.
+  ///  * v3 — 출전 일지: `game_log_entries`, a device-local table for the
+  ///    player's own game log. Purely additive, like v2.
   ///
   /// Upgrades are strictly additive. User-owned rows — follows, saved items,
-  /// and scheduled notification settings — are never dropped or recreated;
-  /// `test/unit/migration_test.dart` asserts exactly that.
+  /// scheduled notification settings, and (from v3) game log entries — are
+  /// never dropped or recreated; `test/unit/migration_test.dart` asserts
+  /// exactly that.
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -115,6 +120,11 @@ class WbDatabase extends _$WbDatabase {
         }
         await m.addColumn(articles, articles.storyClusterId);
         await m.addColumn(standings, standings.previousRank);
+      }
+      if (from < 3) {
+        // v2 → v3: the player's own game log. One new table, nothing
+        // existing is touched.
+        await m.createTable(gameLogEntries);
       }
       await _createIndexes(m);
     },
@@ -175,6 +185,8 @@ class WbDatabase extends _$WbDatabase {
       'CREATE INDEX IF NOT EXISTS idx_sync_runs_source ON sync_runs (source_name, started_at)',
       'CREATE INDEX IF NOT EXISTS idx_notifications_entity ON scheduled_notifications (entity_kind, entity_id)',
       'CREATE INDEX IF NOT EXISTS idx_journey_time ON journey_events (occurred_at)',
+      // 출전 일지: the timeline view and 포지션 히스토리 both read in day order.
+      'CREATE INDEX IF NOT EXISTS idx_game_log_day ON game_log_entries (day_key)',
     ];
     for (final sql in statements) {
       await customStatement(sql);

@@ -3,9 +3,11 @@ library;
 
 import 'dart:io';
 
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:w_baseball/core/database/database.dart';
 import 'package:w_baseball/core/design_system/tokens.dart';
 import 'package:w_baseball/data/models/audience.dart';
 import 'package:w_baseball/features/discover/discover_screen.dart';
@@ -75,6 +77,10 @@ void main() {
     Brightness brightness = Brightness.light,
     AudiencePreference? audience,
     bool seeded = true,
+    // Lets a capture seed device-local rows (e.g. 출전 일지 entries) that
+    // are not part of the bundled seed set and would otherwise need their
+    // own full app-building duplicate of this helper.
+    Future<void> Function(TestApp app)? seedLocalState,
   }) async {
     // Golden images must be a function of the code alone. Without a frozen
     // clock the source line drifts from "방금 확인" to "7분 전 확인" between
@@ -85,6 +91,7 @@ void main() {
       frozenNow: goldenClock,
     );
     addTearDown(app.dispose);
+    if (seedLocalState != null) await seedLocalState(app);
     await pumpScreen(tester, app, screen, phone: phone, brightness: brightness);
     await settle(tester);
 
@@ -346,6 +353,61 @@ void main() {
         name: 'my_baseball_setup',
         screen: const MyBaseballScreen(),
         audience: player,
+      ),
+    );
+
+    // 내 기록 (출전 일지), before any entry exists — the "경기 하고 오셨나요?"
+    // nudge card, since 내 기록 renders in player mode with no team followed.
+    testWidgets(
+      '내 기록 · 기록 없음',
+      (t) => capture(
+        t,
+        name: 'my_baseball_game_log_empty',
+        screen: const MyBaseballScreen(),
+        audience: player,
+      ),
+    );
+
+    // 내 기록 with entries: the count, 포지션 히스토리 (a recorded position
+    // change), the entry list, and the "이 기기에만 저장됩니다" export line.
+    testWidgets(
+      '내 기록 · 기록 있음',
+      (t) => capture(
+        t,
+        name: 'my_baseball_game_log',
+        screen: const MyBaseballScreen(),
+        audience: player,
+        seedLocalState: (app) async {
+          await app.db
+              .into(app.db.gameLogEntries)
+              .insert(
+                GameLogEntriesCompanion.insert(
+                  playedAt: DateTime.utc(2026, 7, 12),
+                  dayKey: '2026-07-12',
+                  competitionLabel: const Value('동호인 리그'),
+                  opponentLabel: const Value('남산 호크스'),
+                  venueLabel: const Value('한강 보조경기장'),
+                  positions: const Value('leftField'),
+                  result: const Value('loss'),
+                  createdAt: DateTime.utc(2026, 7, 12, 21),
+                ),
+              );
+          await app.db
+              .into(app.db.gameLogEntries)
+              .insert(
+                GameLogEntriesCompanion.insert(
+                  playedAt: DateTime.utc(2026, 8, 23),
+                  dayKey: '2026-08-23',
+                  competitionLabel: const Value('동호인 리그'),
+                  opponentLabel: const Value('한강 리버베어스'),
+                  venueLabel: const Value('잠실보조경기장'),
+                  positions: const Value('catcher'),
+                  result: const Value('win'),
+                  note: const Value('병살 하나 잡음, 도루 저지 성공'),
+                  createdAt: DateTime.utc(2026, 8, 23, 21),
+                ),
+              );
+        },
       ),
     );
   });

@@ -4,6 +4,7 @@ import '../../core/database/database.dart';
 import '../models/audience.dart';
 import '../models/content.dart';
 import '../models/domain.dart';
+import '../models/game_log.dart';
 import '../models/weather.dart';
 
 /// Database row → domain model.
@@ -808,6 +809,23 @@ extension SavedItemRowMapper on SavedItemRow {
     entityId: entityId,
     savedAt: savedAt,
     note: note,
+  );
+}
+
+extension GameLogEntryRowMapper on GameLogEntryRow {
+  GameLogEntry toDomain() => GameLogEntry(
+    id: id,
+    playedAt: playedAt,
+    dayKey: dayKey,
+    gameId: gameId,
+    competitionLabel: competitionLabel,
+    opponentLabel: opponentLabel,
+    venueLabel: venueLabel,
+    positions: GameLogPosition.decodeList(positions),
+    result: GameLogResult.parse(result),
+    note: note,
+    createdAt: createdAt,
+    updatedAt: updatedAt,
   );
 }
 

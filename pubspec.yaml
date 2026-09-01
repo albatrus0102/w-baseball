@@ -73,6 +73,10 @@ dev_dependencies:
   # that unknown-field tolerance and per-record quarantine stay explicit.
   build_runner: 2.15.1
   drift_dev: 2.31.0
+  # Used only by test/unit/game_log_export_service_test.dart, to build the
+  # same XFile share_plus does — otherwise a transitive-only dependency the
+  # analyzer flags when imported directly.
+  cross_file: 0.3.5+5
 
 flutter:
   uses-material-design: true
