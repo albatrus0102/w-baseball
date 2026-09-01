@@ -208,6 +208,9 @@ class WbHeroGameCard extends StatelessWidget {
                   isFavorite: card.isAwayFavorite,
                   alignment: CrossAxisAlignment.start,
                   suffix: '원정',
+                  onTap: onTeamTap == null
+                      ? null
+                      : () => onTeamTap!(card.awayTeam.id),
                 ),
               ),
               Padding(
@@ -227,6 +230,9 @@ class WbHeroGameCard extends StatelessWidget {
                   isFavorite: card.isHomeFavorite,
                   alignment: CrossAxisAlignment.end,
                   suffix: '홈',
+                  onTap: onTeamTap == null
+                      ? null
+                      : () => onTeamTap!(card.homeTeam.id),
                 ),
               ),
             ],
@@ -298,6 +304,7 @@ class _TeamBlock extends StatelessWidget {
     required this.isFavorite,
     required this.alignment,
     required this.suffix,
+    this.onTap,
   });
 
   final Team team;
@@ -305,11 +312,17 @@ class _TeamBlock extends StatelessWidget {
   final CrossAxisAlignment alignment;
   final String suffix;
 
+  /// Present only where the caller wired [WbHeroGameCard.onTeamTap] — the
+  /// game detail screen. Null everywhere else, which keeps this block the
+  /// same plain, non-interactive label it always was.
+  final VoidCallback? onTap;
+
   @override
   Widget build(BuildContext context) {
     final c = WbTheme.of(context);
     final isEnd = alignment == CrossAxisAlignment.end;
-    return Column(
+    final block = Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: alignment,
       children: <Widget>[
         WbTeamMark(name: team.displayName, colorHex: team.colorHex, size: 34),
@@ -327,6 +340,29 @@ class _TeamBlock extends StatelessWidget {
         const SizedBox(height: WbSpace.xxs),
         Text(suffix, style: WbType.micro.copyWith(color: c.inkMuted)),
       ],
+    );
+
+    final tap = onTap;
+    if (tap == null) return block;
+
+    // Here the team is the subject, not part of a fixture row (compare
+    // `WbGameRow`, where the whole row is one target to the game and the
+    // team name is not separately tappable) — see the design note on
+    // `WbHeroGameCard.onTeamTap`. The whole block is one target, stretched
+    // to the full column width so there is no dead strip beside a short
+    // name, and it clears the 48dp minimum on both axes well past the
+    // team-mark-plus-two-lines it wraps.
+    return Semantics(
+      button: true,
+      label: '${team.displayName} 팀 상세 보기',
+      child: InkWell(
+        onTap: tap,
+        borderRadius: WbRadius.cardAll,
+        child: SizedBox(
+          width: double.infinity,
+          child: ExcludeSemantics(child: block),
+        ),
+      ),
     );
   }
 }

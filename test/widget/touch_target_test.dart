@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:w_baseball/core/design_system/tokens.dart';
 import 'package:w_baseball/data/models/audience.dart';
 import 'package:w_baseball/features/discover/discover_screen.dart';
+import 'package:w_baseball/features/games/game_detail_screen.dart';
 import 'package:w_baseball/features/games/games_screen.dart';
 import 'package:w_baseball/features/home/home_screen.dart';
 import 'package:w_baseball/features/my_baseball/my_baseball_screen.dart';
@@ -91,6 +92,9 @@ void main() {
     ('홈(현역)', const HomeScreen(), player),
     ('홈(입문자)', const HomeScreen(), discover),
     ('경기', const GamesScreen(), player),
+    // Covers the game detail hero card's two team blocks, added alongside
+    // making them tappable (`game_detail_screen.dart`).
+    ('경기 상세', const GameDetailScreen(gameId: 'game-demo-20260831-01'), player),
     ('발견', const DiscoverScreen(), discover),
     ('마이야구', const MyBaseballScreen(), player),
     ('팀 찾기', const TeamsScreen(), discover),

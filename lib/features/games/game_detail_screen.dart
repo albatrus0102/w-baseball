@@ -122,7 +122,14 @@ class _GameDetailBody extends ConsumerWidget {
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.all(WbSpace.screen),
-            child: WbHeroGameCard(card: card, now: now, onTap: () {}),
+            child: WbHeroGameCard(
+              card: card,
+              now: now,
+              // No whole-card destination here — we are already on this
+              // game's own page. The two team blocks are the live targets;
+              // see the design note on `WbHeroGameCard.onTeamTap`.
+              onTeamTap: (id) => context.push(WbRoutes.team(id)),
+            ),
           ),
         ),
 
