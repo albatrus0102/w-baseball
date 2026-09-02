@@ -9,6 +9,7 @@ import 'package:w_baseball/core/database/database.dart';
 import 'package:w_baseball/core/platform/platform_services.dart';
 import 'package:w_baseball/data/export/game_log_export.dart';
 import 'package:w_baseball/data/export/game_log_export_service.dart';
+import 'package:w_baseball/data/repositories/game_log_goal_repository.dart';
 import 'package:w_baseball/data/repositories/game_log_repository.dart';
 
 /// The export pipeline, end to end through real production classes: a real
@@ -102,6 +103,51 @@ void main() {
     final csvText = utf8.decode(csvBytes.skip(3).toList());
     expect(csvText, contains('한강 리버베어스'));
     expect(csvText, contains('타석'));
+  });
+
+  test('다음 경기에서 해볼 것 목표도 실제 파일 쓰기를 거쳐 그대로 나온다', () async {
+    final db = WbDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final repository = DriftGameLogRepository(
+      db: db,
+      clock: () => DateTime.utc(2026, 8, 30, 9),
+    );
+    final goalRepository = DriftGameLogGoalRepository(
+      db: db,
+      clock: () => DateTime.utc(2026, 8, 30, 9),
+    );
+
+    final entry = await repository.addEntry(
+      playedAt: DateTime.utc(2026, 8, 23),
+      opponentLabel: '한강 리버베어스',
+    );
+    await goalRepository.setGoal(body: '초구 공략', entryId: entry.id);
+
+    final entries = await repository.watchEntries().first;
+    final goals = await goalRepository.allGoals();
+
+    final sharing = _RecordingSharingService();
+    await const GameLogExportService().export(
+      entries: entries,
+      sharing: sharing,
+      now: DateTime.utc(2026, 9, 1),
+      goals: goals,
+    );
+
+    final jsonFile = sharing.lastFiles!.firstWhere(
+      (f) => f.path.endsWith('.json'),
+    );
+    final decoded = GameLogJsonCodec.decode(
+      await File(jsonFile.path).readAsString(),
+    );
+    expect(decoded.isValid, isTrue);
+    expect(decoded.goals, hasLength(1));
+    // Korean text survives the real disk round trip — `writeAsString`
+    // defaults to UTF-8, so this is the JSON-side twin of the CSV BOM check
+    // above, not a duplicate of it.
+    expect(decoded.goals.single.body, '초구 공략');
+    expect(decoded.goals.single.entryId, entry.id);
+    expect(decoded.goals.single.isOpen, isTrue);
   });
 }
 

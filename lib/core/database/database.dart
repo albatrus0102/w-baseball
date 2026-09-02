@@ -65,6 +65,8 @@ part 'database.g.dart';
     JourneyEvents,
     // --- device-local state (schema v3) ---
     GameLogEntries,
+    // --- device-local state (schema v5) ---
+    GameLogGoals,
   ],
 )
 class WbDatabase extends _$WbDatabase {
@@ -86,13 +88,18 @@ class WbDatabase extends _$WbDatabase {
   ///    equivalents). Purely additive — every existing row gets all-null
   ///    columns, which reads as "no stat line for this game", not a false
   ///    zero. See `GameLogEntries` in `tables.dart`.
+  ///  * v5 — `game_log_goals`: the player's own "다음 경기에서 해볼 것" note,
+  ///    written in her own words and only ever reflected back to her — see
+  ///    `GameLogGoals` in `tables.dart` and `game_log_widgets.dart`'s module
+  ///    doc for why the app never authors this text itself. Purely
+  ///    additive, like v2 and v3.
   ///
   /// Upgrades are strictly additive. User-owned rows — follows, saved items,
-  /// scheduled notification settings, and (from v3) game log entries — are
-  /// never dropped or recreated; `test/unit/migration_test.dart` asserts
-  /// exactly that.
+  /// scheduled notification settings, (from v3) game log entries, and (from
+  /// v5) game log goals — are never dropped or recreated;
+  /// `test/unit/migration_test.dart` asserts exactly that.
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -158,6 +165,13 @@ class WbDatabase extends _$WbDatabase {
         await m.addColumn(gameLogEntries, gameLogEntries.pitchingWalks);
         await m.addColumn(gameLogEntries, gameLogEntries.runsAllowed);
       }
+      if (from < 5) {
+        // v4 → v5: the player's own "다음 경기에서 해볼 것" note. One new
+        // table, nothing existing is touched — independent of whichever
+        // branch above ran, so this is a separate top-level `if`, not
+        // folded into the `else if` chain above it.
+        await m.createTable(gameLogGoals);
+      }
       await _createIndexes(m);
     },
     beforeOpen: (OpeningDetails details) async {
@@ -219,6 +233,8 @@ class WbDatabase extends _$WbDatabase {
       'CREATE INDEX IF NOT EXISTS idx_journey_time ON journey_events (occurred_at)',
       // 출전 일지: the timeline view and 포지션 히스토리 both read in day order.
       'CREATE INDEX IF NOT EXISTS idx_game_log_day ON game_log_entries (day_key)',
+      // 다음 경기에서 해볼 것: finding the one open goal (closed_at IS NULL).
+      'CREATE INDEX IF NOT EXISTS idx_game_log_goals_open ON game_log_goals (closed_at)',
     ];
     for (final sql in statements) {
       await customStatement(sql);

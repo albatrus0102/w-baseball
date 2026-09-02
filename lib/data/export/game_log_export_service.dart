@@ -23,13 +23,18 @@ class GameLogExportService {
     required List<GameLogEntry> entries,
     required SharingService sharing,
     required DateTime now,
+    // 다음 경기에서 해볼 것 (Stage 3) — every goal ever written, not only the
+    // open one; see `GameLogGoalRepository.allGoals`'s doc. Defaults to
+    // empty so existing callers (and the export unit tests that predate
+    // this field) keep working unchanged.
+    List<GameLogGoal> goals = const <GameLogGoal>[],
   }) async {
     final dir = await getTemporaryDirectory();
     final stamp = _fileStamp(now);
 
     final jsonFile = File('${dir.path}/wb-myrecords-$stamp.json');
     await jsonFile.writeAsString(
-      GameLogJsonCodec.encode(entries, exportedAt: now),
+      GameLogJsonCodec.encode(entries, exportedAt: now, goals: goals),
     );
 
     final csvFile = File('${dir.path}/wb-myrecords-$stamp.csv');

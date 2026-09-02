@@ -944,6 +944,46 @@ class GameLogEntries extends Table {
   DateTimeColumn get updatedAt => dateTime().nullable()();
 }
 
+/// A goal the player wrote for herself, in her own words, after a logged
+/// game — "다음 경기에서 해볼 것".
+///
+/// This table exists to hold exactly one sentence she typed, never anything
+/// the app derived or judged. See `game_log_widgets.dart`'s module doc: the
+/// app reflects this text back to her and lets her mark it done/carried/
+/// dropped — it never generates it, evaluates it, or reads a verdict into
+/// silence. Device-local, alongside [GameLogEntries], for the same reason:
+/// nothing here was published by anyone, so there is no source to cite.
+///
+/// At most one row has `closedAt == null` ("open") at a time — see
+/// `GameLogGoalRepository.setGoal`'s doc for how a new goal supersedes the
+/// old one.
+@DataClassName('GameLogGoalRow')
+class GameLogGoals extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  /// The sentence she wrote. Never generated, rewritten, or graded by the
+  /// app — see the class doc.
+  TextColumn get body => text()();
+
+  /// The 출전 일지 entry this goal was written after, if any. Null for a
+  /// goal carried forward via "다음에도" — that goal was not written
+  /// alongside any one game, just re-opened with the same words.
+  IntColumn get entryId => integer().nullable()();
+
+  DateTimeColumn get createdAt => dateTime()();
+
+  /// Null while the goal is still open — see the class doc. Set the moment
+  /// it is superseded by a new goal, marked done, carried forward, or
+  /// dropped.
+  DateTimeColumn get closedAt => dateTime().nullable()();
+
+  /// `'done'` | `'carried'` | `'dropped'` | null. Null means the goal was
+  /// silently superseded by a newly-written one — nobody was asked and
+  /// nobody answered, which is a different thing from any of the three
+  /// buttons being pressed. See `GameLogGoalRepository.setGoal`'s doc.
+  TextColumn get outcome => text().nullable()();
+}
+
 /// Cached "how complete is this?" figures per scope.
 @DataClassName('DataCoverageRow')
 class DataCoverages extends Table {

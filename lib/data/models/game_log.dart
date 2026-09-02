@@ -485,6 +485,71 @@ class PitchingStatSummary {
   String get inningsLabelKo => formatInningsPitched(outsPitched);
 }
 
+// ---------------------------------------------------------------------------
+// 다음 경기에서 해볼 것 (Stage 3)
+// ---------------------------------------------------------------------------
+
+/// How an open [GameLogGoal] was closed.
+///
+/// Never assigned by the app — every value here is the direct result of the
+/// player tapping one specific button on the reflection card. See
+/// `game_log_widgets.dart`'s module doc: the app never judges whether she
+/// actually did the thing.
+enum GameLogGoalOutcome {
+  /// "했어요" — she says she did it.
+  done,
+
+  /// "다음에도" — carried forward into a new open goal with the same words.
+  carried,
+
+  /// "지우기" — she dropped it.
+  dropped;
+
+  static GameLogGoalOutcome? parse(String? raw) => switch (raw) {
+    'done' => GameLogGoalOutcome.done,
+    'carried' => GameLogGoalOutcome.carried,
+    'dropped' => GameLogGoalOutcome.dropped,
+    _ => null,
+  };
+
+  String get wireValue => name;
+}
+
+/// One "다음 경기에서 해볼 것" note — the player's own sentence, never the
+/// app's. See `GameLogGoals` in `tables.dart`.
+@immutable
+class GameLogGoal {
+  const GameLogGoal({
+    required this.id,
+    required this.body,
+    required this.createdAt,
+    this.entryId,
+    this.closedAt,
+    this.outcome,
+  });
+
+  final int id;
+
+  /// What she wrote, verbatim. The app never rewrites, evaluates, or grades
+  /// this string.
+  final String body;
+
+  /// The 출전 일지 entry this was written after, if any — null when carried
+  /// forward rather than freshly written. See `GameLogGoals.entryId`'s doc.
+  final int? entryId;
+
+  final DateTime createdAt;
+
+  /// Null while this goal is still open — see [isOpen].
+  final DateTime? closedAt;
+
+  final GameLogGoalOutcome? outcome;
+
+  /// Whether this is the one goal currently shown back to her. At most one
+  /// goal is open at a time — see `GameLogGoalRepository.setGoal`'s doc.
+  bool get isOpen => closedAt == null;
+}
+
 /// The whole "내 기록" aggregate card in one object: how many games, her
 /// W-L-D record, and the batting/pitching lines built from whichever of them
 /// actually carry a stat line. See [BattingStatSummary.from] and

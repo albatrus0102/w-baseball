@@ -67,6 +67,10 @@ class _GameLogSection extends ConsumerWidget {
         else ...<Widget>[
           _GameLogSummary(entries: entries),
           const SizedBox(height: WbSpace.md),
+          // Adds its own trailing gap only when it actually renders
+          // something — an open goal is the exception, not the rule, and a
+          // fixed gap here would shift every other capture that has none.
+          _GameLogGoalCard(entries: entries),
           _PositionTimelineCard(entries: entries),
           const SizedBox(height: WbSpace.md),
           for (final entry in entries)
@@ -404,6 +408,92 @@ final _gameLogGuideProvider = FutureProvider.autoDispose<BeginnerGuide?>((ref) {
   return ref.watch(contentRepositoryProvider).guideForAnchor('stat:obp');
 });
 
+/// "다음 경기에서 해볼 것" reflected back to her, unedited — never generated,
+/// never judged. See this file's module doc and `GameLogGoalRepository`.
+///
+/// Shows nothing when there is no open goal — closed goals are stored (see
+/// `GameLogGoals` in `tables.dart`) but deliberately never listed on this
+/// screen; see the feature brief's "지난 것" section.
+class _GameLogGoalCard extends ConsumerWidget {
+  const _GameLogGoalCard({required this.entries});
+
+  /// Used only to resolve a goal's `entryId` to the game it was written
+  /// after, for the "M월 D일 경기 뒤에 적음" line — see [_dateLabel].
+  final List<GameLogEntry> entries;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final goal = ref.watch(gameLogOpenGoalProvider).value;
+    if (goal == null) return const SizedBox.shrink();
+    final c = WbTheme.of(context);
+    final repo = ref.read(gameLogGoalRepositoryProvider);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        WbSpace.screen,
+        0,
+        WbSpace.screen,
+        WbSpace.md,
+      ),
+      child: WbCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              '다음 경기에서 해볼 것',
+              style: WbType.captionStrong.copyWith(color: c.ink),
+            ),
+            const SizedBox(height: WbSpace.xs),
+            Text('"${goal.body}"', style: WbType.body.copyWith(color: c.ink)),
+            const SizedBox(height: WbSpace.xxs),
+            Text(
+              _dateLabel(goal),
+              style: WbType.caption.copyWith(color: c.inkMuted),
+            ),
+            const SizedBox(height: WbSpace.sm),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: <Widget>[
+                TextButton(
+                  onPressed: () => repo.markDone(goal.id),
+                  child: const Text('했어요'),
+                ),
+                TextButton(
+                  onPressed: () =>
+                      repo.carryForward(id: goal.id, body: goal.body),
+                  child: const Text('다음에도'),
+                ),
+                TextButton(
+                  onPressed: () => repo.dropGoal(goal.id),
+                  child: const Text('지우기'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// "8월 23일 경기 뒤에 적음" when [goal] was written right after a specific
+  /// logged game (its `entryId` resolves in [entries]), or a plainer "8월
+  /// 23일에 적음" when it was not — a goal carried forward via "다음에도" has
+  /// no entry to name. Falls back to [GameLogGoal.createdAt] either way.
+  String _dateLabel(GameLogGoal goal) {
+    GameLogEntry? linkedEntry;
+    for (final entry in entries) {
+      if (entry.id == goal.entryId) {
+        linkedEntry = entry;
+        break;
+      }
+    }
+    if (linkedEntry != null) {
+      return '${KoDate.monthDay(linkedEntry.playedAt)} 경기 뒤에 적음';
+    }
+    return '${KoDate.monthDay(goal.createdAt)}에 적음';
+  }
+}
+
 /// "외야에서 포수로 전향" made visible — derived from the entries themselves,
 /// never stored separately. See `derivePositionTimeline`.
 class _PositionTimelineCard extends StatelessWidget {
@@ -613,12 +703,14 @@ Future<void> exportGameLog(BuildContext context, WidgetRef ref) async {
   final entries = ref.read(gameLogEntriesProvider).value ?? const [];
   if (entries.isEmpty) return;
   final now = ref.read(clockProvider)();
+  final goals = await ref.read(gameLogGoalRepositoryProvider).allGoals();
   await ref
       .read(gameLogExportServiceProvider)
       .export(
         entries: entries,
         sharing: ref.read(platformServicesProvider).sharing,
         now: now,
+        goals: goals,
       );
   await ref.read(analyticsProvider).log(AnalyticsEvent.gameLogExported);
 }
@@ -687,6 +779,7 @@ class _GameLogEntrySheetState extends ConsumerState<_GameLogEntrySheet> {
   late final TextEditingController _opponent;
   late final TextEditingController _venue;
   late final TextEditingController _note;
+  late final TextEditingController _goal;
   late Set<GameLogPosition> _positions;
   late GameLogResult _result;
   bool _saving = false;
@@ -725,6 +818,7 @@ class _GameLogEntrySheetState extends ConsumerState<_GameLogEntrySheet> {
     _opponent = TextEditingController(text: last?.opponentLabel ?? '');
     _venue = TextEditingController(text: last?.venueLabel ?? '');
     _note = TextEditingController();
+    _goal = TextEditingController();
     _positions = (last?.positions ?? const <GameLogPosition>[]).toSet();
     _result = GameLogResult.unspecified;
     _statsExpanded = ref.read(audienceProvider).gameLogStatsExpanded;
@@ -736,6 +830,7 @@ class _GameLogEntrySheetState extends ConsumerState<_GameLogEntrySheet> {
     _opponent.dispose();
     _venue.dispose();
     _note.dispose();
+    _goal.dispose();
     super.dispose();
   }
 
@@ -836,6 +931,23 @@ class _GameLogEntrySheetState extends ConsumerState<_GameLogEntrySheet> {
                 border: OutlineInputBorder(),
               ),
             ),
+            const SizedBox(height: WbSpace.md),
+            // 다음 경기에서 해볼 것 — free text, deliberately not chips/a
+            // stepper: this is the one field on the sheet that must be in
+            // her own words to be hers at all. See the feature brief and
+            // `_GameLogGoalCard` below, which only ever shows this sentence
+            // back unedited. Left empty, nothing happens — no goal is
+            // written or closed.
+            TextField(
+              key: const ValueKey('gameLogGoalField'),
+              controller: _goal,
+              maxLines: 2,
+              decoration: const InputDecoration(
+                labelText: '다음 경기에서 해볼 것 (선택)',
+                hintText: '예: 초구 공략',
+                border: OutlineInputBorder(),
+              ),
+            ),
             const SizedBox(height: WbSpace.xl),
             SizedBox(
               width: double.infinity,
@@ -871,7 +983,7 @@ class _GameLogEntrySheetState extends ConsumerState<_GameLogEntrySheet> {
     setState(() => _saving = true);
     final playedAt = Kst.fromKst(_dateKst);
     final pitching = _statsExpanded && _isPitcher;
-    await ref
+    final savedEntry = await ref
         .read(gameLogRepositoryProvider)
         .addEntry(
           playedAt: playedAt,
@@ -904,6 +1016,15 @@ class _GameLogEntrySheetState extends ConsumerState<_GameLogEntrySheet> {
           runsAllowed: pitching ? _runsAllowed : null,
         );
     await ref.read(analyticsProvider).log(AnalyticsEvent.gameLogEntryAdded);
+    // 다음 경기에서 해볼 것 — only when she actually wrote one. An empty
+    // field means no goal at all, not an empty-string goal; see
+    // `GameLogGoalRepository.setGoal`'s doc for what happens to any
+    // previously open goal here.
+    if (_goal.text.trim().isNotEmpty) {
+      await ref
+          .read(gameLogGoalRepositoryProvider)
+          .setGoal(body: _goal.text, entryId: savedEntry.id);
+    }
     if (_statsExpanded) {
       // One-way switch — see `AudiencePreference.gameLogStatsExpanded`'s
       // doc. Fired after a real save, not on every toggle, so idly opening

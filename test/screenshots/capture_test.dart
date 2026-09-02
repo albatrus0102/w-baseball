@@ -392,7 +392,7 @@ void main() {
                   createdAt: DateTime.utc(2026, 7, 12, 21),
                 ),
               );
-          await app.db
+          final lastEntryId = await app.db
               .into(app.db.gameLogEntries)
               .insert(
                 GameLogEntriesCompanion.insert(
@@ -416,6 +416,19 @@ void main() {
                   runsBattedIn: const Value(1),
                   runsScored: const Value(1),
                   stolenBases: const Value(1),
+                ),
+              );
+          // Stage 3: 다음 경기에서 해볼 것 — an open goal written after the
+          // game above, so `_GameLogGoalCard` actually renders in this
+          // capture rather than staying the untested `SizedBox.shrink()`
+          // case every other capture in this file exercises.
+          await app.db
+              .into(app.db.gameLogGoals)
+              .insert(
+                GameLogGoalsCompanion.insert(
+                  body: '초구 공략',
+                  entryId: Value(lastEntryId),
+                  createdAt: DateTime.utc(2026, 8, 23, 21),
                 ),
               );
         },

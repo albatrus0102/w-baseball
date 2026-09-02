@@ -26,11 +26,17 @@ class GameLogJsonCodec {
   static String encode(
     List<GameLogEntry> entries, {
     required DateTime exportedAt,
+    // 다음 경기에서 해볼 것 (Stage 3). A new top-level key on an
+    // already-shipped envelope — `formatTag` stays `wb-myrecords-v1`, same
+    // as the stat-line fields added above; see this class's doc comment.
+    // Not in [GameLogCsvCodec] — see that class's doc for why.
+    List<GameLogGoal> goals = const <GameLogGoal>[],
   }) {
     final json = <String, Object?>{
       'format': formatTag,
       'exportedAt': exportedAt.toUtc().toIso8601String(),
       'entries': entries.map(_encodeEntry).toList(growable: false),
+      'goals': goals.map(_encodeGoal).toList(growable: false),
     };
     return const JsonEncoder.withIndent('  ').convert(json);
   }
@@ -63,6 +69,15 @@ class GameLogJsonCodec {
     'pitchingStrikeouts': e.pitchingStrikeouts,
     'pitchingWalks': e.pitchingWalks,
     'runsAllowed': e.runsAllowed,
+  };
+
+  static Map<String, Object?> _encodeGoal(GameLogGoal g) => <String, Object?>{
+    'id': g.id,
+    'body': g.body,
+    'entryId': g.entryId,
+    'createdAt': g.createdAt.toUtc().toIso8601String(),
+    'closedAt': g.closedAt?.toUtc().toIso8601String(),
+    'outcome': g.outcome?.wireValue,
   };
 
   /// Parses an export file back into entries.
@@ -118,7 +133,25 @@ class GameLogJsonCodec {
         entries.add(entry);
       }
     }
-    return GameLogImportResult(entries: entries, skippedCount: skipped);
+
+    // 다음 경기에서 해볼 것 (Stage 3). Missing entirely on a file exported
+    // before this key existed — reads as "no goals in this file", the same
+    // additive-field handling every stat-line key above already gets, not a
+    // format error.
+    final rawGoals = parsed['goals'];
+    final goals = <GameLogGoal>[];
+    if (rawGoals is List) {
+      for (final item in rawGoals) {
+        final goal = _decodeGoal(item);
+        if (goal != null) goals.add(goal);
+      }
+    }
+
+    return GameLogImportResult(
+      entries: entries,
+      goals: goals,
+      skippedCount: skipped,
+    );
   }
 
   static GameLogEntry? _decodeEntry(Object? raw) {
@@ -178,6 +211,30 @@ class GameLogJsonCodec {
     );
   }
 
+  static GameLogGoal? _decodeGoal(Object? raw) {
+    if (raw is! Map) return null;
+    final id = raw['id'];
+    final body = raw['body'];
+    final createdAtRaw = raw['createdAt'];
+    if (id is! int || body is! String || createdAtRaw is! String) {
+      return null;
+    }
+    final createdAt = DateTime.tryParse(createdAtRaw)?.toUtc();
+    if (createdAt == null) return null;
+
+    final closedAtRaw = raw['closedAt'];
+    return GameLogGoal(
+      id: id,
+      body: body,
+      entryId: _intOrNull(raw['entryId']),
+      createdAt: createdAt,
+      closedAt: closedAtRaw is String
+          ? DateTime.tryParse(closedAtRaw)?.toUtc()
+          : null,
+      outcome: GameLogGoalOutcome.parse(raw['outcome'] as String?),
+    );
+  }
+
   static int? _intOrNull(Object? raw) => raw is int ? raw : null;
 
   static String _fallbackDayKey(DateTime utc) {
@@ -191,10 +248,16 @@ class GameLogImportResult {
   const GameLogImportResult({
     required this.entries,
     required this.skippedCount,
+    this.goals = const <GameLogGoal>[],
     this.formatError,
   });
 
   final List<GameLogEntry> entries;
+
+  /// 다음 경기에서 해볼 것 (Stage 3). Empty on a file exported before this
+  /// field existed, or one with no goals ever written — see
+  /// [GameLogJsonCodec.decode].
+  final List<GameLogGoal> goals;
 
   /// Individual rows that could not be parsed and were dropped, not the
   /// whole file — see [GameLogJsonCodec.decode].
@@ -210,6 +273,14 @@ class GameLogImportResult {
 /// Human-readable CSV, for opening in a spreadsheet or for the "총무의 엑셀"
 /// bulk-entry path later. See the class doc above for why this is
 /// encode-only in Stage 1.
+///
+/// 다음 경기에서 해볼 것 (Stage 3) is deliberately **not** a column here: this
+/// format is one row per game, and a goal is not a per-game fact — it can
+/// outlive the game it was written after (carried forward across several),
+/// or exist with no game tied to it at all once carried. Forcing it into a
+/// per-row shape would either duplicate it across every row until the next
+/// goal, or silently drop whichever goal has no entry to sit next to.
+/// [GameLogJsonCodec] carries it instead, where it belongs as its own array.
 class GameLogCsvCodec {
   const GameLogCsvCodec._();
 

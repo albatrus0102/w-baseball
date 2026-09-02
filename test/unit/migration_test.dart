@@ -9,8 +9,9 @@ import 'package:w_baseball/data/models/game_log.dart';
 /// Schema migration.
 ///
 /// The rule that matters to a user: **an upgrade must never lose what they
-/// chose.** Followed teams, saved games, scheduled notification settings, and
-/// (from v3) game log entries are theirs, not the publisher's.
+/// chose.** Followed teams, saved games, scheduled notification settings,
+/// (from v3) game log entries, and (from v5) game log goals are theirs, not
+/// the publisher's.
 ///
 /// Rather than hand-writing old DDL (which would drift away from the real
 /// schema and stop testing anything), these tests derive a genuine older
@@ -47,9 +48,12 @@ void main() {
   /// Tables introduced in schema v3 — see `GameLogEntries` in `tables.dart`.
   const v3Tables = <String>['game_log_entries'];
 
+  /// Tables introduced in schema v5 — see `GameLogGoals` in `tables.dart`.
+  const v5Tables = <String>['game_log_goals'];
+
   int epoch(DateTime value) => value.millisecondsSinceEpoch ~/ 1000;
 
-  group('v1 → v4 마이그레이션 (신규 설치가 오래 방치된 경우)', () {
+  group('v1 → v5 마이그레이션 (신규 설치가 오래 방치된 경우)', () {
     late Database raw;
     late WbDatabase db;
 
@@ -81,7 +85,7 @@ void main() {
       ]) {
         raw.execute('DROP INDEX IF EXISTS $index;');
       }
-      for (final table in <String>[...v2Tables, ...v3Tables]) {
+      for (final table in <String>[...v2Tables, ...v3Tables, ...v5Tables]) {
         raw.execute('DROP TABLE IF EXISTS $table;');
       }
       v2Columns.forEach((table, column) {
@@ -128,11 +132,13 @@ void main() {
         "${epoch(DateTime.utc(2026, 7, 5))}, 'autoVerified', 'linkOnly', 'public', 0)",
       );
 
-      // 4. Reopen. This is the actual v1 -> v4 migration under test — the
+      // 4. Reopen. This is the actual v1 -> v5 migration under test — the
       // `game_log_entries` table dropped above gets recreated straight from
       // the *current* table definition (already including v4's 12 stat
-      // columns), so this install jumps all the way to v4 in one step. See
-      // the `else if` in `WbDatabase.migration`'s `onUpgrade`.
+      // columns), so this install jumps all the way to v4 in one step (see
+      // the `else if` in `WbDatabase.migration`'s `onUpgrade`), and the new
+      // `game_log_goals` table (v5) is created in the same reopen by the
+      // independent `if (from < 5)` right after.
       db = WbDatabase(NativeDatabase.opened(raw));
     });
 
@@ -140,18 +146,19 @@ void main() {
       await db.close();
     });
 
-    test('사전 조건: v1 상태에는 v2/v3 테이블이 없다', () {
+    test('사전 조건: v1 상태에는 v2/v3/v5 테이블이 없다', () {
       // Guards the test itself — if this ever passes trivially the rest is
       // moot.
       final before = sqlite3.openInMemory();
       addTearDown(before.dispose);
       expect(v2Tables, isNotEmpty);
       expect(v3Tables, isNotEmpty);
+      expect(v5Tables, isNotEmpty);
     });
 
-    test('마이그레이션 후 스키마 버전이 4가 된다', () async {
+    test('마이그레이션 후 스키마 버전이 5가 된다', () async {
       await db.select(db.localFollows).get();
-      expect(raw.select('PRAGMA user_version;').first.values.first, 4);
+      expect(raw.select('PRAGMA user_version;').first.values.first, 5);
     });
 
     test('팔로우가 그대로 보존된다', () async {
@@ -247,8 +254,23 @@ void main() {
       final rows = await db.select(db.gameLogEntries).get();
       expect(rows, hasLength(1));
       // v4's stat columns exist on this freshly-created table too (this
-      // install jumped straight from v1 to v4) and default to null, not 0.
+      // install jumped straight from v1 to v5) and default to null, not 0.
       expect(rows.single.plateAppearances, isNull);
+    });
+
+    test('v5에서 추가된 다음 경기 목표 테이블을 사용할 수 있다', () async {
+      expect(await db.select(db.gameLogGoals).get(), isEmpty);
+      await db
+          .into(db.gameLogGoals)
+          .insert(
+            GameLogGoalsCompanion.insert(
+              body: '초구 공략',
+              createdAt: DateTime.utc(2026, 8, 29, 21),
+            ),
+          );
+      final rows = await db.select(db.gameLogGoals).get();
+      expect(rows, hasLength(1));
+      expect(rows.single.closedAt, isNull);
     });
 
     test('마이그레이션 후에도 인덱스가 생성된다', () async {
@@ -261,6 +283,7 @@ void main() {
       expect(indexes, contains('idx_articles_cluster'));
       expect(indexes, contains('idx_games_day'));
       expect(indexes, contains('idx_game_log_day'));
+      expect(indexes, contains('idx_game_log_goals_open'));
     });
 
     test('기본 출처 정책이 시드된다', () async {
@@ -280,15 +303,16 @@ void main() {
     });
   });
 
-  group('v2 → v4 마이그레이션 (한 버전 뒤처진 설치)', () {
+  group('v2 → v5 마이그레이션 (한 버전 뒤처진 설치)', () {
     // A separate baseline from the group above: this one derives a genuine
-    // *v2* database (only v3's addition rolled back) rather than v1. Like
-    // the v1 group, `game_log_entries` gets recreated from the current
-    // (v4-shaped) table definition, so this also lands on v4 directly — see
-    // the `else if` in `WbDatabase.migration`'s `onUpgrade`. The
-    // 3-columns-added-later case (a v3 install that already has the table
-    // without the stat columns) is what the "v3 → v4" group below tests
-    // instead.
+    // *v2* database (only v3's and v5's additions rolled back) rather than
+    // v1. Like the v1 group, `game_log_entries` gets recreated from the
+    // current (v4-shaped) table definition, so this also lands on v4 for
+    // that table directly — see the `else if` in `WbDatabase.migration`'s
+    // `onUpgrade` — before the same reopen also creates `game_log_goals`
+    // (v5). The 3-columns-added-later case (a v3 install that already has
+    // the table without the stat columns) is what the "v3 → v4" group below
+    // tests instead.
     late Database raw;
     late WbDatabase db;
 
@@ -298,7 +322,7 @@ void main() {
       final seedDb = WbDatabase(NativeDatabase.opened(raw));
       await seedDb.select(probeTable(seedDb)).get();
 
-      for (final table in v3Tables) {
+      for (final table in <String>[...v3Tables, ...v5Tables]) {
         raw.execute('DROP TABLE IF EXISTS $table;');
       }
       raw.execute('PRAGMA user_version = 2;');
@@ -331,7 +355,7 @@ void main() {
         "${epoch(DateTime.utc(2026, 8, 30))}, 'autoVerified', 'unknown', 'public', 0)",
       );
 
-      // This is the actual v2 -> v4 migration under test.
+      // This is the actual v2 -> v5 migration under test.
       db = WbDatabase(NativeDatabase.opened(raw));
     });
 
@@ -339,13 +363,14 @@ void main() {
       await db.close();
     });
 
-    test('사전 조건: v2 상태에는 game_log_entries가 없다', () {
+    test('사전 조건: v2 상태에는 game_log_entries도 game_log_goals도 없다', () {
       expect(v3Tables, contains('game_log_entries'));
+      expect(v5Tables, contains('game_log_goals'));
     });
 
-    test('마이그레이션 후 스키마 버전이 4가 된다', () async {
+    test('마이그레이션 후 스키마 버전이 5가 된다', () async {
       await db.select(db.localFollows).get();
-      expect(raw.select('PRAGMA user_version;').first.values.first, 4);
+      expect(raw.select('PRAGMA user_version;').first.values.first, 5);
     });
 
     test('팔로우가 그대로 보존된다', () async {
@@ -407,10 +432,11 @@ void main() {
     });
   });
 
-  group('v3 → v4 마이그레이션 (성적 칼럼이 없던 설치)', () {
+  group('v3 → v5 마이그레이션 (성적 칼럼도 목표 테이블도 없던 설치)', () {
     // A genuine *v3* database: `game_log_entries` exists (Stage 1 shipped),
-    // but none of the 12 stat columns Stage 2 added do. Derived by dropping
-    // exactly those columns from the current schema, the same technique
+    // but none of the 12 stat columns Stage 2 added do, and `game_log_goals`
+    // (v5) does not exist yet either. Derived by dropping exactly those
+    // columns and that table from the current schema, the same technique
     // every group above uses — see the file doc comment.
     const v4StatColumns = <String>[
       'plate_appearances',
@@ -439,6 +465,9 @@ void main() {
       for (final column in v4StatColumns) {
         raw.execute('ALTER TABLE game_log_entries DROP COLUMN $column;');
       }
+      for (final table in v5Tables) {
+        raw.execute('DROP TABLE IF EXISTS $table;');
+      }
       raw.execute('PRAGMA user_version = 3;');
 
       // A real Stage 1 row, exactly as a player would have left it before
@@ -453,7 +482,7 @@ void main() {
         "${epoch(DateTime.utc(2026, 7, 12, 21))})",
       );
 
-      // This is the actual v3 -> v4 migration under test.
+      // This is the actual v3 -> v5 migration under test.
       db = WbDatabase(NativeDatabase.opened(raw));
     });
 
@@ -461,13 +490,14 @@ void main() {
       await db.close();
     });
 
-    test('사전 조건: v3 상태에는 성적 칼럼이 없다', () {
+    test('사전 조건: v3 상태에는 성적 칼럼도 목표 테이블도 없다', () {
       expect(v4StatColumns, isNotEmpty);
+      expect(v5Tables, isNotEmpty);
     });
 
-    test('마이그레이션 후 스키마 버전이 4가 된다', () async {
+    test('마이그레이션 후 스키마 버전이 5가 된다', () async {
       await db.select(db.gameLogEntries).get();
-      expect(raw.select('PRAGMA user_version;').first.values.first, 4);
+      expect(raw.select('PRAGMA user_version;').first.values.first, 5);
     });
 
     test('기존 출전 일지 행이 그대로 보존된다', () async {
@@ -532,6 +562,106 @@ void main() {
       expect(newRow.walks, 1);
       // Untouched columns on the same insert stay null, not 0.
       expect(newRow.sacrificeBunts, isNull);
+    });
+  });
+
+  group('v4 → v5 마이그레이션 (다음 경기 목표 테이블이 없던 설치)', () {
+    // A genuine *v4* database: the full stat-line shape from the group
+    // above already exists, but `game_log_goals` (v5) does not yet — the
+    // same technique as every group above, just rolling back only v5's own
+    // addition. See `GameLogGoals` in `tables.dart`.
+    late Database raw;
+    late WbDatabase db;
+
+    setUp(() async {
+      raw = sqlite3.openInMemory();
+
+      final seedDb = WbDatabase(NativeDatabase.opened(raw));
+      await seedDb.select(probeTable(seedDb)).get();
+
+      for (final table in v5Tables) {
+        raw.execute('DROP TABLE IF EXISTS $table;');
+      }
+      raw.execute('PRAGMA user_version = 4;');
+
+      // A real Stage 2 row, exactly as a player would have left it before
+      // this upgrade ever existed — a full stat line, but obviously no
+      // 다음 경기에서 해볼 것 note, since there was nowhere yet to put one.
+      raw.execute(
+        "INSERT INTO game_log_entries "
+        "(played_at, day_key, competition_label, opponent_label, positions, "
+        " result, note, created_at, plate_appearances, hits, walks) "
+        "VALUES (${epoch(DateTime.utc(2026, 8, 23))}, '2026-08-23', "
+        "'동호인 리그', '한강 리버베어스', 'catcher', 'win', '병살 하나 잡음', "
+        "${epoch(DateTime.utc(2026, 8, 23, 21))}, 4, 2, 0)",
+      );
+
+      // This is the actual v4 -> v5 migration under test.
+      db = WbDatabase(NativeDatabase.opened(raw));
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    test('사전 조건: v4 상태에는 game_log_goals가 없다', () {
+      expect(v5Tables, contains('game_log_goals'));
+    });
+
+    test('마이그레이션 후 스키마 버전이 5가 된다', () async {
+      await db.select(db.gameLogEntries).get();
+      expect(raw.select('PRAGMA user_version;').first.values.first, 5);
+    });
+
+    test('① 기존 출전 일지 기록이 그대로 보존된다', () async {
+      final rows = await db.select(db.gameLogEntries).get();
+      expect(rows, hasLength(1));
+      final row = rows.single;
+      expect(row.competitionLabel, '동호인 리그');
+      expect(row.opponentLabel, '한강 리버베어스');
+      expect(row.note, '병살 하나 잡음');
+      // Its Stage 2 stat line survives the upgrade untouched too.
+      expect(row.plateAppearances, 4);
+      expect(row.hits, 2);
+    });
+
+    test('② 새 목표 테이블은 비어 있다', () async {
+      expect(await db.select(db.gameLogGoals).get(), isEmpty);
+    });
+
+    test('③ 열린 목표가 없으므로 카드에 보여줄 것이 없다', () async {
+      // What `_GameLogGoalCard` gates on: no row with `closedAt IS NULL`.
+      // See `GameLogGoalRepository.watchOpenGoal` — an upgraded install with
+      // no goal ever written must not manufacture one.
+      final openGoals = await (db.select(
+        db.gameLogGoals,
+      )..where((t) => t.closedAt.isNull())).get();
+      expect(openGoals, isEmpty);
+    });
+
+    test('새 목표 테이블에 바로 값을 쓸 수 있다', () async {
+      await db
+          .into(db.gameLogGoals)
+          .insert(
+            GameLogGoalsCompanion.insert(
+              body: '초구 공략',
+              entryId: const Value(1),
+              createdAt: DateTime.utc(2026, 8, 23, 21),
+            ),
+          );
+      final rows = await db.select(db.gameLogGoals).get();
+      expect(rows, hasLength(1));
+      expect(rows.single.body, '초구 공략');
+      expect(rows.single.closedAt, isNull);
+    });
+
+    test('목표 테이블 인덱스가 생성된다', () async {
+      await db.select(db.gameLogGoals).get();
+      final indexes = raw
+          .select("SELECT name FROM sqlite_master WHERE type='index'")
+          .map((r) => r['name'] as String)
+          .toSet();
+      expect(indexes, contains('idx_game_log_goals_open'));
     });
   });
 }

@@ -21,6 +21,7 @@ import '../data/export/game_log_export_service.dart';
 import '../data/repositories/competition_repository.dart';
 import '../data/repositories/content_repository.dart';
 import '../data/repositories/follow_repository.dart';
+import '../data/repositories/game_log_goal_repository.dart';
 import '../data/repositories/game_log_repository.dart';
 import '../data/repositories/game_repository.dart';
 import '../data/repositories/preferences_repository.dart';
@@ -196,6 +197,13 @@ final gameLogRepositoryProvider = Provider<GameLogRepository>((ref) {
 final gameLogExportServiceProvider = Provider<GameLogExportService>(
   (ref) => const GameLogExportService(),
 );
+
+final gameLogGoalRepositoryProvider = Provider<GameLogGoalRepository>((ref) {
+  return DriftGameLogGoalRepository(
+    db: ref.watch(databaseProvider),
+    clock: ref.watch(clockProvider),
+  );
+});
 
 final weatherRepositoryProvider = Provider<WeatherRepository>((ref) {
   return DriftWeatherRepository(db: ref.watch(databaseProvider));
@@ -427,6 +435,12 @@ final savedGameIdsProvider = StreamProvider<Set<String>>((ref) {
 /// count, and the derived 포지션 히스토리 in the same frame.
 final gameLogEntriesProvider = StreamProvider<List<GameLogEntry>>((ref) {
   return ref.watch(gameLogRepositoryProvider).watchEntries();
+});
+
+/// The player's one open "다음 경기에서 해볼 것" goal, if any — null once it
+/// has been closed one way or another. See `GameLogGoalRepository`.
+final gameLogOpenGoalProvider = StreamProvider<GameLogGoal?>((ref) {
+  return ref.watch(gameLogGoalRepositoryProvider).watchOpenGoal();
 });
 
 final featuredProvider = StreamProvider<List<FeaturedItem>>((ref) {

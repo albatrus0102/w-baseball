@@ -180,6 +180,77 @@ void main() {
     });
   });
 
+  group('목표 (다음 경기에서 해볼 것) 왕복', () {
+    final goals = <GameLogGoal>[
+      GameLogGoal(
+        id: 1,
+        body: '초구 공략',
+        entryId: 5,
+        createdAt: DateTime.utc(2026, 8, 23, 21),
+      ),
+      // Closed, carried forward — no entryId, has an outcome.
+      GameLogGoal(
+        id: 2,
+        body: '병살 완성, "확실하게"',
+        createdAt: DateTime.utc(2026, 8, 16, 21),
+        closedAt: DateTime.utc(2026, 8, 23, 21),
+        outcome: GameLogGoalOutcome.carried,
+      ),
+    ];
+
+    test('내보낸 뒤 다시 읽으면 목표가 그대로 남는다', () {
+      final encoded = GameLogJsonCodec.encode(
+        entries,
+        exportedAt: DateTime.utc(2026, 9, 1),
+        goals: goals,
+      );
+      final result = GameLogJsonCodec.decode(encoded);
+
+      expect(result.isValid, isTrue);
+      expect(result.goals, hasLength(2));
+
+      final open = result.goals.firstWhere((g) => g.id == 1);
+      expect(open.body, '초구 공략');
+      expect(open.entryId, 5);
+      expect(open.createdAt, goals[0].createdAt);
+      expect(open.closedAt, isNull);
+      expect(open.outcome, isNull);
+      expect(open.isOpen, isTrue);
+
+      final closed = result.goals.firstWhere((g) => g.id == 2);
+      expect(closed.body, '병살 완성, "확실하게"');
+      expect(closed.entryId, isNull);
+      expect(closed.closedAt, goals[1].closedAt);
+      expect(closed.outcome, GameLogGoalOutcome.carried);
+      expect(closed.isOpen, isFalse);
+    });
+
+    test('목표 없이 내보내도 빈 배열로 왕복한다', () {
+      final encoded = GameLogJsonCodec.encode(
+        entries,
+        exportedAt: DateTime.utc(2026, 9, 1),
+      );
+      final result = GameLogJsonCodec.decode(encoded);
+      expect(result.isValid, isTrue);
+      expect(result.goals, isEmpty);
+    });
+
+    test('goals 키가 아예 없는 옛 내보내기 파일도 빈 배열로 읽힌다 (하위 호환)', () {
+      // Simulates a pre-Stage-3 export, written before this key existed.
+      // `formatTag` never bumped for it — see this file's class doc.
+      const raw = '''
+      {
+        "format": "wb-myrecords-v1",
+        "exportedAt": "2026-09-01T00:00:00.000Z",
+        "entries": []
+      }
+      ''';
+      final result = GameLogJsonCodec.decode(raw);
+      expect(result.isValid, isTrue);
+      expect(result.goals, isEmpty);
+    });
+  });
+
   group('CSV 내보내기', () {
     test('머리글과 한 항목당 한 행을 만든다', () {
       final csv = GameLogCsvCodec.encode(entries);

@@ -482,6 +482,207 @@ void main() {
     });
   });
 
+  group('다음 경기에서 해볼 것', () {
+    testWidgets('입력 시트에서 목표를 적고 저장하면 반영 카드에 그대로 나타난다', (tester) async {
+      final app = await buildTestApp(
+        audience: player,
+        seedAssets: false,
+        // Hour 9 UTC (18:00 KST), like every other `frozenNow` in this
+        // file — hour 21 UTC crosses into the next KST calendar day, which
+        // would silently shift "오늘" to 8월 24일 and break the date-label
+        // assertion below.
+        frozenNow: DateTime.utc(2026, 8, 23, 9),
+      );
+      addTearDown(app.dispose);
+
+      await pumpScreen(tester, app, const MyBaseballScreen());
+      await tester.tap(find.textContaining('경기 하고 오셨나요'));
+      await tester.pumpAndSettle();
+
+      await _scrollSheetTo(
+        tester,
+        find.byKey(const ValueKey('gameLogGoalField')),
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('gameLogGoalField')),
+        '초구 공략',
+      );
+      await _scrollSheetTo(
+        tester,
+        find.byKey(const ValueKey('gameLogSaveButton')),
+      );
+      await tester.tap(find.byKey(const ValueKey('gameLogSaveButton')));
+      await tester.pumpAndSettle();
+      await settle(tester);
+      await scrollToEnd(tester);
+
+      expect(find.text('다음 경기에서 해볼 것'), findsOneWidget);
+      expect(find.text('"초구 공략"'), findsOneWidget);
+      expect(find.textContaining('8월 23일 경기 뒤에 적음'), findsOneWidget);
+      expectNoOverflow(tester);
+    });
+
+    testWidgets('목표를 비워두고 저장하면 반영 카드가 나타나지 않는다', (tester) async {
+      final app = await buildTestApp(audience: player, seedAssets: false);
+      addTearDown(app.dispose);
+
+      await app.container
+          .read(gameLogRepositoryProvider)
+          .addEntry(playedAt: DateTime.utc(2026, 8, 20));
+
+      await pumpScreen(tester, app, const MyBaseballScreen());
+      await settle(tester);
+      await scrollToEnd(tester);
+
+      expect(find.text('다음 경기에서 해볼 것'), findsNothing);
+    });
+
+    testWidgets('"했어요"를 누르면 done으로 닫히고 카드가 사라진다', (tester) async {
+      final app = await buildTestApp(audience: player, seedAssets: false);
+      addTearDown(app.dispose);
+
+      final entry = await app.container
+          .read(gameLogRepositoryProvider)
+          .addEntry(playedAt: DateTime.utc(2026, 8, 20));
+      await app.container
+          .read(gameLogGoalRepositoryProvider)
+          .setGoal(body: '초구 공략', entryId: entry.id);
+
+      await pumpScreen(tester, app, const MyBaseballScreen());
+      await settle(tester);
+      expect(find.text('"초구 공략"'), findsOneWidget);
+
+      // No `scrollToEnd` before this tap: the goal card sits near the top
+      // of the screen, well within the initial viewport, and scrolling the
+      // list to its *end* first would carry these buttons off-screen —
+      // `find` still matches them in the tree at that point (this is a
+      // plain eager `ListView`, not `.builder`), but a tap dispatched at an
+      // off-screen coordinate silently hits nothing. See the sibling tests
+      // below for the same care.
+      await tester.tap(find.text('했어요'));
+      await settle(tester);
+
+      expect(find.text('다음 경기에서 해볼 것'), findsNothing);
+      final all = await app.container
+          .read(gameLogGoalRepositoryProvider)
+          .allGoals();
+      expect(all.single.outcome, GameLogGoalOutcome.done);
+    });
+
+    testWidgets('"지우기"를 누르면 dropped로 닫히고 카드가 사라진다', (tester) async {
+      final app = await buildTestApp(audience: player, seedAssets: false);
+      addTearDown(app.dispose);
+
+      final entry = await app.container
+          .read(gameLogRepositoryProvider)
+          .addEntry(playedAt: DateTime.utc(2026, 8, 20));
+      await app.container
+          .read(gameLogGoalRepositoryProvider)
+          .setGoal(body: '초구 공략', entryId: entry.id);
+
+      await pumpScreen(tester, app, const MyBaseballScreen());
+      await settle(tester);
+
+      await tester.tap(find.text('지우기'));
+      await settle(tester);
+
+      expect(find.text('다음 경기에서 해볼 것'), findsNothing);
+      final all = await app.container
+          .read(gameLogGoalRepositoryProvider)
+          .allGoals();
+      expect(all.single.outcome, GameLogGoalOutcome.dropped);
+    });
+
+    testWidgets('"다음에도"를 누르면 carried로 닫히고 같은 문장의 새 목표가 열린 채 남는다', (
+      tester,
+    ) async {
+      final app = await buildTestApp(audience: player, seedAssets: false);
+      addTearDown(app.dispose);
+
+      final entry = await app.container
+          .read(gameLogRepositoryProvider)
+          .addEntry(playedAt: DateTime.utc(2026, 8, 20));
+      await app.container
+          .read(gameLogGoalRepositoryProvider)
+          .setGoal(body: '초구 공략', entryId: entry.id);
+
+      await pumpScreen(tester, app, const MyBaseballScreen());
+      await settle(tester);
+
+      await tester.tap(find.text('다음에도'));
+      await settle(tester);
+
+      // Still shown — a new goal opened with the same words, not gone like
+      // 했어요/지우기 above.
+      expect(find.text('다음 경기에서 해볼 것'), findsOneWidget);
+      expect(find.text('"초구 공략"'), findsOneWidget);
+      expectNoOverflow(tester);
+
+      final all = await app.container
+          .read(gameLogGoalRepositoryProvider)
+          .allGoals();
+      expect(all, hasLength(2));
+      final closed = all.firstWhere((g) => !g.isOpen);
+      expect(closed.outcome, GameLogGoalOutcome.carried);
+      final open = all.firstWhere((g) => g.isOpen);
+      expect(open.entryId, isNull);
+    });
+
+    testWidgets('이미 열린 목표가 있을 때 새 목표를 쓰면, 이전 것은 화면에서 조용히 사라진다 (outcome null)', (
+      tester,
+    ) async {
+      final app = await buildTestApp(
+        audience: player,
+        seedAssets: false,
+        frozenNow: DateTime.utc(2026, 8, 30, 9),
+      );
+      addTearDown(app.dispose);
+
+      final firstEntry = await app.container
+          .read(gameLogRepositoryProvider)
+          .addEntry(playedAt: DateTime.utc(2026, 8, 20));
+      await app.container
+          .read(gameLogGoalRepositoryProvider)
+          .setGoal(body: '초구 공략', entryId: firstEntry.id);
+
+      await pumpScreen(tester, app, const MyBaseballScreen());
+      await settle(tester);
+      await tester.tap(find.text('기록 추가'));
+      await tester.pumpAndSettle();
+
+      await _scrollSheetTo(
+        tester,
+        find.byKey(const ValueKey('gameLogGoalField')),
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('gameLogGoalField')),
+        '병살 완성',
+      );
+      await _scrollSheetTo(
+        tester,
+        find.byKey(const ValueKey('gameLogSaveButton')),
+      );
+      await tester.tap(find.byKey(const ValueKey('gameLogSaveButton')));
+      await tester.pumpAndSettle();
+      await settle(tester);
+      await scrollToEnd(tester);
+
+      // Only the new goal shows — no "닫힌 목표" list, no mention of the old
+      // one at all. See the feature brief's "지난 것" section.
+      expect(find.text('"병살 완성"'), findsOneWidget);
+      expect(find.textContaining('초구 공략'), findsNothing);
+
+      final all = await app.container
+          .read(gameLogGoalRepositoryProvider)
+          .allGoals();
+      expect(all, hasLength(2));
+      final superseded = all.firstWhere((g) => g.body == '초구 공략');
+      expect(superseded.isOpen, isFalse);
+      // Silently superseded, never asked — not the same thing as 다음에도.
+      expect(superseded.outcome, isNull);
+    });
+  });
+
   // The export button's actual file output — real repository, real
   // `GameLogExportService`, real `dart:io` write, parsed back and checked
   // field-for-field — is covered in

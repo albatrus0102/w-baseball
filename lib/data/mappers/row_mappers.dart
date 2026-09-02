@@ -841,6 +841,17 @@ extension GameLogEntryRowMapper on GameLogEntryRow {
   );
 }
 
+extension GameLogGoalRowMapper on GameLogGoalRow {
+  GameLogGoal toDomain() => GameLogGoal(
+    id: id,
+    body: body,
+    entryId: entryId,
+    createdAt: createdAt,
+    closedAt: closedAt,
+    outcome: GameLogGoalOutcome.parse(outcome),
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Shared helpers
 // ---------------------------------------------------------------------------

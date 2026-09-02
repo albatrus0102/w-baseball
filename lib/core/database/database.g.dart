@@ -44397,6 +44397,423 @@ class GameLogEntriesCompanion extends UpdateCompanion<GameLogEntryRow> {
   }
 }
 
+class $GameLogGoalsTable extends GameLogGoals
+    with TableInfo<$GameLogGoalsTable, GameLogGoalRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $GameLogGoalsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _bodyMeta = const VerificationMeta('body');
+  @override
+  late final GeneratedColumn<String> body = GeneratedColumn<String>(
+    'body',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _entryIdMeta = const VerificationMeta(
+    'entryId',
+  );
+  @override
+  late final GeneratedColumn<int> entryId = GeneratedColumn<int>(
+    'entry_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _closedAtMeta = const VerificationMeta(
+    'closedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> closedAt = GeneratedColumn<DateTime>(
+    'closed_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _outcomeMeta = const VerificationMeta(
+    'outcome',
+  );
+  @override
+  late final GeneratedColumn<String> outcome = GeneratedColumn<String>(
+    'outcome',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    body,
+    entryId,
+    createdAt,
+    closedAt,
+    outcome,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'game_log_goals';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<GameLogGoalRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('body')) {
+      context.handle(
+        _bodyMeta,
+        body.isAcceptableOrUnknown(data['body']!, _bodyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_bodyMeta);
+    }
+    if (data.containsKey('entry_id')) {
+      context.handle(
+        _entryIdMeta,
+        entryId.isAcceptableOrUnknown(data['entry_id']!, _entryIdMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('closed_at')) {
+      context.handle(
+        _closedAtMeta,
+        closedAt.isAcceptableOrUnknown(data['closed_at']!, _closedAtMeta),
+      );
+    }
+    if (data.containsKey('outcome')) {
+      context.handle(
+        _outcomeMeta,
+        outcome.isAcceptableOrUnknown(data['outcome']!, _outcomeMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  GameLogGoalRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return GameLogGoalRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      body: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}body'],
+      )!,
+      entryId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}entry_id'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      closedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}closed_at'],
+      ),
+      outcome: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}outcome'],
+      ),
+    );
+  }
+
+  @override
+  $GameLogGoalsTable createAlias(String alias) {
+    return $GameLogGoalsTable(attachedDatabase, alias);
+  }
+}
+
+class GameLogGoalRow extends DataClass implements Insertable<GameLogGoalRow> {
+  final int id;
+
+  /// The sentence she wrote. Never generated, rewritten, or graded by the
+  /// app — see the class doc.
+  final String body;
+
+  /// The 출전 일지 entry this goal was written after, if any. Null for a
+  /// goal carried forward via "다음에도" — that goal was not written
+  /// alongside any one game, just re-opened with the same words.
+  final int? entryId;
+  final DateTime createdAt;
+
+  /// Null while the goal is still open — see the class doc. Set the moment
+  /// it is superseded by a new goal, marked done, carried forward, or
+  /// dropped.
+  final DateTime? closedAt;
+
+  /// `'done'` | `'carried'` | `'dropped'` | null. Null means the goal was
+  /// silently superseded by a newly-written one — nobody was asked and
+  /// nobody answered, which is a different thing from any of the three
+  /// buttons being pressed. See `GameLogGoalRepository.setGoal`'s doc.
+  final String? outcome;
+  const GameLogGoalRow({
+    required this.id,
+    required this.body,
+    this.entryId,
+    required this.createdAt,
+    this.closedAt,
+    this.outcome,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['body'] = Variable<String>(body);
+    if (!nullToAbsent || entryId != null) {
+      map['entry_id'] = Variable<int>(entryId);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    if (!nullToAbsent || closedAt != null) {
+      map['closed_at'] = Variable<DateTime>(closedAt);
+    }
+    if (!nullToAbsent || outcome != null) {
+      map['outcome'] = Variable<String>(outcome);
+    }
+    return map;
+  }
+
+  GameLogGoalsCompanion toCompanion(bool nullToAbsent) {
+    return GameLogGoalsCompanion(
+      id: Value(id),
+      body: Value(body),
+      entryId: entryId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(entryId),
+      createdAt: Value(createdAt),
+      closedAt: closedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(closedAt),
+      outcome: outcome == null && nullToAbsent
+          ? const Value.absent()
+          : Value(outcome),
+    );
+  }
+
+  factory GameLogGoalRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return GameLogGoalRow(
+      id: serializer.fromJson<int>(json['id']),
+      body: serializer.fromJson<String>(json['body']),
+      entryId: serializer.fromJson<int?>(json['entryId']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      closedAt: serializer.fromJson<DateTime?>(json['closedAt']),
+      outcome: serializer.fromJson<String?>(json['outcome']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'body': serializer.toJson<String>(body),
+      'entryId': serializer.toJson<int?>(entryId),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'closedAt': serializer.toJson<DateTime?>(closedAt),
+      'outcome': serializer.toJson<String?>(outcome),
+    };
+  }
+
+  GameLogGoalRow copyWith({
+    int? id,
+    String? body,
+    Value<int?> entryId = const Value.absent(),
+    DateTime? createdAt,
+    Value<DateTime?> closedAt = const Value.absent(),
+    Value<String?> outcome = const Value.absent(),
+  }) => GameLogGoalRow(
+    id: id ?? this.id,
+    body: body ?? this.body,
+    entryId: entryId.present ? entryId.value : this.entryId,
+    createdAt: createdAt ?? this.createdAt,
+    closedAt: closedAt.present ? closedAt.value : this.closedAt,
+    outcome: outcome.present ? outcome.value : this.outcome,
+  );
+  GameLogGoalRow copyWithCompanion(GameLogGoalsCompanion data) {
+    return GameLogGoalRow(
+      id: data.id.present ? data.id.value : this.id,
+      body: data.body.present ? data.body.value : this.body,
+      entryId: data.entryId.present ? data.entryId.value : this.entryId,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      closedAt: data.closedAt.present ? data.closedAt.value : this.closedAt,
+      outcome: data.outcome.present ? data.outcome.value : this.outcome,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GameLogGoalRow(')
+          ..write('id: $id, ')
+          ..write('body: $body, ')
+          ..write('entryId: $entryId, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('closedAt: $closedAt, ')
+          ..write('outcome: $outcome')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, body, entryId, createdAt, closedAt, outcome);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GameLogGoalRow &&
+          other.id == this.id &&
+          other.body == this.body &&
+          other.entryId == this.entryId &&
+          other.createdAt == this.createdAt &&
+          other.closedAt == this.closedAt &&
+          other.outcome == this.outcome);
+}
+
+class GameLogGoalsCompanion extends UpdateCompanion<GameLogGoalRow> {
+  final Value<int> id;
+  final Value<String> body;
+  final Value<int?> entryId;
+  final Value<DateTime> createdAt;
+  final Value<DateTime?> closedAt;
+  final Value<String?> outcome;
+  const GameLogGoalsCompanion({
+    this.id = const Value.absent(),
+    this.body = const Value.absent(),
+    this.entryId = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.closedAt = const Value.absent(),
+    this.outcome = const Value.absent(),
+  });
+  GameLogGoalsCompanion.insert({
+    this.id = const Value.absent(),
+    required String body,
+    this.entryId = const Value.absent(),
+    required DateTime createdAt,
+    this.closedAt = const Value.absent(),
+    this.outcome = const Value.absent(),
+  }) : body = Value(body),
+       createdAt = Value(createdAt);
+  static Insertable<GameLogGoalRow> custom({
+    Expression<int>? id,
+    Expression<String>? body,
+    Expression<int>? entryId,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? closedAt,
+    Expression<String>? outcome,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (body != null) 'body': body,
+      if (entryId != null) 'entry_id': entryId,
+      if (createdAt != null) 'created_at': createdAt,
+      if (closedAt != null) 'closed_at': closedAt,
+      if (outcome != null) 'outcome': outcome,
+    });
+  }
+
+  GameLogGoalsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? body,
+    Value<int?>? entryId,
+    Value<DateTime>? createdAt,
+    Value<DateTime?>? closedAt,
+    Value<String?>? outcome,
+  }) {
+    return GameLogGoalsCompanion(
+      id: id ?? this.id,
+      body: body ?? this.body,
+      entryId: entryId ?? this.entryId,
+      createdAt: createdAt ?? this.createdAt,
+      closedAt: closedAt ?? this.closedAt,
+      outcome: outcome ?? this.outcome,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (body.present) {
+      map['body'] = Variable<String>(body.value);
+    }
+    if (entryId.present) {
+      map['entry_id'] = Variable<int>(entryId.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (closedAt.present) {
+      map['closed_at'] = Variable<DateTime>(closedAt.value);
+    }
+    if (outcome.present) {
+      map['outcome'] = Variable<String>(outcome.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GameLogGoalsCompanion(')
+          ..write('id: $id, ')
+          ..write('body: $body, ')
+          ..write('entryId: $entryId, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('closedAt: $closedAt, ')
+          ..write('outcome: $outcome')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$WbDatabase extends GeneratedDatabase {
   _$WbDatabase(QueryExecutor e) : super(e);
   $WbDatabaseManager get managers => $WbDatabaseManager(this);
@@ -44458,6 +44875,7 @@ abstract class _$WbDatabase extends GeneratedDatabase {
   late final $SeenItemsTable seenItems = $SeenItemsTable(this);
   late final $JourneyEventsTable journeyEvents = $JourneyEventsTable(this);
   late final $GameLogEntriesTable gameLogEntries = $GameLogEntriesTable(this);
+  late final $GameLogGoalsTable gameLogGoals = $GameLogGoalsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -44510,6 +44928,7 @@ abstract class _$WbDatabase extends GeneratedDatabase {
     seenItems,
     journeyEvents,
     gameLogEntries,
+    gameLogGoals,
   ];
 }
 
@@ -64734,6 +65153,219 @@ typedef $$GameLogEntriesTableProcessedTableManager =
       GameLogEntryRow,
       PrefetchHooks Function()
     >;
+typedef $$GameLogGoalsTableCreateCompanionBuilder =
+    GameLogGoalsCompanion Function({
+      Value<int> id,
+      required String body,
+      Value<int?> entryId,
+      required DateTime createdAt,
+      Value<DateTime?> closedAt,
+      Value<String?> outcome,
+    });
+typedef $$GameLogGoalsTableUpdateCompanionBuilder =
+    GameLogGoalsCompanion Function({
+      Value<int> id,
+      Value<String> body,
+      Value<int?> entryId,
+      Value<DateTime> createdAt,
+      Value<DateTime?> closedAt,
+      Value<String?> outcome,
+    });
+
+class $$GameLogGoalsTableFilterComposer
+    extends Composer<_$WbDatabase, $GameLogGoalsTable> {
+  $$GameLogGoalsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get body => $composableBuilder(
+    column: $table.body,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get entryId => $composableBuilder(
+    column: $table.entryId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get closedAt => $composableBuilder(
+    column: $table.closedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get outcome => $composableBuilder(
+    column: $table.outcome,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$GameLogGoalsTableOrderingComposer
+    extends Composer<_$WbDatabase, $GameLogGoalsTable> {
+  $$GameLogGoalsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get body => $composableBuilder(
+    column: $table.body,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get entryId => $composableBuilder(
+    column: $table.entryId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get closedAt => $composableBuilder(
+    column: $table.closedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get outcome => $composableBuilder(
+    column: $table.outcome,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$GameLogGoalsTableAnnotationComposer
+    extends Composer<_$WbDatabase, $GameLogGoalsTable> {
+  $$GameLogGoalsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get body =>
+      $composableBuilder(column: $table.body, builder: (column) => column);
+
+  GeneratedColumn<int> get entryId =>
+      $composableBuilder(column: $table.entryId, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get closedAt =>
+      $composableBuilder(column: $table.closedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get outcome =>
+      $composableBuilder(column: $table.outcome, builder: (column) => column);
+}
+
+class $$GameLogGoalsTableTableManager
+    extends
+        RootTableManager<
+          _$WbDatabase,
+          $GameLogGoalsTable,
+          GameLogGoalRow,
+          $$GameLogGoalsTableFilterComposer,
+          $$GameLogGoalsTableOrderingComposer,
+          $$GameLogGoalsTableAnnotationComposer,
+          $$GameLogGoalsTableCreateCompanionBuilder,
+          $$GameLogGoalsTableUpdateCompanionBuilder,
+          (
+            GameLogGoalRow,
+            BaseReferences<_$WbDatabase, $GameLogGoalsTable, GameLogGoalRow>,
+          ),
+          GameLogGoalRow,
+          PrefetchHooks Function()
+        > {
+  $$GameLogGoalsTableTableManager(_$WbDatabase db, $GameLogGoalsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$GameLogGoalsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$GameLogGoalsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$GameLogGoalsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> body = const Value.absent(),
+                Value<int?> entryId = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime?> closedAt = const Value.absent(),
+                Value<String?> outcome = const Value.absent(),
+              }) => GameLogGoalsCompanion(
+                id: id,
+                body: body,
+                entryId: entryId,
+                createdAt: createdAt,
+                closedAt: closedAt,
+                outcome: outcome,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String body,
+                Value<int?> entryId = const Value.absent(),
+                required DateTime createdAt,
+                Value<DateTime?> closedAt = const Value.absent(),
+                Value<String?> outcome = const Value.absent(),
+              }) => GameLogGoalsCompanion.insert(
+                id: id,
+                body: body,
+                entryId: entryId,
+                createdAt: createdAt,
+                closedAt: closedAt,
+                outcome: outcome,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$GameLogGoalsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$WbDatabase,
+      $GameLogGoalsTable,
+      GameLogGoalRow,
+      $$GameLogGoalsTableFilterComposer,
+      $$GameLogGoalsTableOrderingComposer,
+      $$GameLogGoalsTableAnnotationComposer,
+      $$GameLogGoalsTableCreateCompanionBuilder,
+      $$GameLogGoalsTableUpdateCompanionBuilder,
+      (
+        GameLogGoalRow,
+        BaseReferences<_$WbDatabase, $GameLogGoalsTable, GameLogGoalRow>,
+      ),
+      GameLogGoalRow,
+      PrefetchHooks Function()
+    >;
 
 class $WbDatabaseManager {
   final _$WbDatabase _db;
@@ -64835,4 +65467,6 @@ class $WbDatabaseManager {
       $$JourneyEventsTableTableManager(_db, _db.journeyEvents);
   $$GameLogEntriesTableTableManager get gameLogEntries =>
       $$GameLogEntriesTableTableManager(_db, _db.gameLogEntries);
+  $$GameLogGoalsTableTableManager get gameLogGoals =>
+      $$GameLogGoalsTableTableManager(_db, _db.gameLogGoals);
 }
