@@ -84,3 +84,23 @@ flutter:
     - assets/seed/competitions/
     - assets/seed/standings/
     - assets/seed/content/
+
+  # Bundled so Korean text renders in the same face on every device, instead
+  # of falling back to whatever Korean system font (or none) the OEM shipped.
+  # lib/core/design_system/typography.dart names the family 'Pretendard';
+  # weights map 1:1 to the five static TTFs below. Licensed under the SIL
+  # Open Font License 1.1 -- assets/fonts/OFL.txt ships alongside per the
+  # license's distribution requirement.
+  fonts:
+    - family: Pretendard
+      fonts:
+        - asset: assets/fonts/Pretendard-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Pretendard-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Pretendard-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Pretendard-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Pretendard-ExtraBold.ttf
+          weight: 800

@@ -252,8 +252,22 @@ class WbHeroGameCard extends StatelessWidget {
                 ),
               ),
               if (weatherRisk != null &&
-                  weatherRisk!.level != WeatherRiskLevel.clear)
-                WbWeatherRiskBadge(risk: weatherRisk!),
+                  weatherRisk!.level != WeatherRiskLevel.clear) ...<Widget>[
+                const SizedBox(width: WbSpace.xs),
+                // Flexible, not a bare child: at large text scales the
+                // badge's own label (`WbWeatherRiskBadge` -> `WbBadge`) can
+                // outgrow what is left after the venue name and follow
+                // star, and a bare child cannot shrink — only a flex
+                // child can, which is what lets `WbBadge`'s own internal
+                // `Flexible(Text(..., overflow: ellipsis))` (already coded,
+                // previously never engaged because nothing upstream ever
+                // constrained it) actually take effect instead of the row
+                // overflowing. Measured, not guessed: this was reproduced
+                // overflowing by 39px at 1.7x and 78px at 2.0x on a 360dp
+                // screen before this change (see
+                // `test/audit/text_scale_probe_test.dart`).
+                Flexible(child: WbWeatherRiskBadge(risk: weatherRisk!)),
+              ],
               if (onToggleFollow != null)
                 WbTapTarget(
                   onTap: onToggleFollow,

@@ -1295,7 +1295,17 @@ class _WeatherSummaryLine extends StatelessWidget {
         Row(
           children: <Widget>[
             if (risk.level != WeatherRiskLevel.clear) ...<Widget>[
-              WbWeatherRiskBadge(risk: risk),
+              // Flexible, not a bare child: at large text scales the
+              // badge's own label can outgrow what is left in this Row,
+              // and a bare child cannot shrink to make room — only a flex
+              // child can, which is what lets `WbBadge`'s own internal
+              // `Flexible(Text(..., overflow: ellipsis))` (already coded,
+              // previously never engaged because nothing upstream ever
+              // constrained it) actually take effect instead of the row
+              // overflowing. Measured, not guessed: this was reproduced
+              // overflowing by 12px at 2.0x on a 360dp screen before this
+              // change (see `test/audit/text_scale_probe_test.dart`).
+              Flexible(child: WbWeatherRiskBadge(risk: risk)),
               const SizedBox(width: WbSpace.sm),
             ],
             Flexible(

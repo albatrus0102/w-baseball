@@ -39,7 +39,35 @@ void main() {
   }
 
   test('화면 코드는 벽시계를 직접 읽지 않는다', () {
-    final found = offenders('lib/features').toList();
+    // `lib/features`뿐 아니라 `lib/core/design_system`도 본다: 그 안의 위젯들은
+    // 여러 화면이 그대로 가져다 쓰는 공유 렌더링 계층이라, 여기서 벽시계를 직접
+    // 읽으면 `lib/features`에서 읽는 것과 똑같이 "실행 시각에 따라 문구가
+    // 달라지는" 결함이 되고, 오히려 퍼지는 범위는 더 넓다. 두 디렉터리 모두
+    // 지금 위반이 0건이라 베이스라인 없이 바로 막는다.
+    //
+    // `lib/app`도 본다 — `app.dart`/`router.dart`/`shell.dart`는 위젯을 빌드하는
+    // 코드이고 여기도 0건이라 같은 이유로 막는다. 다만 그 디렉터리의
+    // `providers.dart`와 `bootstrap.dart`는 제외한다: 둘 다 여기서 걸린 결함과
+    // 다른 종류다 — 화면이 매 빌드마다 다시 묻는 "지금 몇 시야"가 아니라, 실제로
+    // 벌어진 일(동기화 성공, 앱 시작)의 시각을 그 순간에 한 번 기록하는 값이다.
+    // `setLastSuccessfulSyncAt`이 시계를 고정한 채 기록하면 "방금 갱신됨"이
+    // 영원히 고정된 값이 되어 버려, 오히려 이 테스트가 막으려는 것과 반대되는
+    // 결함이 생긴다. `clockProvider`의 실제 구현체(630번 줄)도 여기 있어야 하고,
+    // 당연히 자기 자신은 걸리면 안 된다.
+    //
+    // `lib/core/network`, `lib/core/platform` 같은 나머지 `lib/core`는 넓히지
+    // 않는다: HTTP 재시도 backoff, 실제 OS 알림 예약처럼 화면 문구가 아니라
+    // 실제 바깥 세계의 시각과 맞아야 하는 자리이고, 지금도 여러 건 있어
+    // 베이스라인부터 만들어야 하는데 이 결함과 직접 관련이 없다.
+    final found = <({String path, int line, String text})>[
+      ...offenders('lib/features'),
+      ...offenders('lib/core/design_system'),
+      ...offenders('lib/app').where(
+        (o) =>
+            !o.path.contains('/app/providers.dart') &&
+            !o.path.contains('/app/bootstrap.dart'),
+      ),
+    ];
 
     expect(
       found,
