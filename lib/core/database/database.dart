@@ -80,13 +80,19 @@ class WbDatabase extends _$WbDatabase {
   ///    and `standings.previous_rank`.
   ///  * v3 — 출전 일지: `game_log_entries`, a device-local table for the
   ///    player's own game log. Purely additive, like v2.
+  ///  * v4 — 출전 일지 stat line: 12 nullable columns added to
+  ///    `game_log_entries` (plate appearances, hits, walks, sacrifice
+  ///    bunts, strikeouts, RBI, runs, stolen bases, and the pitching
+  ///    equivalents). Purely additive — every existing row gets all-null
+  ///    columns, which reads as "no stat line for this game", not a false
+  ///    zero. See `GameLogEntries` in `tables.dart`.
   ///
   /// Upgrades are strictly additive. User-owned rows — follows, saved items,
   /// scheduled notification settings, and (from v3) game log entries — are
   /// never dropped or recreated; `test/unit/migration_test.dart` asserts
   /// exactly that.
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -123,8 +129,34 @@ class WbDatabase extends _$WbDatabase {
       }
       if (from < 3) {
         // v2 → v3: the player's own game log. One new table, nothing
-        // existing is touched.
+        // existing is touched. `createTable` builds it from the *current*
+        // table definition — which already includes v4's stat columns —
+        // so an install this old lands on v4's full shape in one step and
+        // must not also hit the `addColumn` branch below for the same
+        // columns (that would be "add a column that already exists").
+        // Hence `else if`, not a second `if`: exactly one of these two
+        // branches ever runs for a given `from`.
         await m.createTable(gameLogEntries);
+      } else if (from < 4) {
+        // v3 → v4: the player's own stat line, added to the game log entry
+        // she already has. Reached only when `game_log_entries` already
+        // existed *without* these columns (from == 3) — see the branch
+        // above. 12 nullable columns, nothing existing is touched — every
+        // pre-existing row reads as "no stat line" once this runs, never a
+        // false zero. See `GameLogEntries` in `tables.dart` for why each
+        // column is nullable.
+        await m.addColumn(gameLogEntries, gameLogEntries.plateAppearances);
+        await m.addColumn(gameLogEntries, gameLogEntries.hits);
+        await m.addColumn(gameLogEntries, gameLogEntries.walks);
+        await m.addColumn(gameLogEntries, gameLogEntries.sacrificeBunts);
+        await m.addColumn(gameLogEntries, gameLogEntries.strikeouts);
+        await m.addColumn(gameLogEntries, gameLogEntries.runsBattedIn);
+        await m.addColumn(gameLogEntries, gameLogEntries.runsScored);
+        await m.addColumn(gameLogEntries, gameLogEntries.stolenBases);
+        await m.addColumn(gameLogEntries, gameLogEntries.outsPitched);
+        await m.addColumn(gameLogEntries, gameLogEntries.pitchingStrikeouts);
+        await m.addColumn(gameLogEntries, gameLogEntries.pitchingWalks);
+        await m.addColumn(gameLogEntries, gameLogEntries.runsAllowed);
       }
       await _createIndexes(m);
     },

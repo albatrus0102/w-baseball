@@ -60,6 +60,7 @@ class SharedPrefsRepository implements PreferencesRepository {
   static const _kDensity = 'audience.density';
   static const _kModeNudgeDismissed = 'audience.modeNudgeDismissed';
   static const _kGameLogNudgeDismissed = 'audience.gameLogNudgeDismissed';
+  static const _kGameLogStatsExpanded = 'audience.gameLogStatsExpanded';
 
   static const _kNotifEnabled = 'notif.enabled';
   static const _kQuietStart = 'notif.quietStart';
@@ -114,6 +115,7 @@ class SharedPrefsRepository implements PreferencesRepository {
           : null,
       modeNudgeDismissed: _prefs.getBool(_kModeNudgeDismissed) ?? false,
       gameLogNudgeDismissed: _prefs.getBool(_kGameLogNudgeDismissed) ?? false,
+      gameLogStatsExpanded: _prefs.getBool(_kGameLogStatsExpanded) ?? false,
     );
   }
 
@@ -144,6 +146,7 @@ class SharedPrefsRepository implements PreferencesRepository {
     }
     await _prefs.setBool(_kModeNudgeDismissed, p.modeNudgeDismissed);
     await _prefs.setBool(_kGameLogNudgeDismissed, p.gameLogNudgeDismissed);
+    await _prefs.setBool(_kGameLogStatsExpanded, p.gameLogStatsExpanded);
     _audience = p;
     _audienceController.add(p);
   }

@@ -53,6 +53,9 @@ void main() {
       competitionLabel: '동호인 리그',
       opponentLabel: '한강 리버베어스',
       note: '병살 하나 잡음',
+      plateAppearances: 4,
+      hits: 2,
+      walks: 1,
     );
     await repository.addEntry(playedAt: DateTime.utc(2026, 8, 22));
 
@@ -84,12 +87,21 @@ void main() {
       containsAll(<String?>['한강 리버베어스', null]),
     );
     expect(decoded.entries.firstWhere((e) => e.note != null).note, '병살 하나 잡음');
+    // The stat line survives the real write + reparse too, not just the
+    // in-memory codec round trip already covered in game_log_export_test.dart.
+    final withStats = decoded.entries.firstWhere(
+      (e) => e.plateAppearances != null,
+    );
+    expect(withStats.plateAppearances, 4);
+    expect(withStats.hits, 2);
+    expect(withStats.walks, 1);
 
     final csvBytes = await File(csvFile.path).readAsBytes();
     // BOM so Excel on Windows opens the Korean header correctly.
     expect(csvBytes.take(3), <int>[0xEF, 0xBB, 0xBF]);
     final csvText = utf8.decode(csvBytes.skip(3).toList());
     expect(csvText, contains('한강 리버베어스'));
+    expect(csvText, contains('타석'));
   });
 }
 

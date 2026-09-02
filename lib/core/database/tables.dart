@@ -841,9 +841,13 @@ class JourneyEvents extends Table {
 /// anyone. It is the user's own record of her own game, so there is no
 /// source to cite and no quality/licence status to track.
 ///
-/// Stage 1 only — see the feature brief. Deliberately **not** a stat table:
-/// no 타수/안타/타율 columns exist here (Stage 2), and nothing here is ever
-/// aggregated into a ranking against anyone else.
+/// Stage 1 added the log entry itself; Stage 2 (below) added an optional
+/// stat line per entry. Deliberately still **not** a full stat table: there
+/// is no 타수 column (derived, not stored — see `BattingStatSummary`), no
+/// 타율 (the app only ever computes/shows 출루율, per the feature brief), no
+/// earned-run split, and nothing here is ever aggregated into a ranking
+/// against anyone else — every summary built from this table is the one
+/// player's own figures, and only ever shown back to her.
 @DataClassName('GameLogEntryRow')
 class GameLogEntries extends Table {
   IntColumn get id => integer().autoIncrement()();
@@ -887,6 +891,54 @@ class GameLogEntries extends Table {
   /// feature brief: a record about herself is not what the minor-safety
   /// rules for shared surfaces exist to guard against.
   TextColumn get note => text().nullable()();
+
+  // --- stat line (schema v4) ---------------------------------------------
+  //
+  // Stage 2 — see the feature brief. Every column below is nullable, and
+  // null means something different from 0: "this game has no stat line at
+  // all" (the entry sheet's 성적 section was left collapsed) versus "she
+  // played and this particular count was zero". A whole game's worth of
+  // these columns is written together (all-null or all-filled) by the entry
+  // sheet, but each is independently nullable at the schema level because
+  // that is what makes a v3 → v4 upgrade purely additive: every existing row
+  // becomes "no stat line", not a row of false zeros.
+  //
+  // `plateAppearances` is what gates whether a game counts toward the
+  // batting aggregate at all — see `BattingStatSummary.from` in
+  // `../../data/models/game_log.dart`.
+  IntColumn get plateAppearances => integer().nullable()(); // 타석
+  IntColumn get hits => integer().nullable()(); // 안타
+
+  /// 볼넷 + 몸에 맞는 공, combined into one column. The app's own OBP guide
+  /// (`assets/seed/content/discover.json`, `guide-stat-obp`) puts both in the
+  /// numerator and the denominator identically, so summing them here loses
+  /// nothing the guide's formula would otherwise use separately.
+  IntColumn get walks => integer().nullable()();
+
+  /// 희생번트. This is *not* decorative: 타석 already includes it, but the
+  /// OBP guide's denominator does not, so without this column the app would
+  /// have no way to compute the same number its own guide teaches. See
+  /// `BattingStatSummary.obpDenominator`.
+  IntColumn get sacrificeBunts => integer().nullable()();
+  IntColumn get strikeouts => integer().nullable()(); // 삼진 (타자)
+  IntColumn get runsBattedIn => integer().nullable()(); // 타점
+  IntColumn get runsScored => integer().nullable()(); // 득점
+  IntColumn get stolenBases => integer().nullable()(); // 도루
+
+  /// Innings pitched, stored as outs (innings × 3) rather than a fractional
+  /// innings count — a double would accumulate rounding error across a
+  /// season of 6⅔-style partial innings once summed. Converted to the
+  /// familiar `N⅔이닝` form only for display; see `formatInningsPitched`.
+  IntColumn get outsPitched => integer().nullable()();
+  IntColumn get pitchingStrikeouts => integer().nullable()(); // 탈삼진
+  IntColumn get pitchingWalks => integer().nullable()(); // 볼넷 + 몸에 맞힘
+
+  /// Runs allowed, with no earned/unearned split. Earned-run judgement is an
+  /// official scorer's call, not something a personal log can make, so this
+  /// column deliberately stops at the count that needs no judgement at all —
+  /// there is no `earnedRuns` column and the app never shows an ERA. See the
+  /// feature brief.
+  IntColumn get runsAllowed => integer().nullable()();
 
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime().nullable()();

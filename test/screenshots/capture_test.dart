@@ -405,8 +405,137 @@ void main() {
                   result: const Value('win'),
                   note: const Value('병살 하나 잡음, 도루 저지 성공'),
                   createdAt: DateTime.utc(2026, 8, 23, 21),
+                  // A stat line below the OBP threshold (Stage 2) — shows
+                  // the count-only summary line, not a rate, alongside the
+                  // Stage 1 fields above.
+                  plateAppearances: const Value(4),
+                  hits: const Value(2),
+                  walks: const Value(0),
+                  sacrificeBunts: const Value(0),
+                  strikeouts: const Value(1),
+                  runsBattedIn: const Value(1),
+                  runsScored: const Value(1),
+                  stolenBases: const Value(1),
                 ),
               );
+        },
+      ),
+    );
+
+    // Stage 2: enough batting to clear the OBP threshold, plus a pitching
+    // line, a game whose 희생번트 was never recorded, and a game with no
+    // stat line at all — one screenshot exercising every branch of the
+    // aggregate card at once.
+    testWidgets(
+      '내 기록 · 성적 집계 (문턱 충족)',
+      (t) => capture(
+        t,
+        name: 'my_baseball_game_log_stats_qualified',
+        screen: const MyBaseballScreen(),
+        audience: player,
+        seedLocalState: (app) async {
+          Future<void> insert(GameLogEntriesCompanion row) =>
+              app.db.into(app.db.gameLogEntries).insert(row);
+
+          await insert(
+            GameLogEntriesCompanion.insert(
+              playedAt: DateTime.utc(2026, 7, 5),
+              dayKey: '2026-07-05',
+              competitionLabel: const Value('동호인 리그'),
+              opponentLabel: const Value('남산 호크스'),
+              positions: const Value('catcher'),
+              result: const Value('win'),
+              createdAt: DateTime.utc(2026, 7, 5, 21),
+              plateAppearances: const Value(8),
+              hits: const Value(3),
+              walks: const Value(1),
+              sacrificeBunts: const Value(0),
+              strikeouts: const Value(2),
+              runsBattedIn: const Value(2),
+              runsScored: const Value(1),
+              stolenBases: const Value(1),
+            ),
+          );
+          await insert(
+            GameLogEntriesCompanion.insert(
+              playedAt: DateTime.utc(2026, 7, 12),
+              dayKey: '2026-07-12',
+              competitionLabel: const Value('동호인 리그'),
+              opponentLabel: const Value('한강 리버베어스'),
+              positions: const Value('catcher'),
+              result: const Value('loss'),
+              createdAt: DateTime.utc(2026, 7, 12, 21),
+              plateAppearances: const Value(9),
+              hits: const Value(2),
+              walks: const Value(2),
+              sacrificeBunts: const Value(1),
+              strikeouts: const Value(3),
+              runsBattedIn: const Value(1),
+              runsScored: const Value(2),
+              stolenBases: const Value(0),
+            ),
+          );
+          // 희생번트를 적지 않은 경기 — treated as 0, and noted as such.
+          await insert(
+            GameLogEntriesCompanion.insert(
+              playedAt: DateTime.utc(2026, 7, 19),
+              dayKey: '2026-07-19',
+              competitionLabel: const Value('동호인 리그'),
+              opponentLabel: const Value('남산 호크스'),
+              positions: const Value('catcher'),
+              result: const Value('win'),
+              createdAt: DateTime.utc(2026, 7, 19, 21),
+              plateAppearances: const Value(7),
+              hits: const Value(3),
+              walks: const Value(0),
+              strikeouts: const Value(1),
+              runsBattedIn: const Value(3),
+              runsScored: const Value(1),
+              stolenBases: const Value(0),
+            ),
+          );
+          await insert(
+            GameLogEntriesCompanion.insert(
+              playedAt: DateTime.utc(2026, 7, 26),
+              dayKey: '2026-07-26',
+              competitionLabel: const Value('동호인 리그'),
+              opponentLabel: const Value('한강 리버베어스'),
+              positions: const Value('pitcher'),
+              result: const Value('win'),
+              createdAt: DateTime.utc(2026, 7, 26, 21),
+              outsPitched: const Value(21),
+              pitchingStrikeouts: const Value(6),
+              pitchingWalks: const Value(3),
+              runsAllowed: const Value(2),
+            ),
+          );
+          await insert(
+            GameLogEntriesCompanion.insert(
+              playedAt: DateTime.utc(2026, 8, 2),
+              dayKey: '2026-08-02',
+              competitionLabel: const Value('동호인 리그'),
+              opponentLabel: const Value('남산 호크스'),
+              positions: const Value('pitcher'),
+              result: const Value('loss'),
+              createdAt: DateTime.utc(2026, 8, 2, 21),
+              outsPitched: const Value(15),
+              pitchingStrikeouts: const Value(4),
+              pitchingWalks: const Value(2),
+              runsAllowed: const Value(3),
+            ),
+          );
+          // Logged the game itself, no stat line at all — Stage 1's shape.
+          await insert(
+            GameLogEntriesCompanion.insert(
+              playedAt: DateTime.utc(2026, 8, 9),
+              dayKey: '2026-08-09',
+              competitionLabel: const Value('동호인 리그'),
+              opponentLabel: const Value('한강 리버베어스'),
+              positions: const Value('leftField'),
+              result: const Value('draw'),
+              createdAt: DateTime.utc(2026, 8, 9, 21),
+            ),
+          );
         },
       ),
     );

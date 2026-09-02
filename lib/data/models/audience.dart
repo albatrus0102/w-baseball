@@ -209,6 +209,7 @@ class AudiencePreference {
     this.densityOverride,
     this.modeNudgeDismissed = false,
     this.gameLogNudgeDismissed = false,
+    this.gameLogStatsExpanded = false,
   });
 
   final AudienceMode mode;
@@ -251,6 +252,13 @@ class AudiencePreference {
   /// to dismiss. See `GameLogModule` in `my_baseball_screen.dart`.
   final bool gameLogNudgeDismissed;
 
+  /// Once true, the 경기 기록하기 sheet's 성적 (선택사항) section opens
+  /// expanded by default instead of collapsed. Set the first time she saves
+  /// an entry with it expanded — never reset back to false automatically,
+  /// since "한 번 펼쳐 쓴 사용자에게는 다음부터 펼쳐진 채로 열립니다" is a
+  /// one-way switch, not a per-entry toggle. See `_GameLogEntrySheetState`.
+  final bool gameLogStatsExpanded;
+
   /// The density the UI should actually use.
   WbDensity get density => densityOverride ?? mode.defaultDensity;
 
@@ -285,6 +293,7 @@ class AudiencePreference {
     WbDensity? densityOverride,
     bool? modeNudgeDismissed,
     bool? gameLogNudgeDismissed,
+    bool? gameLogStatsExpanded,
     bool clearRegion = false,
     bool clearDensityOverride = false,
   }) {
@@ -307,6 +316,7 @@ class AudiencePreference {
       modeNudgeDismissed: modeNudgeDismissed ?? this.modeNudgeDismissed,
       gameLogNudgeDismissed:
           gameLogNudgeDismissed ?? this.gameLogNudgeDismissed,
+      gameLogStatsExpanded: gameLogStatsExpanded ?? this.gameLogStatsExpanded,
     );
   }
 }

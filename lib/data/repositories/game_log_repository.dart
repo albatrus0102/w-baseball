@@ -24,6 +24,22 @@ abstract interface class GameLogRepository {
     List<GameLogPosition> positions = const <GameLogPosition>[],
     GameLogResult result = GameLogResult.unspecified,
     String? note,
+    // Stat line (Stage 2) — all null by default, which the entry sheet
+    // relies on: leaving the 성적 section collapsed means every one of
+    // these is simply never passed, and the game is excluded from every
+    // aggregate. See `GameLogEntries` in `tables.dart`.
+    int? plateAppearances,
+    int? hits,
+    int? walks,
+    int? sacrificeBunts,
+    int? strikeouts,
+    int? runsBattedIn,
+    int? runsScored,
+    int? stolenBases,
+    int? outsPitched,
+    int? pitchingStrikeouts,
+    int? pitchingWalks,
+    int? runsAllowed,
   });
 
   Future<void> deleteEntry(int id);
@@ -63,6 +79,18 @@ class DriftGameLogRepository implements GameLogRepository {
     List<GameLogPosition> positions = const <GameLogPosition>[],
     GameLogResult result = GameLogResult.unspecified,
     String? note,
+    int? plateAppearances,
+    int? hits,
+    int? walks,
+    int? sacrificeBunts,
+    int? strikeouts,
+    int? runsBattedIn,
+    int? runsScored,
+    int? stolenBases,
+    int? outsPitched,
+    int? pitchingStrikeouts,
+    int? pitchingWalks,
+    int? runsAllowed,
   }) async {
     final now = _clock().toUtc();
     final id = await db
@@ -79,6 +107,18 @@ class DriftGameLogRepository implements GameLogRepository {
             result: Value(result.wireValue),
             note: Value(_orNull(note)),
             createdAt: now,
+            plateAppearances: Value(plateAppearances),
+            hits: Value(hits),
+            walks: Value(walks),
+            sacrificeBunts: Value(sacrificeBunts),
+            strikeouts: Value(strikeouts),
+            runsBattedIn: Value(runsBattedIn),
+            runsScored: Value(runsScored),
+            stolenBases: Value(stolenBases),
+            outsPitched: Value(outsPitched),
+            pitchingStrikeouts: Value(pitchingStrikeouts),
+            pitchingWalks: Value(pitchingWalks),
+            runsAllowed: Value(runsAllowed),
           ),
         );
     return GameLogEntry(
@@ -93,6 +133,18 @@ class DriftGameLogRepository implements GameLogRepository {
       result: result,
       note: _orNull(note),
       createdAt: now,
+      plateAppearances: plateAppearances,
+      hits: hits,
+      walks: walks,
+      sacrificeBunts: sacrificeBunts,
+      strikeouts: strikeouts,
+      runsBattedIn: runsBattedIn,
+      runsScored: runsScored,
+      stolenBases: stolenBases,
+      outsPitched: outsPitched,
+      pitchingStrikeouts: pitchingStrikeouts,
+      pitchingWalks: pitchingWalks,
+      runsAllowed: runsAllowed,
     );
   }
 

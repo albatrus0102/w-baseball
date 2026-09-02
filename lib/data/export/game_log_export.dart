@@ -48,6 +48,21 @@ class GameLogJsonCodec {
     'note': e.note,
     'createdAt': e.createdAt.toUtc().toIso8601String(),
     'updatedAt': e.updatedAt?.toUtc().toIso8601String(),
+    // Stat line (Stage 2). Optional keys on an already-shipped envelope —
+    // `formatTag` stays `wb-myrecords-v1`; see this class's doc comment for
+    // why a new field is additive, not a breaking change.
+    'plateAppearances': e.plateAppearances,
+    'hits': e.hits,
+    'walks': e.walks,
+    'sacrificeBunts': e.sacrificeBunts,
+    'strikeouts': e.strikeouts,
+    'runsBattedIn': e.runsBattedIn,
+    'runsScored': e.runsScored,
+    'stolenBases': e.stolenBases,
+    'outsPitched': e.outsPitched,
+    'pitchingStrikeouts': e.pitchingStrikeouts,
+    'pitchingWalks': e.pitchingWalks,
+    'runsAllowed': e.runsAllowed,
   };
 
   /// Parses an export file back into entries.
@@ -145,8 +160,25 @@ class GameLogJsonCodec {
       updatedAt: updatedAtRaw is String
           ? DateTime.tryParse(updatedAtRaw)?.toUtc()
           : null,
+      // Stat line (Stage 2). A missing key (an export from before this
+      // field existed) reads as null the same way a wrong-typed value
+      // does — both mean "no stat line", never a silently-wrong 0.
+      plateAppearances: _intOrNull(raw['plateAppearances']),
+      hits: _intOrNull(raw['hits']),
+      walks: _intOrNull(raw['walks']),
+      sacrificeBunts: _intOrNull(raw['sacrificeBunts']),
+      strikeouts: _intOrNull(raw['strikeouts']),
+      runsBattedIn: _intOrNull(raw['runsBattedIn']),
+      runsScored: _intOrNull(raw['runsScored']),
+      stolenBases: _intOrNull(raw['stolenBases']),
+      outsPitched: _intOrNull(raw['outsPitched']),
+      pitchingStrikeouts: _intOrNull(raw['pitchingStrikeouts']),
+      pitchingWalks: _intOrNull(raw['pitchingWalks']),
+      runsAllowed: _intOrNull(raw['runsAllowed']),
     );
   }
+
+  static int? _intOrNull(Object? raw) => raw is int ? raw : null;
 
   static String _fallbackDayKey(DateTime utc) {
     String p2(int v) => v.toString().padLeft(2, '0');
@@ -189,6 +221,18 @@ class GameLogCsvCodec {
     '포지션',
     '결과',
     '메모',
+    '타석',
+    '안타',
+    '볼넷',
+    '희생번트',
+    '삼진',
+    '타점',
+    '득점',
+    '도루',
+    '투구아웃수',
+    '탈삼진',
+    '볼넷(투구)',
+    '실점',
   ];
 
   static String encode(List<GameLogEntry> entries) {
@@ -202,6 +246,22 @@ class GameLogCsvCodec {
         e.positions.map((p) => p.labelKo).join('/'),
         e.result.labelKo,
         e.note ?? '',
+        e.plateAppearances?.toString() ?? '',
+        e.hits?.toString() ?? '',
+        e.walks?.toString() ?? '',
+        e.sacrificeBunts?.toString() ?? '',
+        e.strikeouts?.toString() ?? '',
+        e.runsBattedIn?.toString() ?? '',
+        e.runsScored?.toString() ?? '',
+        e.stolenBases?.toString() ?? '',
+        // Raw outs (innings × 3), not the `12⅔이닝` display form — a plain
+        // number is what stays summable if this file is opened in a
+        // spreadsheet, and what a later CSV-import path (⑤, not this build)
+        // would need to read back exactly.
+        e.outsPitched?.toString() ?? '',
+        e.pitchingStrikeouts?.toString() ?? '',
+        e.pitchingWalks?.toString() ?? '',
+        e.runsAllowed?.toString() ?? '',
       ];
       buffer.writeln(row.map(_quote).join(','));
     }

@@ -331,6 +331,13 @@ class AudienceController {
   Future<void> dismissGameLogNudge() => _prefs.saveAudience(
     _prefs.audience.copyWith(gameLogNudgeDismissed: true),
   );
+
+  /// One-way switch: once a player has saved a 경기 기록하기 entry with the
+  /// 성적 section expanded, the sheet stops asking her to re-expand it every
+  /// time. Never called with `false` — see `AudiencePreference
+  /// .gameLogStatsExpanded`'s doc.
+  Future<void> markGameLogStatsExpanded() =>
+      _prefs.saveAudience(_prefs.audience.copyWith(gameLogStatsExpanded: true));
 }
 
 final audienceControllerProvider = Provider<AudienceController>(

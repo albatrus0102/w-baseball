@@ -13,15 +13,18 @@ import '../../core/design_system/typography.dart';
 import '../../core/utils/kst.dart';
 import '../../data/models/content.dart';
 import '../../data/models/game_log.dart';
+import '../../data/models/stats.dart' show formatRate;
 
 /// 출전 일지: 내 기록.
 ///
-/// Stage 1 only — see the feature brief. This module is the app's one
-/// write-driven surface: everything it shows is derived from what the player
-/// typed herself, nothing is compared against anyone else, and the app never
-/// turns a handful of entries into advice (no "뭘 더 해야 할지" is ever
-/// generated here — see `_GameLogSummary`, which only ever resurfaces her
-/// own last note, and `_ObpGuideLink`, which only ever links to a guide).
+/// Stage 1 (log entries, position history) plus Stage 2 (the optional stat
+/// line and its OBP aggregate) — see the feature brief. This module is the
+/// app's one write-driven surface: everything it shows is derived from what
+/// the player typed herself, nothing is compared against anyone else, and
+/// the app never turns a handful of entries into advice (no "뭘 더 해야
+/// 할지" is ever generated here — `_GameLogSummary` only ever resurfaces her
+/// own last note plus arithmetic on her own numbers, and `_ObpGuideLink`
+/// only ever links to a guide).
 ///
 /// Callers gate this on audience mode (player/both only, never discover) —
 /// see `MyBaseballScreen`.
@@ -188,6 +191,7 @@ class _GameLogSummary extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final c = WbTheme.of(context);
     final last = entries.first; // watchEntries() is most-recent-first.
+    final summary = GameLogStatSummary.from(entries);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: WbSpace.screen),
@@ -196,7 +200,7 @@ class _GameLogSummary extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             WbNoticeWithAction(
-              text: '${entries.length}게임 기록',
+              text: _headerTextKo(summary),
               textStyle: WbType.title.copyWith(color: c.ink),
               actionLabel: '기록 추가',
               actionIcon: Icons.add_rounded,
@@ -212,10 +216,157 @@ class _GameLogSummary extends ConsumerWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ],
+            if (summary.batting != null) ...<Widget>[
+              const SizedBox(height: WbSpace.md),
+              _BattingSummaryBlock(
+                batting: summary.batting!,
+                hasPitching: summary.pitching != null,
+              ),
+              if (summary.gamesWithoutBattingStats > 0) ...<Widget>[
+                const SizedBox(height: WbSpace.sm),
+                Text(
+                  '타격 기록이 없는 경기가 ${summary.gamesWithoutBattingStats}경기 있어요.',
+                  style: WbType.caption.copyWith(color: c.inkMuted),
+                ),
+              ],
+            ],
+            if (summary.pitching != null) ...<Widget>[
+              const SizedBox(height: WbSpace.md),
+              _PitchingSummaryBlock(
+                pitching: summary.pitching!,
+                hasBatting: summary.batting != null,
+              ),
+            ],
+            const SizedBox(height: WbSpace.sm),
+            // Fixed on every summary card, not just the ones with a stat
+            // line — see the feature brief.
+            Text(
+              '직접 기록한 개인 집계입니다. 공식 기록이 아닙니다.',
+              style: WbType.micro.copyWith(color: c.inkMuted),
+            ),
             const _ObpGuideLink(),
           ],
         ),
       ),
+    );
+  }
+
+  /// "N게임 기록", plus her W-L-D record once at least one result has been
+  /// recorded — never shown as `0승 0패 0무` for a log that is all
+  /// "기록 안 함" so far.
+  String _headerTextKo(GameLogStatSummary summary) {
+    final base = '${entries.length}게임 기록';
+    if (!summary.hasAnyResult) return base;
+    return '$base · ${summary.wins}승 ${summary.losses}패 ${summary.draws}무';
+  }
+}
+
+/// The 타자로 block of the 내 기록 aggregate card — plate appearances, OBP
+/// (once [BattingStatSummary.meetsThreshold]), and the counting stats.
+class _BattingSummaryBlock extends StatelessWidget {
+  const _BattingSummaryBlock({
+    required this.batting,
+    required this.hasPitching,
+  });
+
+  final BattingStatSummary batting;
+
+  /// Only prefixes the header with "타자로" when there is a 투수로 block to
+  /// tell it apart from — a log with no pitching entries at all reads better
+  /// without a role label that has nothing to contrast against.
+  final bool hasPitching;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = WbTheme.of(context);
+    final prefix = hasPitching ? '타자로 — ' : '';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          '$prefix${batting.plateAppearances}타석 (타격 기록이 있는 ${batting.gamesWithStats}경기)',
+          style: WbType.captionStrong.copyWith(color: c.ink),
+        ),
+        const SizedBox(height: WbSpace.xxs),
+        if (batting.meetsThreshold)
+          Text(_obpLineKo(batting), style: WbType.body.copyWith(color: c.ink))
+        else ...<Widget>[
+          Text(
+            '${batting.obpDenominator}타석 중 ${batting.reachedBaseCount}번 나갔어요',
+            style: WbType.body.copyWith(color: c.ink),
+          ),
+          const SizedBox(height: WbSpace.xxs),
+          Text(
+            '출루율은 계산에 들어가는 타석이 ${BattingStatSummary.threshold}번 모이면 '
+            '보여드려요. 지금 ${batting.obpDenominator}번이에요.',
+            style: WbType.caption.copyWith(color: c.inkMuted),
+          ),
+        ],
+        const SizedBox(height: WbSpace.xxs),
+        Text(
+          '안타 ${batting.hits} · 볼넷 ${batting.walks} · 삼진 ${batting.strikeouts} · '
+          '타점 ${batting.runsBattedIn} · 도루 ${batting.stolenBases}',
+          style: WbType.caption.copyWith(color: c.inkMuted),
+        ),
+        if (batting.gamesMissingSacrificeBunts > 0) ...<Widget>[
+          const SizedBox(height: WbSpace.xxs),
+          Text(
+            '희생번트를 적지 않은 경기 ${batting.gamesMissingSacrificeBunts}경기는 '
+            '0으로 계산했어요. 출루율이 실제보다 낮게 나올 수는 있어도 높게 나오지는 '
+            '않아요.',
+            style: WbType.micro.copyWith(color: c.inkMuted),
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// "출루율 .438 (48타석 중 21번)", or, once 희생번트 has actually excluded
+  /// something, "출루율 .457 (희생번트 2번 제외, 46번 중 21번)" — see
+  /// `BattingStatSummary.obpDenominator`.
+  String _obpLineKo(BattingStatSummary b) {
+    final rate = formatRate(b.onBasePercentage);
+    if (b.sacrificeBunts == 0) {
+      return '출루율 $rate (${b.plateAppearances}타석 중 ${b.reachedBaseCount}번)';
+    }
+    return '출루율 $rate (희생번트 ${b.sacrificeBunts}번 제외, '
+        '${b.obpDenominator}번 중 ${b.reachedBaseCount}번)';
+  }
+}
+
+/// The 투수로 block of the 내 기록 aggregate card. No ERA, no earned/unearned
+/// split — see `PitchingStatSummary` and `GameLogEntries.runsAllowed`'s doc.
+class _PitchingSummaryBlock extends StatelessWidget {
+  const _PitchingSummaryBlock({
+    required this.pitching,
+    required this.hasBatting,
+  });
+
+  final PitchingStatSummary pitching;
+
+  /// Mirrors `_BattingSummaryBlock.hasPitching` — only labels the block
+  /// "투수로" when a 타자로 block exists to distinguish it from.
+  final bool hasBatting;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = WbTheme.of(context);
+    final prefix = hasBatting ? '투수로 — ' : '';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          '$prefix${pitching.inningsLabelKo} (${pitching.gamesWithStats}경기)',
+          style: WbType.captionStrong.copyWith(color: c.ink),
+        ),
+        const SizedBox(height: WbSpace.xxs),
+        Text(
+          '탈삼진 ${pitching.strikeouts} · 볼넷 ${pitching.walks} · '
+          '실점 ${pitching.runsAllowed}',
+          style: WbType.caption.copyWith(color: c.inkMuted),
+        ),
+      ],
     );
   }
 }
@@ -540,6 +691,30 @@ class _GameLogEntrySheetState extends ConsumerState<_GameLogEntrySheet> {
   late GameLogResult _result;
   bool _saving = false;
 
+  // --- stat line (Stage 2) -----------------------------------------------
+  //
+  // Deliberately never pre-filled from `widget.last`, unlike
+  // 대회/상대/구장/포지션 above — a stat line is specific to the one game
+  // just played, and carrying last game's numbers forward would be a bug,
+  // not a convenience. `_statsExpanded` alone remembers a *preference*
+  // (open or closed), never a value.
+  late bool _statsExpanded;
+  int _plateAppearances = 0;
+  int _hits = 0;
+  int _walks = 0;
+  int _sacrificeBunts = 0;
+  int _strikeouts = 0;
+  int _runsBattedIn = 0;
+  int _runsScored = 0;
+  int _stolenBases = 0;
+  int _inningsWhole = 0;
+  int _inningsRemainderOuts = 0; // 0, 1, or 2 — the fractional part of 이닝.
+  int _pitchingStrikeouts = 0;
+  int _pitchingWalks = 0;
+  int _runsAllowed = 0;
+
+  bool get _isPitcher => _positions.contains(GameLogPosition.pitcher);
+
   @override
   void initState() {
     super.initState();
@@ -552,6 +727,7 @@ class _GameLogEntrySheetState extends ConsumerState<_GameLogEntrySheet> {
     _note = TextEditingController();
     _positions = (last?.positions ?? const <GameLogPosition>[]).toSet();
     _result = GameLogResult.unspecified;
+    _statsExpanded = ref.read(audienceProvider).gameLogStatsExpanded;
   }
 
   @override
@@ -576,6 +752,7 @@ class _GameLogEntrySheetState extends ConsumerState<_GameLogEntrySheet> {
         minChildSize: 0.5,
         expand: false,
         builder: (context, scrollController) => ListView(
+          key: const ValueKey('gameLogEntrySheetList'),
           controller: scrollController,
           padding: const EdgeInsets.fromLTRB(
             WbSpace.screen,
@@ -632,6 +809,8 @@ class _GameLogEntrySheetState extends ConsumerState<_GameLogEntrySheet> {
                   ),
               ],
             ),
+            const SizedBox(height: WbSpace.lg),
+            _buildStatSection(c),
             const SizedBox(height: WbSpace.lg),
             Text('결과', style: WbType.captionStrong.copyWith(color: c.ink)),
             const SizedBox(height: WbSpace.sm),
@@ -691,6 +870,7 @@ class _GameLogEntrySheetState extends ConsumerState<_GameLogEntrySheet> {
   Future<void> _save() async {
     setState(() => _saving = true);
     final playedAt = Kst.fromKst(_dateKst);
+    final pitching = _statsExpanded && _isPitcher;
     await ref
         .read(gameLogRepositoryProvider)
         .addEntry(
@@ -701,13 +881,228 @@ class _GameLogEntrySheetState extends ConsumerState<_GameLogEntrySheet> {
           positions: _positions.toList(growable: false),
           result: _result,
           note: _note.text,
+          // Collapsed means "no stat line at all" — every one of these
+          // stays null, which is what excludes the game from every
+          // aggregate. See `GameLogEntries` in `tables.dart`.
+          plateAppearances: _statsExpanded ? _plateAppearances : null,
+          hits: _statsExpanded ? _hits : null,
+          walks: _statsExpanded ? _walks : null,
+          sacrificeBunts: _statsExpanded ? _sacrificeBunts : null,
+          strikeouts: _statsExpanded ? _strikeouts : null,
+          runsBattedIn: _statsExpanded ? _runsBattedIn : null,
+          runsScored: _statsExpanded ? _runsScored : null,
+          stolenBases: _statsExpanded ? _stolenBases : null,
+          // The pitching fields stay null unless the section is both
+          // expanded *and* 투수 is a recorded position — the sheet never
+          // shows these controls otherwise, so there is nothing the player
+          // actually entered to save.
+          outsPitched: pitching
+              ? _inningsWhole * 3 + _inningsRemainderOuts
+              : null,
+          pitchingStrikeouts: pitching ? _pitchingStrikeouts : null,
+          pitchingWalks: pitching ? _pitchingWalks : null,
+          runsAllowed: pitching ? _runsAllowed : null,
         );
     await ref.read(analyticsProvider).log(AnalyticsEvent.gameLogEntryAdded);
+    if (_statsExpanded) {
+      // One-way switch — see `AudiencePreference.gameLogStatsExpanded`'s
+      // doc. Fired after a real save, not on every toggle, so idly opening
+      // the section and closing it again without saving does not flip it.
+      await ref.read(audienceControllerProvider).markGameLogStatsExpanded();
+    }
 
     if (!mounted) return;
     // The export nudge is offered by the caller of `showGameLogEntrySheet`,
     // once this pop has actually landed — see that function's doc.
     Navigator.of(context).pop(true);
+  }
+
+  /// The 성적 (선택사항) section: collapsed by default (or per
+  /// `AudiencePreference.gameLogStatsExpanded`), showing only a one-line
+  /// hint until opened. See the feature brief: leaving it collapsed must
+  /// cost a returning 1단계-only user zero extra taps.
+  Widget _buildStatSection(WbSemanticColors c) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        InkWell(
+          onTap: () => setState(() => _statsExpanded = !_statsExpanded),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: WbSpace.xxs),
+            child: Row(
+              children: <Widget>[
+                Expanded(
+                  child: Text(
+                    '성적 (선택사항)',
+                    style: WbType.captionStrong.copyWith(color: c.ink),
+                  ),
+                ),
+                Icon(
+                  _statsExpanded
+                      ? Icons.expand_less_rounded
+                      : Icons.expand_more_rounded,
+                  color: c.inkMuted,
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (!_statsExpanded)
+          Padding(
+            padding: const EdgeInsets.only(top: WbSpace.xxs),
+            child: Text(
+              '타석 수가 기억 안 나면 접어 두세요. 접힌 경기는 집계에서 뺍니다.',
+              style: WbType.caption.copyWith(color: c.inkMuted),
+            ),
+          )
+        else ...<Widget>[
+          const SizedBox(height: WbSpace.xs),
+          _StatStepper(
+            label: '타석',
+            value: _plateAppearances,
+            onChanged: (v) => setState(() => _plateAppearances = v),
+          ),
+          _StatStepper(
+            label: '안타',
+            value: _hits,
+            onChanged: (v) => setState(() => _hits = v),
+          ),
+          _StatStepper(
+            label: '볼넷 (몸에 맞는 공 포함)',
+            value: _walks,
+            onChanged: (v) => setState(() => _walks = v),
+          ),
+          _StatStepper(
+            label: '희생번트',
+            value: _sacrificeBunts,
+            onChanged: (v) => setState(() => _sacrificeBunts = v),
+          ),
+          _StatStepper(
+            label: '삼진',
+            value: _strikeouts,
+            onChanged: (v) => setState(() => _strikeouts = v),
+          ),
+          _StatStepper(
+            label: '타점',
+            value: _runsBattedIn,
+            onChanged: (v) => setState(() => _runsBattedIn = v),
+          ),
+          _StatStepper(
+            label: '득점',
+            value: _runsScored,
+            onChanged: (v) => setState(() => _runsScored = v),
+          ),
+          _StatStepper(
+            label: '도루',
+            value: _stolenBases,
+            onChanged: (v) => setState(() => _stolenBases = v),
+          ),
+          if (_isPitcher) ...<Widget>[
+            const WbInsetDivider(vertical: WbSpace.sm),
+            Text('투구', style: WbType.caption.copyWith(color: c.inkMuted)),
+            const SizedBox(height: WbSpace.xxs),
+            _StatStepper(
+              label: '이닝',
+              value: _inningsWhole,
+              onChanged: (v) => setState(() => _inningsWhole = v),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: WbSpace.xxs),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      '남은 아웃카운트',
+                      style: WbType.body.copyWith(color: c.ink),
+                    ),
+                  ),
+                  Wrap(
+                    spacing: WbSpace.xs,
+                    children: <Widget>[
+                      for (final outs in const <int>[0, 1, 2])
+                        WbFilterChip(
+                          label: '$outs아웃',
+                          selected: _inningsRemainderOuts == outs,
+                          onTap: () =>
+                              setState(() => _inningsRemainderOuts = outs),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            _StatStepper(
+              label: '탈삼진',
+              value: _pitchingStrikeouts,
+              onChanged: (v) => setState(() => _pitchingStrikeouts = v),
+            ),
+            _StatStepper(
+              label: '볼넷 (투구, 몸에 맞힘 포함)',
+              value: _pitchingWalks,
+              onChanged: (v) => setState(() => _pitchingWalks = v),
+            ),
+            _StatStepper(
+              label: '실점',
+              value: _runsAllowed,
+              onChanged: (v) => setState(() => _runsAllowed = v),
+            ),
+          ],
+        ],
+      ],
+    );
+  }
+}
+
+/// One labelled row: a minus button, the current count, a plus button.
+/// Never a keyboard — see the feature brief's "steppers and chips" rule and
+/// `_DateStepper` above, which this mirrors. Every 성적 field this app
+/// stores is a non-negative count, so the floor is fixed at 0 rather than
+/// exposed as a parameter no caller would ever want to change.
+class _StatStepper extends StatelessWidget {
+  const _StatStepper({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String label;
+  final int value;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = WbTheme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: WbSpace.xxs),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: Text(label, style: WbType.body.copyWith(color: c.ink)),
+          ),
+          WbTapTarget(
+            onTap: value > 0 ? () => onChanged(value - 1) : null,
+            semanticLabel: '$label 줄이기',
+            child: Icon(
+              Icons.remove_circle_outline_rounded,
+              color: value > 0 ? c.ink : c.divider,
+            ),
+          ),
+          SizedBox(
+            width: 28,
+            child: Text(
+              '$value',
+              textAlign: TextAlign.center,
+              style: WbType.bodyStrong.copyWith(color: c.ink),
+            ),
+          ),
+          WbTapTarget(
+            onTap: () => onChanged(value + 1),
+            semanticLabel: '$label 늘리기',
+            child: Icon(Icons.add_circle_outline_rounded, color: c.ink),
+          ),
+        ],
+      ),
+    );
   }
 }
 

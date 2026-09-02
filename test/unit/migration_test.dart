@@ -3,6 +3,8 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'package:w_baseball/core/database/database.dart';
+import 'package:w_baseball/data/mappers/row_mappers.dart';
+import 'package:w_baseball/data/models/game_log.dart';
 
 /// Schema migration.
 ///
@@ -47,7 +49,7 @@ void main() {
 
   int epoch(DateTime value) => value.millisecondsSinceEpoch ~/ 1000;
 
-  group('v1 → v3 마이그레이션 (신규 설치가 오래 방치된 경우)', () {
+  group('v1 → v4 마이그레이션 (신규 설치가 오래 방치된 경우)', () {
     late Database raw;
     late WbDatabase db;
 
@@ -126,7 +128,11 @@ void main() {
         "${epoch(DateTime.utc(2026, 7, 5))}, 'autoVerified', 'linkOnly', 'public', 0)",
       );
 
-      // 4. Reopen. This is the actual v1 -> v3 migration under test.
+      // 4. Reopen. This is the actual v1 -> v4 migration under test — the
+      // `game_log_entries` table dropped above gets recreated straight from
+      // the *current* table definition (already including v4's 12 stat
+      // columns), so this install jumps all the way to v4 in one step. See
+      // the `else if` in `WbDatabase.migration`'s `onUpgrade`.
       db = WbDatabase(NativeDatabase.opened(raw));
     });
 
@@ -143,9 +149,9 @@ void main() {
       expect(v3Tables, isNotEmpty);
     });
 
-    test('마이그레이션 후 스키마 버전이 3이 된다', () async {
+    test('마이그레이션 후 스키마 버전이 4가 된다', () async {
       await db.select(db.localFollows).get();
-      expect(raw.select('PRAGMA user_version;').first.values.first, 3);
+      expect(raw.select('PRAGMA user_version;').first.values.first, 4);
     });
 
     test('팔로우가 그대로 보존된다', () async {
@@ -238,7 +244,11 @@ void main() {
               createdAt: DateTime.utc(2026, 8, 29, 21),
             ),
           );
-      expect(await db.select(db.gameLogEntries).get(), hasLength(1));
+      final rows = await db.select(db.gameLogEntries).get();
+      expect(rows, hasLength(1));
+      // v4's stat columns exist on this freshly-created table too (this
+      // install jumped straight from v1 to v4) and default to null, not 0.
+      expect(rows.single.plateAppearances, isNull);
     });
 
     test('마이그레이션 후에도 인덱스가 생성된다', () async {
@@ -270,11 +280,15 @@ void main() {
     });
   });
 
-  group('v2 → v3 마이그레이션 (한 버전 뒤처진 설치)', () {
+  group('v2 → v4 마이그레이션 (한 버전 뒤처진 설치)', () {
     // A separate baseline from the group above: this one derives a genuine
-    // *v2* database (only v3's addition rolled back) rather than v1, so the
-    // upgrade actually under test is the single step this feature shipped —
-    // not the two-step jump an already-thorough v1 suite covers above.
+    // *v2* database (only v3's addition rolled back) rather than v1. Like
+    // the v1 group, `game_log_entries` gets recreated from the current
+    // (v4-shaped) table definition, so this also lands on v4 directly — see
+    // the `else if` in `WbDatabase.migration`'s `onUpgrade`. The
+    // 3-columns-added-later case (a v3 install that already has the table
+    // without the stat columns) is what the "v3 → v4" group below tests
+    // instead.
     late Database raw;
     late WbDatabase db;
 
@@ -317,7 +331,7 @@ void main() {
         "${epoch(DateTime.utc(2026, 8, 30))}, 'autoVerified', 'unknown', 'public', 0)",
       );
 
-      // This is the actual v2 -> v3 migration under test.
+      // This is the actual v2 -> v4 migration under test.
       db = WbDatabase(NativeDatabase.opened(raw));
     });
 
@@ -329,9 +343,9 @@ void main() {
       expect(v3Tables, contains('game_log_entries'));
     });
 
-    test('마이그레이션 후 스키마 버전이 3이 된다', () async {
+    test('마이그레이션 후 스키마 버전이 4가 된다', () async {
       await db.select(db.localFollows).get();
-      expect(raw.select('PRAGMA user_version;').first.values.first, 3);
+      expect(raw.select('PRAGMA user_version;').first.values.first, 4);
     });
 
     test('팔로우가 그대로 보존된다', () async {
@@ -390,6 +404,134 @@ void main() {
           .map((r) => r['name'] as String)
           .toSet();
       expect(indexes, contains('idx_game_log_day'));
+    });
+  });
+
+  group('v3 → v4 마이그레이션 (성적 칼럼이 없던 설치)', () {
+    // A genuine *v3* database: `game_log_entries` exists (Stage 1 shipped),
+    // but none of the 12 stat columns Stage 2 added do. Derived by dropping
+    // exactly those columns from the current schema, the same technique
+    // every group above uses — see the file doc comment.
+    const v4StatColumns = <String>[
+      'plate_appearances',
+      'hits',
+      'walks',
+      'sacrifice_bunts',
+      'strikeouts',
+      'runs_batted_in',
+      'runs_scored',
+      'stolen_bases',
+      'outs_pitched',
+      'pitching_strikeouts',
+      'pitching_walks',
+      'runs_allowed',
+    ];
+
+    late Database raw;
+    late WbDatabase db;
+
+    setUp(() async {
+      raw = sqlite3.openInMemory();
+
+      final seedDb = WbDatabase(NativeDatabase.opened(raw));
+      await seedDb.select(probeTable(seedDb)).get();
+
+      for (final column in v4StatColumns) {
+        raw.execute('ALTER TABLE game_log_entries DROP COLUMN $column;');
+      }
+      raw.execute('PRAGMA user_version = 3;');
+
+      // A real Stage 1 row, exactly as a player would have left it before
+      // this upgrade ever existed — no stat line, because the columns to
+      // hold one did not exist yet.
+      raw.execute(
+        "INSERT INTO game_log_entries "
+        "(played_at, day_key, competition_label, opponent_label, positions, "
+        " result, note, created_at) "
+        "VALUES (${epoch(DateTime.utc(2026, 7, 12))}, '2026-07-12', "
+        "'동호인 리그', '남산 호크스', 'leftField', 'loss', '아깝게 졌다', "
+        "${epoch(DateTime.utc(2026, 7, 12, 21))})",
+      );
+
+      // This is the actual v3 -> v4 migration under test.
+      db = WbDatabase(NativeDatabase.opened(raw));
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    test('사전 조건: v3 상태에는 성적 칼럼이 없다', () {
+      expect(v4StatColumns, isNotEmpty);
+    });
+
+    test('마이그레이션 후 스키마 버전이 4가 된다', () async {
+      await db.select(db.gameLogEntries).get();
+      expect(raw.select('PRAGMA user_version;').first.values.first, 4);
+    });
+
+    test('기존 출전 일지 행이 그대로 보존된다', () async {
+      final rows = await db.select(db.gameLogEntries).get();
+      expect(rows, hasLength(1));
+      final row = rows.single;
+      expect(row.competitionLabel, '동호인 리그');
+      expect(row.opponentLabel, '남산 호크스');
+      expect(row.note, '아깝게 졌다');
+    });
+
+    test('새 성적 칼럼은 전부 null이다 — 0으로 채워지지 않는다', () async {
+      final row = (await db.select(db.gameLogEntries).get()).single;
+      // Every one of these must be null, not 0: this row predates the stat
+      // line entirely, and a false 0 would silently misreport a real
+      // 0-for-0 game that never happened. See `GameLogEntries` in
+      // `tables.dart`.
+      expect(row.plateAppearances, isNull);
+      expect(row.hits, isNull);
+      expect(row.walks, isNull);
+      expect(row.sacrificeBunts, isNull);
+      expect(row.strikeouts, isNull);
+      expect(row.runsBattedIn, isNull);
+      expect(row.runsScored, isNull);
+      expect(row.stolenBases, isNull);
+      expect(row.outsPitched, isNull);
+      expect(row.pitchingStrikeouts, isNull);
+      expect(row.pitchingWalks, isNull);
+      expect(row.runsAllowed, isNull);
+    });
+
+    test('null 성적을 가진 이 행은 타격 집계에서 완전히 빠진다', () async {
+      final rows = await db.select(db.gameLogEntries).get();
+      final entries = rows.map((r) => r.toDomain()).toList();
+
+      // This is the same exclusion `BattingStatSummary.from` promises for
+      // any migrated row — a game with no stat line contributes nothing,
+      // not a false 0-for-0. If this ever starts counting the game, the
+      // aggregate for every pre-Stage-2 install would suddenly under-report
+      // a real player's OBP the day she upgrades.
+      final batting = BattingStatSummary.from(entries);
+      expect(batting, isNull);
+    });
+
+    test('새 성적 칼럼에 바로 값을 쓸 수 있다', () async {
+      await db
+          .into(db.gameLogEntries)
+          .insert(
+            GameLogEntriesCompanion.insert(
+              playedAt: DateTime.utc(2026, 8, 29),
+              dayKey: '2026-08-29',
+              createdAt: DateTime.utc(2026, 8, 29, 21),
+              plateAppearances: const Value(4),
+              hits: const Value(2),
+              walks: const Value(1),
+            ),
+          );
+      final rows = await db.select(db.gameLogEntries).get();
+      final newRow = rows.firstWhere((r) => r.dayKey == '2026-08-29');
+      expect(newRow.plateAppearances, 4);
+      expect(newRow.hits, 2);
+      expect(newRow.walks, 1);
+      // Untouched columns on the same insert stay null, not 0.
+      expect(newRow.sacrificeBunts, isNull);
     });
   });
 }

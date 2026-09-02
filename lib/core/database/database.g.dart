@@ -43122,6 +43122,133 @@ class $GameLogEntriesTable extends GameLogEntries
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _plateAppearancesMeta = const VerificationMeta(
+    'plateAppearances',
+  );
+  @override
+  late final GeneratedColumn<int> plateAppearances = GeneratedColumn<int>(
+    'plate_appearances',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _hitsMeta = const VerificationMeta('hits');
+  @override
+  late final GeneratedColumn<int> hits = GeneratedColumn<int>(
+    'hits',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _walksMeta = const VerificationMeta('walks');
+  @override
+  late final GeneratedColumn<int> walks = GeneratedColumn<int>(
+    'walks',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _sacrificeBuntsMeta = const VerificationMeta(
+    'sacrificeBunts',
+  );
+  @override
+  late final GeneratedColumn<int> sacrificeBunts = GeneratedColumn<int>(
+    'sacrifice_bunts',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _strikeoutsMeta = const VerificationMeta(
+    'strikeouts',
+  );
+  @override
+  late final GeneratedColumn<int> strikeouts = GeneratedColumn<int>(
+    'strikeouts',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _runsBattedInMeta = const VerificationMeta(
+    'runsBattedIn',
+  );
+  @override
+  late final GeneratedColumn<int> runsBattedIn = GeneratedColumn<int>(
+    'runs_batted_in',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _runsScoredMeta = const VerificationMeta(
+    'runsScored',
+  );
+  @override
+  late final GeneratedColumn<int> runsScored = GeneratedColumn<int>(
+    'runs_scored',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _stolenBasesMeta = const VerificationMeta(
+    'stolenBases',
+  );
+  @override
+  late final GeneratedColumn<int> stolenBases = GeneratedColumn<int>(
+    'stolen_bases',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _outsPitchedMeta = const VerificationMeta(
+    'outsPitched',
+  );
+  @override
+  late final GeneratedColumn<int> outsPitched = GeneratedColumn<int>(
+    'outs_pitched',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _pitchingStrikeoutsMeta =
+      const VerificationMeta('pitchingStrikeouts');
+  @override
+  late final GeneratedColumn<int> pitchingStrikeouts = GeneratedColumn<int>(
+    'pitching_strikeouts',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _pitchingWalksMeta = const VerificationMeta(
+    'pitchingWalks',
+  );
+  @override
+  late final GeneratedColumn<int> pitchingWalks = GeneratedColumn<int>(
+    'pitching_walks',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _runsAllowedMeta = const VerificationMeta(
+    'runsAllowed',
+  );
+  @override
+  late final GeneratedColumn<int> runsAllowed = GeneratedColumn<int>(
+    'runs_allowed',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -43156,6 +43283,18 @@ class $GameLogEntriesTable extends GameLogEntries
     positions,
     result,
     note,
+    plateAppearances,
+    hits,
+    walks,
+    sacrificeBunts,
+    strikeouts,
+    runsBattedIn,
+    runsScored,
+    stolenBases,
+    outsPitched,
+    pitchingStrikeouts,
+    pitchingWalks,
+    runsAllowed,
     createdAt,
     updatedAt,
   ];
@@ -43238,6 +43377,102 @@ class $GameLogEntriesTable extends GameLogEntries
         note.isAcceptableOrUnknown(data['note']!, _noteMeta),
       );
     }
+    if (data.containsKey('plate_appearances')) {
+      context.handle(
+        _plateAppearancesMeta,
+        plateAppearances.isAcceptableOrUnknown(
+          data['plate_appearances']!,
+          _plateAppearancesMeta,
+        ),
+      );
+    }
+    if (data.containsKey('hits')) {
+      context.handle(
+        _hitsMeta,
+        hits.isAcceptableOrUnknown(data['hits']!, _hitsMeta),
+      );
+    }
+    if (data.containsKey('walks')) {
+      context.handle(
+        _walksMeta,
+        walks.isAcceptableOrUnknown(data['walks']!, _walksMeta),
+      );
+    }
+    if (data.containsKey('sacrifice_bunts')) {
+      context.handle(
+        _sacrificeBuntsMeta,
+        sacrificeBunts.isAcceptableOrUnknown(
+          data['sacrifice_bunts']!,
+          _sacrificeBuntsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('strikeouts')) {
+      context.handle(
+        _strikeoutsMeta,
+        strikeouts.isAcceptableOrUnknown(data['strikeouts']!, _strikeoutsMeta),
+      );
+    }
+    if (data.containsKey('runs_batted_in')) {
+      context.handle(
+        _runsBattedInMeta,
+        runsBattedIn.isAcceptableOrUnknown(
+          data['runs_batted_in']!,
+          _runsBattedInMeta,
+        ),
+      );
+    }
+    if (data.containsKey('runs_scored')) {
+      context.handle(
+        _runsScoredMeta,
+        runsScored.isAcceptableOrUnknown(data['runs_scored']!, _runsScoredMeta),
+      );
+    }
+    if (data.containsKey('stolen_bases')) {
+      context.handle(
+        _stolenBasesMeta,
+        stolenBases.isAcceptableOrUnknown(
+          data['stolen_bases']!,
+          _stolenBasesMeta,
+        ),
+      );
+    }
+    if (data.containsKey('outs_pitched')) {
+      context.handle(
+        _outsPitchedMeta,
+        outsPitched.isAcceptableOrUnknown(
+          data['outs_pitched']!,
+          _outsPitchedMeta,
+        ),
+      );
+    }
+    if (data.containsKey('pitching_strikeouts')) {
+      context.handle(
+        _pitchingStrikeoutsMeta,
+        pitchingStrikeouts.isAcceptableOrUnknown(
+          data['pitching_strikeouts']!,
+          _pitchingStrikeoutsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('pitching_walks')) {
+      context.handle(
+        _pitchingWalksMeta,
+        pitchingWalks.isAcceptableOrUnknown(
+          data['pitching_walks']!,
+          _pitchingWalksMeta,
+        ),
+      );
+    }
+    if (data.containsKey('runs_allowed')) {
+      context.handle(
+        _runsAllowedMeta,
+        runsAllowed.isAcceptableOrUnknown(
+          data['runs_allowed']!,
+          _runsAllowedMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -43301,6 +43536,54 @@ class $GameLogEntriesTable extends GameLogEntries
         DriftSqlType.string,
         data['${effectivePrefix}note'],
       ),
+      plateAppearances: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}plate_appearances'],
+      ),
+      hits: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}hits'],
+      ),
+      walks: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}walks'],
+      ),
+      sacrificeBunts: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sacrifice_bunts'],
+      ),
+      strikeouts: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}strikeouts'],
+      ),
+      runsBattedIn: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}runs_batted_in'],
+      ),
+      runsScored: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}runs_scored'],
+      ),
+      stolenBases: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}stolen_bases'],
+      ),
+      outsPitched: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}outs_pitched'],
+      ),
+      pitchingStrikeouts: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}pitching_strikeouts'],
+      ),
+      pitchingWalks: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}pitching_walks'],
+      ),
+      runsAllowed: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}runs_allowed'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -43360,6 +43643,39 @@ class GameLogEntryRow extends DataClass implements Insertable<GameLogEntryRow> {
   /// feature brief: a record about herself is not what the minor-safety
   /// rules for shared surfaces exist to guard against.
   final String? note;
+  final int? plateAppearances;
+  final int? hits;
+
+  /// 볼넷 + 몸에 맞는 공, combined into one column. The app's own OBP guide
+  /// (`assets/seed/content/discover.json`, `guide-stat-obp`) puts both in the
+  /// numerator and the denominator identically, so summing them here loses
+  /// nothing the guide's formula would otherwise use separately.
+  final int? walks;
+
+  /// 희생번트. This is *not* decorative: 타석 already includes it, but the
+  /// OBP guide's denominator does not, so without this column the app would
+  /// have no way to compute the same number its own guide teaches. See
+  /// `BattingStatSummary.obpDenominator`.
+  final int? sacrificeBunts;
+  final int? strikeouts;
+  final int? runsBattedIn;
+  final int? runsScored;
+  final int? stolenBases;
+
+  /// Innings pitched, stored as outs (innings × 3) rather than a fractional
+  /// innings count — a double would accumulate rounding error across a
+  /// season of 6⅔-style partial innings once summed. Converted to the
+  /// familiar `N⅔이닝` form only for display; see `formatInningsPitched`.
+  final int? outsPitched;
+  final int? pitchingStrikeouts;
+  final int? pitchingWalks;
+
+  /// Runs allowed, with no earned/unearned split. Earned-run judgement is an
+  /// official scorer's call, not something a personal log can make, so this
+  /// column deliberately stops at the count that needs no judgement at all —
+  /// there is no `earnedRuns` column and the app never shows an ERA. See the
+  /// feature brief.
+  final int? runsAllowed;
   final DateTime createdAt;
   final DateTime? updatedAt;
   const GameLogEntryRow({
@@ -43373,6 +43689,18 @@ class GameLogEntryRow extends DataClass implements Insertable<GameLogEntryRow> {
     required this.positions,
     required this.result,
     this.note,
+    this.plateAppearances,
+    this.hits,
+    this.walks,
+    this.sacrificeBunts,
+    this.strikeouts,
+    this.runsBattedIn,
+    this.runsScored,
+    this.stolenBases,
+    this.outsPitched,
+    this.pitchingStrikeouts,
+    this.pitchingWalks,
+    this.runsAllowed,
     required this.createdAt,
     this.updatedAt,
   });
@@ -43398,6 +43726,42 @@ class GameLogEntryRow extends DataClass implements Insertable<GameLogEntryRow> {
     map['result'] = Variable<String>(result);
     if (!nullToAbsent || note != null) {
       map['note'] = Variable<String>(note);
+    }
+    if (!nullToAbsent || plateAppearances != null) {
+      map['plate_appearances'] = Variable<int>(plateAppearances);
+    }
+    if (!nullToAbsent || hits != null) {
+      map['hits'] = Variable<int>(hits);
+    }
+    if (!nullToAbsent || walks != null) {
+      map['walks'] = Variable<int>(walks);
+    }
+    if (!nullToAbsent || sacrificeBunts != null) {
+      map['sacrifice_bunts'] = Variable<int>(sacrificeBunts);
+    }
+    if (!nullToAbsent || strikeouts != null) {
+      map['strikeouts'] = Variable<int>(strikeouts);
+    }
+    if (!nullToAbsent || runsBattedIn != null) {
+      map['runs_batted_in'] = Variable<int>(runsBattedIn);
+    }
+    if (!nullToAbsent || runsScored != null) {
+      map['runs_scored'] = Variable<int>(runsScored);
+    }
+    if (!nullToAbsent || stolenBases != null) {
+      map['stolen_bases'] = Variable<int>(stolenBases);
+    }
+    if (!nullToAbsent || outsPitched != null) {
+      map['outs_pitched'] = Variable<int>(outsPitched);
+    }
+    if (!nullToAbsent || pitchingStrikeouts != null) {
+      map['pitching_strikeouts'] = Variable<int>(pitchingStrikeouts);
+    }
+    if (!nullToAbsent || pitchingWalks != null) {
+      map['pitching_walks'] = Variable<int>(pitchingWalks);
+    }
+    if (!nullToAbsent || runsAllowed != null) {
+      map['runs_allowed'] = Variable<int>(runsAllowed);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     if (!nullToAbsent || updatedAt != null) {
@@ -43426,6 +43790,40 @@ class GameLogEntryRow extends DataClass implements Insertable<GameLogEntryRow> {
       positions: Value(positions),
       result: Value(result),
       note: note == null && nullToAbsent ? const Value.absent() : Value(note),
+      plateAppearances: plateAppearances == null && nullToAbsent
+          ? const Value.absent()
+          : Value(plateAppearances),
+      hits: hits == null && nullToAbsent ? const Value.absent() : Value(hits),
+      walks: walks == null && nullToAbsent
+          ? const Value.absent()
+          : Value(walks),
+      sacrificeBunts: sacrificeBunts == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sacrificeBunts),
+      strikeouts: strikeouts == null && nullToAbsent
+          ? const Value.absent()
+          : Value(strikeouts),
+      runsBattedIn: runsBattedIn == null && nullToAbsent
+          ? const Value.absent()
+          : Value(runsBattedIn),
+      runsScored: runsScored == null && nullToAbsent
+          ? const Value.absent()
+          : Value(runsScored),
+      stolenBases: stolenBases == null && nullToAbsent
+          ? const Value.absent()
+          : Value(stolenBases),
+      outsPitched: outsPitched == null && nullToAbsent
+          ? const Value.absent()
+          : Value(outsPitched),
+      pitchingStrikeouts: pitchingStrikeouts == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pitchingStrikeouts),
+      pitchingWalks: pitchingWalks == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pitchingWalks),
+      runsAllowed: runsAllowed == null && nullToAbsent
+          ? const Value.absent()
+          : Value(runsAllowed),
       createdAt: Value(createdAt),
       updatedAt: updatedAt == null && nullToAbsent
           ? const Value.absent()
@@ -43449,6 +43847,18 @@ class GameLogEntryRow extends DataClass implements Insertable<GameLogEntryRow> {
       positions: serializer.fromJson<String>(json['positions']),
       result: serializer.fromJson<String>(json['result']),
       note: serializer.fromJson<String?>(json['note']),
+      plateAppearances: serializer.fromJson<int?>(json['plateAppearances']),
+      hits: serializer.fromJson<int?>(json['hits']),
+      walks: serializer.fromJson<int?>(json['walks']),
+      sacrificeBunts: serializer.fromJson<int?>(json['sacrificeBunts']),
+      strikeouts: serializer.fromJson<int?>(json['strikeouts']),
+      runsBattedIn: serializer.fromJson<int?>(json['runsBattedIn']),
+      runsScored: serializer.fromJson<int?>(json['runsScored']),
+      stolenBases: serializer.fromJson<int?>(json['stolenBases']),
+      outsPitched: serializer.fromJson<int?>(json['outsPitched']),
+      pitchingStrikeouts: serializer.fromJson<int?>(json['pitchingStrikeouts']),
+      pitchingWalks: serializer.fromJson<int?>(json['pitchingWalks']),
+      runsAllowed: serializer.fromJson<int?>(json['runsAllowed']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
     );
@@ -43467,6 +43877,18 @@ class GameLogEntryRow extends DataClass implements Insertable<GameLogEntryRow> {
       'positions': serializer.toJson<String>(positions),
       'result': serializer.toJson<String>(result),
       'note': serializer.toJson<String?>(note),
+      'plateAppearances': serializer.toJson<int?>(plateAppearances),
+      'hits': serializer.toJson<int?>(hits),
+      'walks': serializer.toJson<int?>(walks),
+      'sacrificeBunts': serializer.toJson<int?>(sacrificeBunts),
+      'strikeouts': serializer.toJson<int?>(strikeouts),
+      'runsBattedIn': serializer.toJson<int?>(runsBattedIn),
+      'runsScored': serializer.toJson<int?>(runsScored),
+      'stolenBases': serializer.toJson<int?>(stolenBases),
+      'outsPitched': serializer.toJson<int?>(outsPitched),
+      'pitchingStrikeouts': serializer.toJson<int?>(pitchingStrikeouts),
+      'pitchingWalks': serializer.toJson<int?>(pitchingWalks),
+      'runsAllowed': serializer.toJson<int?>(runsAllowed),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime?>(updatedAt),
     };
@@ -43483,6 +43905,18 @@ class GameLogEntryRow extends DataClass implements Insertable<GameLogEntryRow> {
     String? positions,
     String? result,
     Value<String?> note = const Value.absent(),
+    Value<int?> plateAppearances = const Value.absent(),
+    Value<int?> hits = const Value.absent(),
+    Value<int?> walks = const Value.absent(),
+    Value<int?> sacrificeBunts = const Value.absent(),
+    Value<int?> strikeouts = const Value.absent(),
+    Value<int?> runsBattedIn = const Value.absent(),
+    Value<int?> runsScored = const Value.absent(),
+    Value<int?> stolenBases = const Value.absent(),
+    Value<int?> outsPitched = const Value.absent(),
+    Value<int?> pitchingStrikeouts = const Value.absent(),
+    Value<int?> pitchingWalks = const Value.absent(),
+    Value<int?> runsAllowed = const Value.absent(),
     DateTime? createdAt,
     Value<DateTime?> updatedAt = const Value.absent(),
   }) => GameLogEntryRow(
@@ -43500,6 +43934,26 @@ class GameLogEntryRow extends DataClass implements Insertable<GameLogEntryRow> {
     positions: positions ?? this.positions,
     result: result ?? this.result,
     note: note.present ? note.value : this.note,
+    plateAppearances: plateAppearances.present
+        ? plateAppearances.value
+        : this.plateAppearances,
+    hits: hits.present ? hits.value : this.hits,
+    walks: walks.present ? walks.value : this.walks,
+    sacrificeBunts: sacrificeBunts.present
+        ? sacrificeBunts.value
+        : this.sacrificeBunts,
+    strikeouts: strikeouts.present ? strikeouts.value : this.strikeouts,
+    runsBattedIn: runsBattedIn.present ? runsBattedIn.value : this.runsBattedIn,
+    runsScored: runsScored.present ? runsScored.value : this.runsScored,
+    stolenBases: stolenBases.present ? stolenBases.value : this.stolenBases,
+    outsPitched: outsPitched.present ? outsPitched.value : this.outsPitched,
+    pitchingStrikeouts: pitchingStrikeouts.present
+        ? pitchingStrikeouts.value
+        : this.pitchingStrikeouts,
+    pitchingWalks: pitchingWalks.present
+        ? pitchingWalks.value
+        : this.pitchingWalks,
+    runsAllowed: runsAllowed.present ? runsAllowed.value : this.runsAllowed,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
   );
@@ -43521,6 +43975,38 @@ class GameLogEntryRow extends DataClass implements Insertable<GameLogEntryRow> {
       positions: data.positions.present ? data.positions.value : this.positions,
       result: data.result.present ? data.result.value : this.result,
       note: data.note.present ? data.note.value : this.note,
+      plateAppearances: data.plateAppearances.present
+          ? data.plateAppearances.value
+          : this.plateAppearances,
+      hits: data.hits.present ? data.hits.value : this.hits,
+      walks: data.walks.present ? data.walks.value : this.walks,
+      sacrificeBunts: data.sacrificeBunts.present
+          ? data.sacrificeBunts.value
+          : this.sacrificeBunts,
+      strikeouts: data.strikeouts.present
+          ? data.strikeouts.value
+          : this.strikeouts,
+      runsBattedIn: data.runsBattedIn.present
+          ? data.runsBattedIn.value
+          : this.runsBattedIn,
+      runsScored: data.runsScored.present
+          ? data.runsScored.value
+          : this.runsScored,
+      stolenBases: data.stolenBases.present
+          ? data.stolenBases.value
+          : this.stolenBases,
+      outsPitched: data.outsPitched.present
+          ? data.outsPitched.value
+          : this.outsPitched,
+      pitchingStrikeouts: data.pitchingStrikeouts.present
+          ? data.pitchingStrikeouts.value
+          : this.pitchingStrikeouts,
+      pitchingWalks: data.pitchingWalks.present
+          ? data.pitchingWalks.value
+          : this.pitchingWalks,
+      runsAllowed: data.runsAllowed.present
+          ? data.runsAllowed.value
+          : this.runsAllowed,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -43539,6 +44025,18 @@ class GameLogEntryRow extends DataClass implements Insertable<GameLogEntryRow> {
           ..write('positions: $positions, ')
           ..write('result: $result, ')
           ..write('note: $note, ')
+          ..write('plateAppearances: $plateAppearances, ')
+          ..write('hits: $hits, ')
+          ..write('walks: $walks, ')
+          ..write('sacrificeBunts: $sacrificeBunts, ')
+          ..write('strikeouts: $strikeouts, ')
+          ..write('runsBattedIn: $runsBattedIn, ')
+          ..write('runsScored: $runsScored, ')
+          ..write('stolenBases: $stolenBases, ')
+          ..write('outsPitched: $outsPitched, ')
+          ..write('pitchingStrikeouts: $pitchingStrikeouts, ')
+          ..write('pitchingWalks: $pitchingWalks, ')
+          ..write('runsAllowed: $runsAllowed, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -43546,7 +44044,7 @@ class GameLogEntryRow extends DataClass implements Insertable<GameLogEntryRow> {
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     playedAt,
     dayKey,
@@ -43557,9 +44055,21 @@ class GameLogEntryRow extends DataClass implements Insertable<GameLogEntryRow> {
     positions,
     result,
     note,
+    plateAppearances,
+    hits,
+    walks,
+    sacrificeBunts,
+    strikeouts,
+    runsBattedIn,
+    runsScored,
+    stolenBases,
+    outsPitched,
+    pitchingStrikeouts,
+    pitchingWalks,
+    runsAllowed,
     createdAt,
     updatedAt,
-  );
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -43574,6 +44084,18 @@ class GameLogEntryRow extends DataClass implements Insertable<GameLogEntryRow> {
           other.positions == this.positions &&
           other.result == this.result &&
           other.note == this.note &&
+          other.plateAppearances == this.plateAppearances &&
+          other.hits == this.hits &&
+          other.walks == this.walks &&
+          other.sacrificeBunts == this.sacrificeBunts &&
+          other.strikeouts == this.strikeouts &&
+          other.runsBattedIn == this.runsBattedIn &&
+          other.runsScored == this.runsScored &&
+          other.stolenBases == this.stolenBases &&
+          other.outsPitched == this.outsPitched &&
+          other.pitchingStrikeouts == this.pitchingStrikeouts &&
+          other.pitchingWalks == this.pitchingWalks &&
+          other.runsAllowed == this.runsAllowed &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -43589,6 +44111,18 @@ class GameLogEntriesCompanion extends UpdateCompanion<GameLogEntryRow> {
   final Value<String> positions;
   final Value<String> result;
   final Value<String?> note;
+  final Value<int?> plateAppearances;
+  final Value<int?> hits;
+  final Value<int?> walks;
+  final Value<int?> sacrificeBunts;
+  final Value<int?> strikeouts;
+  final Value<int?> runsBattedIn;
+  final Value<int?> runsScored;
+  final Value<int?> stolenBases;
+  final Value<int?> outsPitched;
+  final Value<int?> pitchingStrikeouts;
+  final Value<int?> pitchingWalks;
+  final Value<int?> runsAllowed;
   final Value<DateTime> createdAt;
   final Value<DateTime?> updatedAt;
   const GameLogEntriesCompanion({
@@ -43602,6 +44136,18 @@ class GameLogEntriesCompanion extends UpdateCompanion<GameLogEntryRow> {
     this.positions = const Value.absent(),
     this.result = const Value.absent(),
     this.note = const Value.absent(),
+    this.plateAppearances = const Value.absent(),
+    this.hits = const Value.absent(),
+    this.walks = const Value.absent(),
+    this.sacrificeBunts = const Value.absent(),
+    this.strikeouts = const Value.absent(),
+    this.runsBattedIn = const Value.absent(),
+    this.runsScored = const Value.absent(),
+    this.stolenBases = const Value.absent(),
+    this.outsPitched = const Value.absent(),
+    this.pitchingStrikeouts = const Value.absent(),
+    this.pitchingWalks = const Value.absent(),
+    this.runsAllowed = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
   });
@@ -43616,6 +44162,18 @@ class GameLogEntriesCompanion extends UpdateCompanion<GameLogEntryRow> {
     this.positions = const Value.absent(),
     this.result = const Value.absent(),
     this.note = const Value.absent(),
+    this.plateAppearances = const Value.absent(),
+    this.hits = const Value.absent(),
+    this.walks = const Value.absent(),
+    this.sacrificeBunts = const Value.absent(),
+    this.strikeouts = const Value.absent(),
+    this.runsBattedIn = const Value.absent(),
+    this.runsScored = const Value.absent(),
+    this.stolenBases = const Value.absent(),
+    this.outsPitched = const Value.absent(),
+    this.pitchingStrikeouts = const Value.absent(),
+    this.pitchingWalks = const Value.absent(),
+    this.runsAllowed = const Value.absent(),
     required DateTime createdAt,
     this.updatedAt = const Value.absent(),
   }) : playedAt = Value(playedAt),
@@ -43632,6 +44190,18 @@ class GameLogEntriesCompanion extends UpdateCompanion<GameLogEntryRow> {
     Expression<String>? positions,
     Expression<String>? result,
     Expression<String>? note,
+    Expression<int>? plateAppearances,
+    Expression<int>? hits,
+    Expression<int>? walks,
+    Expression<int>? sacrificeBunts,
+    Expression<int>? strikeouts,
+    Expression<int>? runsBattedIn,
+    Expression<int>? runsScored,
+    Expression<int>? stolenBases,
+    Expression<int>? outsPitched,
+    Expression<int>? pitchingStrikeouts,
+    Expression<int>? pitchingWalks,
+    Expression<int>? runsAllowed,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
   }) {
@@ -43646,6 +44216,18 @@ class GameLogEntriesCompanion extends UpdateCompanion<GameLogEntryRow> {
       if (positions != null) 'positions': positions,
       if (result != null) 'result': result,
       if (note != null) 'note': note,
+      if (plateAppearances != null) 'plate_appearances': plateAppearances,
+      if (hits != null) 'hits': hits,
+      if (walks != null) 'walks': walks,
+      if (sacrificeBunts != null) 'sacrifice_bunts': sacrificeBunts,
+      if (strikeouts != null) 'strikeouts': strikeouts,
+      if (runsBattedIn != null) 'runs_batted_in': runsBattedIn,
+      if (runsScored != null) 'runs_scored': runsScored,
+      if (stolenBases != null) 'stolen_bases': stolenBases,
+      if (outsPitched != null) 'outs_pitched': outsPitched,
+      if (pitchingStrikeouts != null) 'pitching_strikeouts': pitchingStrikeouts,
+      if (pitchingWalks != null) 'pitching_walks': pitchingWalks,
+      if (runsAllowed != null) 'runs_allowed': runsAllowed,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
     });
@@ -43662,6 +44244,18 @@ class GameLogEntriesCompanion extends UpdateCompanion<GameLogEntryRow> {
     Value<String>? positions,
     Value<String>? result,
     Value<String?>? note,
+    Value<int?>? plateAppearances,
+    Value<int?>? hits,
+    Value<int?>? walks,
+    Value<int?>? sacrificeBunts,
+    Value<int?>? strikeouts,
+    Value<int?>? runsBattedIn,
+    Value<int?>? runsScored,
+    Value<int?>? stolenBases,
+    Value<int?>? outsPitched,
+    Value<int?>? pitchingStrikeouts,
+    Value<int?>? pitchingWalks,
+    Value<int?>? runsAllowed,
     Value<DateTime>? createdAt,
     Value<DateTime?>? updatedAt,
   }) {
@@ -43676,6 +44270,18 @@ class GameLogEntriesCompanion extends UpdateCompanion<GameLogEntryRow> {
       positions: positions ?? this.positions,
       result: result ?? this.result,
       note: note ?? this.note,
+      plateAppearances: plateAppearances ?? this.plateAppearances,
+      hits: hits ?? this.hits,
+      walks: walks ?? this.walks,
+      sacrificeBunts: sacrificeBunts ?? this.sacrificeBunts,
+      strikeouts: strikeouts ?? this.strikeouts,
+      runsBattedIn: runsBattedIn ?? this.runsBattedIn,
+      runsScored: runsScored ?? this.runsScored,
+      stolenBases: stolenBases ?? this.stolenBases,
+      outsPitched: outsPitched ?? this.outsPitched,
+      pitchingStrikeouts: pitchingStrikeouts ?? this.pitchingStrikeouts,
+      pitchingWalks: pitchingWalks ?? this.pitchingWalks,
+      runsAllowed: runsAllowed ?? this.runsAllowed,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -43714,6 +44320,42 @@ class GameLogEntriesCompanion extends UpdateCompanion<GameLogEntryRow> {
     if (note.present) {
       map['note'] = Variable<String>(note.value);
     }
+    if (plateAppearances.present) {
+      map['plate_appearances'] = Variable<int>(plateAppearances.value);
+    }
+    if (hits.present) {
+      map['hits'] = Variable<int>(hits.value);
+    }
+    if (walks.present) {
+      map['walks'] = Variable<int>(walks.value);
+    }
+    if (sacrificeBunts.present) {
+      map['sacrifice_bunts'] = Variable<int>(sacrificeBunts.value);
+    }
+    if (strikeouts.present) {
+      map['strikeouts'] = Variable<int>(strikeouts.value);
+    }
+    if (runsBattedIn.present) {
+      map['runs_batted_in'] = Variable<int>(runsBattedIn.value);
+    }
+    if (runsScored.present) {
+      map['runs_scored'] = Variable<int>(runsScored.value);
+    }
+    if (stolenBases.present) {
+      map['stolen_bases'] = Variable<int>(stolenBases.value);
+    }
+    if (outsPitched.present) {
+      map['outs_pitched'] = Variable<int>(outsPitched.value);
+    }
+    if (pitchingStrikeouts.present) {
+      map['pitching_strikeouts'] = Variable<int>(pitchingStrikeouts.value);
+    }
+    if (pitchingWalks.present) {
+      map['pitching_walks'] = Variable<int>(pitchingWalks.value);
+    }
+    if (runsAllowed.present) {
+      map['runs_allowed'] = Variable<int>(runsAllowed.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -43736,6 +44378,18 @@ class GameLogEntriesCompanion extends UpdateCompanion<GameLogEntryRow> {
           ..write('positions: $positions, ')
           ..write('result: $result, ')
           ..write('note: $note, ')
+          ..write('plateAppearances: $plateAppearances, ')
+          ..write('hits: $hits, ')
+          ..write('walks: $walks, ')
+          ..write('sacrificeBunts: $sacrificeBunts, ')
+          ..write('strikeouts: $strikeouts, ')
+          ..write('runsBattedIn: $runsBattedIn, ')
+          ..write('runsScored: $runsScored, ')
+          ..write('stolenBases: $stolenBases, ')
+          ..write('outsPitched: $outsPitched, ')
+          ..write('pitchingStrikeouts: $pitchingStrikeouts, ')
+          ..write('pitchingWalks: $pitchingWalks, ')
+          ..write('runsAllowed: $runsAllowed, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -63511,6 +64165,18 @@ typedef $$GameLogEntriesTableCreateCompanionBuilder =
       Value<String> positions,
       Value<String> result,
       Value<String?> note,
+      Value<int?> plateAppearances,
+      Value<int?> hits,
+      Value<int?> walks,
+      Value<int?> sacrificeBunts,
+      Value<int?> strikeouts,
+      Value<int?> runsBattedIn,
+      Value<int?> runsScored,
+      Value<int?> stolenBases,
+      Value<int?> outsPitched,
+      Value<int?> pitchingStrikeouts,
+      Value<int?> pitchingWalks,
+      Value<int?> runsAllowed,
       required DateTime createdAt,
       Value<DateTime?> updatedAt,
     });
@@ -63526,6 +64192,18 @@ typedef $$GameLogEntriesTableUpdateCompanionBuilder =
       Value<String> positions,
       Value<String> result,
       Value<String?> note,
+      Value<int?> plateAppearances,
+      Value<int?> hits,
+      Value<int?> walks,
+      Value<int?> sacrificeBunts,
+      Value<int?> strikeouts,
+      Value<int?> runsBattedIn,
+      Value<int?> runsScored,
+      Value<int?> stolenBases,
+      Value<int?> outsPitched,
+      Value<int?> pitchingStrikeouts,
+      Value<int?> pitchingWalks,
+      Value<int?> runsAllowed,
       Value<DateTime> createdAt,
       Value<DateTime?> updatedAt,
     });
@@ -63586,6 +64264,66 @@ class $$GameLogEntriesTableFilterComposer
 
   ColumnFilters<String> get note => $composableBuilder(
     column: $table.note,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get plateAppearances => $composableBuilder(
+    column: $table.plateAppearances,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get hits => $composableBuilder(
+    column: $table.hits,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get walks => $composableBuilder(
+    column: $table.walks,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sacrificeBunts => $composableBuilder(
+    column: $table.sacrificeBunts,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get strikeouts => $composableBuilder(
+    column: $table.strikeouts,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get runsBattedIn => $composableBuilder(
+    column: $table.runsBattedIn,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get runsScored => $composableBuilder(
+    column: $table.runsScored,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get stolenBases => $composableBuilder(
+    column: $table.stolenBases,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get outsPitched => $composableBuilder(
+    column: $table.outsPitched,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get pitchingStrikeouts => $composableBuilder(
+    column: $table.pitchingStrikeouts,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get pitchingWalks => $composableBuilder(
+    column: $table.pitchingWalks,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get runsAllowed => $composableBuilder(
+    column: $table.runsAllowed,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -63659,6 +64397,66 @@ class $$GameLogEntriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get plateAppearances => $composableBuilder(
+    column: $table.plateAppearances,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get hits => $composableBuilder(
+    column: $table.hits,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get walks => $composableBuilder(
+    column: $table.walks,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sacrificeBunts => $composableBuilder(
+    column: $table.sacrificeBunts,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get strikeouts => $composableBuilder(
+    column: $table.strikeouts,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get runsBattedIn => $composableBuilder(
+    column: $table.runsBattedIn,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get runsScored => $composableBuilder(
+    column: $table.runsScored,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get stolenBases => $composableBuilder(
+    column: $table.stolenBases,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get outsPitched => $composableBuilder(
+    column: $table.outsPitched,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get pitchingStrikeouts => $composableBuilder(
+    column: $table.pitchingStrikeouts,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get pitchingWalks => $composableBuilder(
+    column: $table.pitchingWalks,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get runsAllowed => $composableBuilder(
+    column: $table.runsAllowed,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -63715,6 +64513,62 @@ class $$GameLogEntriesTableAnnotationComposer
   GeneratedColumn<String> get note =>
       $composableBuilder(column: $table.note, builder: (column) => column);
 
+  GeneratedColumn<int> get plateAppearances => $composableBuilder(
+    column: $table.plateAppearances,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get hits =>
+      $composableBuilder(column: $table.hits, builder: (column) => column);
+
+  GeneratedColumn<int> get walks =>
+      $composableBuilder(column: $table.walks, builder: (column) => column);
+
+  GeneratedColumn<int> get sacrificeBunts => $composableBuilder(
+    column: $table.sacrificeBunts,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get strikeouts => $composableBuilder(
+    column: $table.strikeouts,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get runsBattedIn => $composableBuilder(
+    column: $table.runsBattedIn,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get runsScored => $composableBuilder(
+    column: $table.runsScored,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get stolenBases => $composableBuilder(
+    column: $table.stolenBases,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get outsPitched => $composableBuilder(
+    column: $table.outsPitched,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get pitchingStrikeouts => $composableBuilder(
+    column: $table.pitchingStrikeouts,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get pitchingWalks => $composableBuilder(
+    column: $table.pitchingWalks,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get runsAllowed => $composableBuilder(
+    column: $table.runsAllowed,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
@@ -63763,6 +64617,18 @@ class $$GameLogEntriesTableTableManager
                 Value<String> positions = const Value.absent(),
                 Value<String> result = const Value.absent(),
                 Value<String?> note = const Value.absent(),
+                Value<int?> plateAppearances = const Value.absent(),
+                Value<int?> hits = const Value.absent(),
+                Value<int?> walks = const Value.absent(),
+                Value<int?> sacrificeBunts = const Value.absent(),
+                Value<int?> strikeouts = const Value.absent(),
+                Value<int?> runsBattedIn = const Value.absent(),
+                Value<int?> runsScored = const Value.absent(),
+                Value<int?> stolenBases = const Value.absent(),
+                Value<int?> outsPitched = const Value.absent(),
+                Value<int?> pitchingStrikeouts = const Value.absent(),
+                Value<int?> pitchingWalks = const Value.absent(),
+                Value<int?> runsAllowed = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
               }) => GameLogEntriesCompanion(
@@ -63776,6 +64642,18 @@ class $$GameLogEntriesTableTableManager
                 positions: positions,
                 result: result,
                 note: note,
+                plateAppearances: plateAppearances,
+                hits: hits,
+                walks: walks,
+                sacrificeBunts: sacrificeBunts,
+                strikeouts: strikeouts,
+                runsBattedIn: runsBattedIn,
+                runsScored: runsScored,
+                stolenBases: stolenBases,
+                outsPitched: outsPitched,
+                pitchingStrikeouts: pitchingStrikeouts,
+                pitchingWalks: pitchingWalks,
+                runsAllowed: runsAllowed,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
               ),
@@ -63791,6 +64669,18 @@ class $$GameLogEntriesTableTableManager
                 Value<String> positions = const Value.absent(),
                 Value<String> result = const Value.absent(),
                 Value<String?> note = const Value.absent(),
+                Value<int?> plateAppearances = const Value.absent(),
+                Value<int?> hits = const Value.absent(),
+                Value<int?> walks = const Value.absent(),
+                Value<int?> sacrificeBunts = const Value.absent(),
+                Value<int?> strikeouts = const Value.absent(),
+                Value<int?> runsBattedIn = const Value.absent(),
+                Value<int?> runsScored = const Value.absent(),
+                Value<int?> stolenBases = const Value.absent(),
+                Value<int?> outsPitched = const Value.absent(),
+                Value<int?> pitchingStrikeouts = const Value.absent(),
+                Value<int?> pitchingWalks = const Value.absent(),
+                Value<int?> runsAllowed = const Value.absent(),
                 required DateTime createdAt,
                 Value<DateTime?> updatedAt = const Value.absent(),
               }) => GameLogEntriesCompanion.insert(
@@ -63804,6 +64694,18 @@ class $$GameLogEntriesTableTableManager
                 positions: positions,
                 result: result,
                 note: note,
+                plateAppearances: plateAppearances,
+                hits: hits,
+                walks: walks,
+                sacrificeBunts: sacrificeBunts,
+                strikeouts: strikeouts,
+                runsBattedIn: runsBattedIn,
+                runsScored: runsScored,
+                stolenBases: stolenBases,
+                outsPitched: outsPitched,
+                pitchingStrikeouts: pitchingStrikeouts,
+                pitchingWalks: pitchingWalks,
+                runsAllowed: runsAllowed,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
               ),

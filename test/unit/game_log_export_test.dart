@@ -27,6 +27,18 @@ void main() {
       note: '병살 하나 잡음, "좋았다"',
       createdAt: DateTime.utc(2026, 8, 15, 21, 5),
       updatedAt: DateTime.utc(2026, 8, 16, 8),
+      plateAppearances: 4,
+      hits: 2,
+      walks: 1,
+      sacrificeBunts: 0,
+      strikeouts: 1,
+      runsBattedIn: 2,
+      runsScored: 1,
+      stolenBases: 1,
+      outsPitched: 38,
+      pitchingStrikeouts: 6,
+      pitchingWalks: 2,
+      runsAllowed: 3,
     ),
     // Every optional field left unset — the far more common real entry,
     // since 대회/상대/구장 and 메모 are all free text a first-time user may
@@ -66,6 +78,19 @@ void main() {
       expect(full.note, '병살 하나 잡음, "좋았다"');
       expect(full.createdAt, entries[0].createdAt);
       expect(full.updatedAt, entries[0].updatedAt);
+      // Stat line (Stage 2) — every one of the 12 columns round-trips too.
+      expect(full.plateAppearances, 4);
+      expect(full.hits, 2);
+      expect(full.walks, 1);
+      expect(full.sacrificeBunts, 0);
+      expect(full.strikeouts, 1);
+      expect(full.runsBattedIn, 2);
+      expect(full.runsScored, 1);
+      expect(full.stolenBases, 1);
+      expect(full.outsPitched, 38);
+      expect(full.pitchingStrikeouts, 6);
+      expect(full.pitchingWalks, 2);
+      expect(full.runsAllowed, 3);
 
       final sparse = result.entries.firstWhere((e) => e.id == 2);
       expect(sparse.gameId, isNull);
@@ -74,6 +99,36 @@ void main() {
       expect(sparse.result, GameLogResult.unspecified);
       expect(sparse.note, isNull);
       expect(sparse.updatedAt, isNull);
+      // No stat line at all — every stat field decodes to null, never 0.
+      expect(sparse.plateAppearances, isNull);
+      expect(sparse.hits, isNull);
+      expect(sparse.outsPitched, isNull);
+    });
+
+    test('성적 키가 아예 없는 옛 내보내기 파일도 null로 읽힌다 (하위 호환)', () {
+      // Simulates a Stage-1 export written before these keys existed —
+      // `formatTag` never bumped for this, so an old file must still
+      // decode cleanly. See this file's class doc and `formatTag`'s doc.
+      const raw = '''
+      {
+        "format": "wb-myrecords-v1",
+        "exportedAt": "2026-09-01T00:00:00.000Z",
+        "entries": [
+          {
+            "id": 9,
+            "playedAt": "2026-08-15T00:00:00.000Z",
+            "dayKey": "2026-08-15",
+            "createdAt": "2026-08-15T21:00:00.000Z"
+          }
+        ]
+      }
+      ''';
+      final result = GameLogJsonCodec.decode(raw);
+      expect(result.isValid, isTrue);
+      final entry = result.entries.single;
+      expect(entry.plateAppearances, isNull);
+      expect(entry.hits, isNull);
+      expect(entry.outsPitched, isNull);
     });
 
     test('형식 태그를 담는다', () {
@@ -138,6 +193,26 @@ void main() {
       final csv = GameLogCsvCodec.encode(entries);
       // The first entry's note contains a comma and embedded quotes.
       expect(csv, contains('"병살 하나 잡음, ""좋았다"""'));
+    });
+
+    test('성적 칼럼이 머리글과 각 행에 더해진다', () {
+      final csv = GameLogCsvCodec.encode(entries);
+      final lines = csv.trim().split('\n');
+      expect(lines.first, contains('타석'));
+      expect(lines.first, contains('희생번트'));
+      expect(lines.first, contains('투구아웃수'));
+
+      // First entry's row carries its stat line as plain numbers.
+      final firstRow = lines[1];
+      expect(firstRow, contains('4')); // 타석
+      expect(firstRow, contains('38')); // outsPitched, raw — see the codec's
+      // doc comment on why this is a plain number, not `12⅔이닝`.
+
+      // Second entry has no stat line: those columns are empty, not "0".
+      final secondRow = lines[2];
+      final cells = secondRow.split(',');
+      // 날짜,대회,상대,구장,포지션,결과,메모 = 7 leading columns, then 타석 is next.
+      expect(cells[7], ''); // 타석
     });
   });
 }

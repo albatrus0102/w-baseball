@@ -826,6 +826,18 @@ extension GameLogEntryRowMapper on GameLogEntryRow {
     note: note,
     createdAt: createdAt,
     updatedAt: updatedAt,
+    plateAppearances: plateAppearances,
+    hits: hits,
+    walks: walks,
+    sacrificeBunts: sacrificeBunts,
+    strikeouts: strikeouts,
+    runsBattedIn: runsBattedIn,
+    runsScored: runsScored,
+    stolenBases: stolenBases,
+    outsPitched: outsPitched,
+    pitchingStrikeouts: pitchingStrikeouts,
+    pitchingWalks: pitchingWalks,
+    runsAllowed: runsAllowed,
   );
 }
 
