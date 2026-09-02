@@ -57,25 +57,25 @@ class WbType {
 
   static final TextStyle title = _base(
     size: 22,
-    weight: FontWeight.w700,
+    weight: FontWeight.w800,
     height: 1.30,
-    letterSpacing: -0.4,
+    letterSpacing: -0.5,
   );
 
   /// Section heading ("오늘의 경기", "진행 중인 대회").
   static final TextStyle section = _base(
-    size: 17,
-    weight: FontWeight.w700,
-    height: 1.32,
-    letterSpacing: -0.3,
+    size: 18,
+    weight: FontWeight.w800,
+    height: 1.30,
+    letterSpacing: -0.4,
   );
 
   /// Card headline — team names, competition names.
   static final TextStyle headline = _base(
     size: 16,
-    weight: FontWeight.w600,
+    weight: FontWeight.w700,
     height: 1.36,
-    letterSpacing: -0.2,
+    letterSpacing: -0.3,
   );
 
   static final TextStyle body = _base(
@@ -87,7 +87,7 @@ class WbType {
 
   static final TextStyle bodyStrong = _base(
     size: 15,
-    weight: FontWeight.w600,
+    weight: FontWeight.w700,
     height: 1.52,
     letterSpacing: -0.1,
   );
