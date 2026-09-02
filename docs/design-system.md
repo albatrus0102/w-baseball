@@ -209,7 +209,29 @@ WbDensityScope.of(context)   // 없으면 comfortable
 
 ## 6. 스크린샷
 
-`flutter test --tags screenshots --update-goldens` → `docs/screenshots/` 21장.
+`flutter test --tags screenshots --update-goldens` → `docs/screenshots/` 31장.
 
-CI에서는 제외합니다. 호스트 폰트에 따라 픽셀이 달라지므로 픽셀 차이로 빌드를
-막는 것은 잘못된 신호입니다. **리뷰 자료이지 회귀 게이트가 아닙니다.**
+CI에서는 제외합니다. **리뷰 자료이지 회귀 게이트가 아닙니다** — 이는 정책
+결정이며, 픽셀이 재현 가능한지와는 별개입니다.
+
+**2026-09-02 개정.** 예전엔 이 절이 "호스트 폰트에 따라 픽셀이 달라진다" 고
+적혀 있었다. 그 근거였던 결함(`test/screenshots/capture_test.dart` 의
+`_loadKoreanFont`)을 재현해 보니, 원인으로 지목됐던 "`malgun.ttf`/
+`malgunbd.ttf` 를 같은 family 에 등록하는 순서가 매 실행 흔든다" 는 가설은
+틀렸다 — Flutter `FontLoader.load()` 는 `addFont` 호출 순서대로 순차적으로
+`await` 하지 등록 완료 순서로 하지 않는다(`packages/flutter/lib/src/
+services/font_loader.dart` 확인). 같은 커밋(HEAD)을 20회 이상 다시 캡처해도
+흔들리지 않았다 — 다만 **그 결과가 저장소에 커밋된 골든과는 항상 달랐다**,
+왜 다른지는 끝내 특정하지 못했다(코드는 골든이 마지막으로 갱신된 시점 이후
+바뀌지 않았음을 확인함).
+
+원인은 못 밝혔지만 재발은 막았다: `_loadKoreanFont` 가 이제 **번들된
+Pretendard**(`assets/fonts/`, 저장소에 커밋되어 모든 호스트·CI에 동일하게
+존재)를 `Pretendard` family 로 먼저 등록하고, 시스템 한국어 폰트(Windows의
+Malgun Gothic 등)는 `Pretendard` 가 커버 못 하는 글자(한자·일부 기호/이모지)
+전용 폴백 family 에만 등록한다 — 절대 `Pretendard` 에 같이 넣지 않는다. 지금
+캡처되는 화면은 전부 한글·라틴·숫자뿐이라 실제로 시스템 폰트에 기대는 글자가
+없고, 그래서 **이 31장은 이제 호스트 독립적**이다(10회 연속 재캡처, 픽셀
+동일 확인). 화면에 한자·이모지가 들어가는 날이 오면 그 글자만 다시 호스트
+의존적이 된다 — 리눅스 CI 에는 `malgun.ttf` 가 없으므로. **CI 제외는 정책으로
+남아 있다** — 게이트로 승격할지는 별도 결정 사항.

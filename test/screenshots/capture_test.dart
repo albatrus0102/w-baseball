@@ -29,12 +29,19 @@ import '../widget/harness.dart';
 ///
 /// Output lands in `docs/screenshots/`. These are **review artefacts, not
 /// assertions**: they are excluded from the default run (`--exclude-tags
-/// screenshots`) because pixel output depends on the host's fonts, and a
-/// failing pixel diff should never block a build.
+/// screenshots`) because a failing pixel diff should never block a build --
+/// that is a policy choice, independent of whether the pixels themselves are
+/// reproducible (see `_loadKoreanFont` below).
 ///
-/// Korean glyphs need a real font. `flutter test` ships a placeholder face that
-/// draws boxes, so a system Korean font is loaded when one is present; without
-/// it the capture still runs and is simply less readable.
+/// Korean glyphs need a real font. `flutter test` ships a placeholder face
+/// that draws boxes. Since `assets/fonts/Pretendard-*.ttf` is checked into
+/// this repo, `_loadBundledPretendard` below now registers it for every
+/// capture, so a Hangul/Latin/digit-only screen renders the same face on
+/// every host and in CI, not whatever Korean font that machine happens to
+/// have. A system Korean font is still loaded as a fallback, but only for
+/// glyphs Pretendard has no coverage for (Hanja, some symbols/emoji) -- no
+/// screen captured today needs one, but if a future one does, its pixels go
+/// back to depending on the host, same as before this change.
 void main() {
   setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
@@ -645,8 +652,95 @@ void main() {
   });
 }
 
-/// Registers a Korean-capable system font so captures show real text.
+/// Registers the fonts a capture needs, in two steps that must not mix.
+///
+/// 1. [_loadBundledPretendard] registers the five weights already shipped in
+///    every build (`assets/fonts/`, declared in `pubspec.yaml`) under family
+///    `Pretendard` -- the exact name [WbType] asks for. `flutter test` does
+///    not read `pubspec.yaml`'s `fonts:` block on its own (verified in
+///    `15886df`: capturing with and without that block produced identical
+///    goldens), so without this call the bundle sits unused during tests
+///    even though every release APK ships it. These assets are checked into
+///    the repo, so this step succeeds identically on every machine and in
+///    CI -- it is what makes a capture a function of the code alone rather
+///    than of whichever Korean font happens to be installed on the host
+///    that ran it.
+/// 2. [_loadSystemFallbackFont] registers a system Korean face -- Malgun
+///    Gothic on Windows, or whichever candidate exists -- but only under
+///    [WbType]'s `fontFamilyFallback` names, **never** under `Pretendard`
+///    itself. `fontFamilyFallback` is consulted per glyph, so this face
+///    only ever draws a character Pretendard has no glyph for (Hanja, or a
+///    symbol/emoji in a synced article title); it does not compete with the
+///    bundled weights for anything Pretendard already covers. Registering a
+///    second, unrelated font under `Pretendard` is exactly the bug this
+///    file used to have: `malgun.ttf` and `malgunbd.ttf` were both added to
+///    the `Pretendard` family, and it took reading Flutter's own
+///    `FontLoader.load()` (`packages/flutter/lib/src/services/font_loader.dart`)
+///    to confirm it loads strictly in call order, not completion order --
+///    so that specific pairing was never actually racy. The risk it stood
+///    in for is real regardless: two files with overlapping weight classes
+///    inside one family invites the engine to pick between them by
+///    whatever internal tie-break applies, which this codebase has no
+///    control over and no test for. Keeping only one source of glyphs per
+///    weight per family avoids relying on that tie-break at all.
+///
+/// What this does not fix: Linux CI has no `malgun.ttf`, so a capture
+/// containing Hanja or an emoji is only guaranteed pixel-identical on a
+/// host that has one of [_loadSystemFallbackFont]'s candidates, or has none
+/// of them (in which case that one glyph is tofu everywhere, which is at
+/// least consistent). Every screen captured today is pure Hangul/Latin/
+/// digits, so a golden has not yet exercised that gap.
 Future<void> _loadKoreanFont() async {
+  await _loadBundledPretendard();
+  await _loadSystemFallbackFont();
+}
+
+/// Registers `assets/fonts/Pretendard-*.ttf` under family `Pretendard`. Each
+/// file's own `OS/2 usWeightClass` (400/500/600/700/800 -- verified in
+/// `docs/design-system.md`) is what lets the engine's font matcher pick the
+/// right weight for a given `TextStyle.fontWeight`: `FontLoader` has no API
+/// to say "this file is the 700 weight", so five files with five distinct
+/// embedded weight classes, registered under one family, is what makes
+/// weight selection work at all here.
+Future<void> _loadBundledPretendard() async {
+  const assets = <String>[
+    'assets/fonts/Pretendard-Regular.ttf',
+    'assets/fonts/Pretendard-Medium.ttf',
+    'assets/fonts/Pretendard-SemiBold.ttf',
+    'assets/fonts/Pretendard-Bold.ttf',
+    'assets/fonts/Pretendard-ExtraBold.ttf',
+  ];
+  final loader = FontLoader('Pretendard');
+  var anyFound = false;
+  for (final path in assets) {
+    final file = File(path);
+    if (!file.existsSync()) continue;
+    anyFound = true;
+    loader.addFont(
+      file.readAsBytes().then((bytes) => ByteData.view(bytes.buffer)),
+    );
+  }
+  if (!anyFound) {
+    // Not fatal, but determinism ends here: every glyph, not just the ones
+    // outside Pretendard's coverage, now falls back to whichever system
+    // font `_loadSystemFallbackFont` finds below -- so from this point the
+    // capture is once again a function of the host, not just the code.
+    // ignore: avoid_print
+    print(
+      '[screenshots] assets/fonts/Pretendard-*.ttf not found; captures '
+      'fall back to system fonts and are no longer host-independent',
+    );
+    return;
+  }
+  await loader.load();
+}
+
+/// Registers a system Korean face under [WbType]'s fallback family names
+/// only (`Noto Sans KR` / `Apple SD Gothic Neo` / `Malgun Gothic` /
+/// `sans-serif`, plus `Roboto` for widgets outside [WbType]) -- deliberately
+/// not under `Pretendard`. See [_loadKoreanFont] for why the two must stay
+/// separate.
+Future<void> _loadSystemFallbackFont() async {
   const candidates = <String>[
     r'C:\Windows\Fonts\malgun.ttf',
     r'C:\Windows\Fonts\malgunbd.ttf',
@@ -661,16 +755,17 @@ Future<void> _loadKoreanFont() async {
     if (file.existsSync()) found.add(path);
   }
   if (found.isEmpty) {
-    // Not fatal: the capture still runs, it is just less legible.
+    // Not fatal: only glyphs outside Pretendard's coverage (Hanja, some
+    // symbols/emoji) render as boxes; everything else is unaffected.
     // ignore: avoid_print
-    print('[screenshots] no Korean system font found; glyphs will be boxes');
+    print(
+      '[screenshots] no Korean system font found; glyphs outside '
+      "Pretendard's coverage will be boxes",
+    );
     return;
   }
 
-  // Register under every family the app asks for, plus the fallbacks, so the
-  // text engine resolves Korean regardless of which name it tries first.
   for (final family in <String>[
-    'Pretendard',
     'Noto Sans KR',
     'Apple SD Gothic Neo',
     'Malgun Gothic',
