@@ -83,7 +83,10 @@ class WbHttpClient {
         headers: const <String, String>{
           'Accept': 'application/json',
           // No API keys, no credentials, no user identifiers are ever sent.
-          'User-Agent': 'w-baseball-app/0.1 (+https://github.com/)',
+          // Version here is manual and tracks pubspec.yaml's `version:` field
+          // (drop the +build number) — nothing wires it up automatically, so
+          // bump it by hand when that changes.
+          'User-Agent': 'w-baseball-app/0.1.0 (+https://github.com/albatrus0102/w-baseball)',
         },
       ),
     );

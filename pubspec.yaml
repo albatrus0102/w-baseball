@@ -50,9 +50,6 @@ dependencies:
   webview_flutter: 4.14.1
   package_info_plus: 9.0.1
 
-  # Only used for images we hold an explicit licence to cache.
-  cached_network_image: 3.4.1
-
   # Formatting / i18n.
   intl: 0.20.3
 

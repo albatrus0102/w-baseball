@@ -45,7 +45,7 @@ for _stream in (sys.stdout, sys.stderr):
     except (AttributeError, ValueError):
         pass
 
-USER_AGENT = "w-baseball-ingest/0.1 (+https://github.com/)"
+USER_AGENT = "w-baseball-ingest/0.1 (+https://github.com/albatrus0102/w-baseball)"
 
 # Secrets are read by name only. Their values are never printed or stored.
 SECRET_NAMES = {

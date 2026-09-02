@@ -28,7 +28,6 @@
 | `share_plus` | 예 | iPad에서 팝오버 앵커 필요 |
 | `webview_flutter` | 예 | `WKWebView` 사용. 허용 목록 로직은 그대로 |
 | `package_info_plus` | 예 | 없음 |
-| `cached_network_image` | 예 | 없음 |
 
 ---
 
