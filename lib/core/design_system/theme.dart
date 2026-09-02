@@ -64,7 +64,7 @@ class WbSemanticColors extends ThemeExtension<WbSemanticColors> {
     highlightSoft: WbColors.goldSoft,
     danger: WbColors.error,
     brandSoft: WbColors.navySoft,
-    skeleton: Color(0xFFECE9E2),
+    skeleton: Color(0xFFEBEDEF),
     scrim: Color(0x66111827),
   );
 

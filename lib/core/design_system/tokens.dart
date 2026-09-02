@@ -14,7 +14,7 @@ class WbColors {
   // Base ------------------------------------------------------------------
   static const ink = Color(0xFF111827);
   static const navy = Color(0xFF14213D);
-  static const canvas = Color(0xFFF7F5F0);
+  static const canvas = Color(0xFFF6F7F8);
   static const surface = Color(0xFFFFFFFF);
 
   // Accents ---------------------------------------------------------------
@@ -28,7 +28,7 @@ class WbColors {
   static const error = Color(0xFFC73939);
 
   // Derived light surfaces -------------------------------------------------
-  static const canvasRaised = Color(0xFFFFFDF9);
+  static const canvasRaised = Color(0xFFFBFCFD);
   static const inkSoft = Color(0xFF2B3444);
   static const tealSoft = Color(0xFFE6F2F1);
   static const coralSoft = Color(0xFFFDECEC);
