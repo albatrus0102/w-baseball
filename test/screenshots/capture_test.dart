@@ -12,6 +12,7 @@ import 'package:w_baseball/core/design_system/tokens.dart';
 import 'package:w_baseball/data/models/audience.dart';
 import 'package:w_baseball/features/discover/discover_screen.dart';
 import 'package:w_baseball/features/discover/nearby_games_screen.dart';
+import 'package:w_baseball/features/games/game_detail_screen.dart';
 import 'package:w_baseball/features/games/games_screen.dart';
 import 'package:w_baseball/features/home/home_screen.dart';
 import 'package:w_baseball/features/my_baseball/my_baseball_screen.dart';
@@ -310,6 +311,53 @@ void main() {
         seeded: false,
       ),
     );
+
+    // 경기 상세's quick-action bar with all four buttons, at the narrowest
+    // screen and at both ends of the text-scale range the app allows.
+    //
+    // Captured because until this existed, nobody could look at that bar. No
+    // bundled fixture carries `officialDetailUrl`, so the four-button branch
+    // only appears once synced data supplies the field, and every screenshot
+    // and audit probe in this repo had therefore only ever rendered the
+    // three-button one. The branch nobody could see was the worse of the
+    // two: it drew '공식 기록' into a label column 0.0dp wide at 1.0x, and
+    // pushed the button off the screen edge at 2.0x. `_QuickActionBar` now
+    // measures the labels and folds to 2x2 and then to a single column;
+    // these two images are what that decision looks like.
+    //
+    // `game_detail_quick_actions_test.dart` is what *asserts* the labels stay
+    // on one line — a golden cannot, since a pixel diff must never block a
+    // build (see this file's own doc). This pair is here so a reviewer sees
+    // the shape, not so a machine checks it.
+    for (final scale in <double>[1.0, 2.0]) {
+      testWidgets(
+        '경기 상세 · 공식 기록 있음 · 글자 $scale배',
+        (t) => capture(
+          t,
+          name: 'game_detail_official',
+          screen: const GameDetailScreen(gameId: 'game-demo-20260902-23'),
+          audience: player,
+          phone: TestPhone(
+            'small_360x640_text${(scale * 100).round()}',
+            const Size(360, 640),
+            textScale: scale,
+          ),
+          // The field the four-button branch depends on, written straight to
+          // the row the sync engine just created rather than into the seed
+          // documents, so this capture shares `capture`'s single app build
+          // with every other one instead of needing its own.
+          seedLocalState: (app) async {
+            await (app.db.update(
+              app.db.games,
+            )..where((g) => g.id.equals('game-demo-20260902-23'))).write(
+              const GamesCompanion(
+                officialDetailUrl: Value('https://example.org/games/23'),
+              ),
+            );
+          },
+        ),
+      );
+    }
   });
 
   group('발견', () {

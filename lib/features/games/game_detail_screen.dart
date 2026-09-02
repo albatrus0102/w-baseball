@@ -218,9 +218,23 @@ class _QuickActions extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final services = ref.watch(platformServicesProvider);
-    final card = detail.card;
     final game = detail.game;
-    final venue = card.venue;
+    final venue = detail.card.venue;
+
+    // The reminder's state is read *here* rather than inside its own widget
+    // because its label changes length with that state ('알림' / '알림 켜짐'),
+    // and `_QuickActionBar` measures the labels to decide the layout. A
+    // subscription living one level down would swap the label without the
+    // bar remeasuring, leaving the grid sized for the label it no longer
+    // shows.
+    final saved = ref.watch(savedGameIdsProvider).value ?? const <String>{};
+    final isOn = saved.contains(game.id);
+    final categories = ref.watch(notificationPreferenceProvider).value;
+    // A finished or called-off fixture has nothing left to announce.
+    final canRemind =
+        game.startTimeUtc.isAfter(ref.watch(clockProvider)()) &&
+        game.status != GameStatus.cancelled &&
+        game.status != GameStatus.postponed;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -229,54 +243,53 @@ class _QuickActions extends ConsumerWidget {
         WbSpace.screen,
         WbSpace.md,
       ),
-      child: Row(
-        children: <Widget>[
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: services.calendar.isSupported
-                  ? () => _addToCalendar(context, ref)
-                  : null,
-              icon: const Icon(Icons.event_available_outlined, size: 18),
-              label: const Text('캘린더'),
-            ),
+      child: _QuickActionBar(
+        actions: <_QuickAction>[
+          _QuickAction(
+            label: '캘린더',
+            icon: Icons.event_available_outlined,
+            onPressed: services.calendar.isSupported
+                ? () => _addToCalendar(context, ref)
+                : null,
           ),
-          const SizedBox(width: WbSpace.sm),
-          Expanded(child: _ReminderButton(detail: detail)),
-          const SizedBox(width: WbSpace.sm),
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: (venue?.isRoutable ?? false)
-                  ? () => _openDirections(context, ref)
-                  : null,
-              icon: const Icon(Icons.directions_outlined, size: 18),
-              label: const Text('길찾기'),
-            ),
+          _QuickAction(
+            label: isOn ? '알림 켜짐' : '알림',
+            icon: isOn
+                ? Icons.notifications_active_rounded
+                : Icons.notifications_none_rounded,
+            onPressed: canRemind
+                ? () => _toggleReminder(context, ref, isOn, categories)
+                : null,
           ),
-          if (game.officialDetailUrl != null) ...<Widget>[
-            const SizedBox(width: WbSpace.sm),
-            Expanded(
-              child: FilledButton.icon(
-                onPressed: () {
-                  ref
-                      .read(analyticsProvider)
-                      .log(
-                        AnalyticsEvent.sourceOpened,
-                        properties: <String, Object?>{'screen': 'game_detail'},
-                      );
-                  openSource(
-                    context,
-                    url: game.officialDetailUrl!,
-                    title:
-                        '${card.awayTeam.displayName} vs '
-                        '${card.homeTeam.displayName}',
-                    sourceLabel: game.provenance.sourceName,
-                  );
-                },
-                icon: const Icon(Icons.description_outlined, size: 18),
-                label: const Text('공식 기록'),
-              ),
+          _QuickAction(
+            label: '길찾기',
+            icon: Icons.directions_outlined,
+            onPressed: (venue?.isRoutable ?? false)
+                ? () => _openDirections(context, ref)
+                : null,
+          ),
+          if (game.officialDetailUrl != null)
+            _QuickAction(
+              label: '공식 기록',
+              icon: Icons.description_outlined,
+              emphasized: true,
+              onPressed: () {
+                ref
+                    .read(analyticsProvider)
+                    .log(
+                      AnalyticsEvent.sourceOpened,
+                      properties: <String, Object?>{'screen': 'game_detail'},
+                    );
+                openSource(
+                  context,
+                  url: game.officialDetailUrl!,
+                  title:
+                      '${detail.card.awayTeam.displayName} vs '
+                      '${detail.card.homeTeam.displayName}',
+                  sourceLabel: game.provenance.sourceName,
+                );
+              },
             ),
-          ],
         ],
       ),
     );
@@ -327,6 +340,234 @@ class _QuickActions extends ConsumerWidget {
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('지도 앱을 열지 못했습니다.')));
     }
+  }
+
+  Future<void> _toggleReminder(
+    BuildContext context,
+    WidgetRef ref,
+    bool isOn,
+    NotificationPreference? preference,
+  ) async {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final follows = ref.read(followRepositoryProvider);
+    final prefs = ref.read(preferencesProvider);
+
+    if (isOn) {
+      await follows.toggleSaved(SavedItemKind.game, detail.game.id);
+      await ref.read(platformServicesProvider).haptics.selection();
+      messenger?.showSnackBar(const SnackBar(content: Text('이 경기 알림을 껐습니다.')));
+      return;
+    }
+
+    // Ask for permission at the moment of intent, not before.
+    var current = preference ?? prefs.notifications;
+    if (!current.permissionRequested) {
+      await ref.read(notificationServiceProvider).requestPermission();
+      current = current.copyWith(permissionRequested: true);
+      await prefs.saveNotifications(current);
+    }
+
+    await follows.toggleSaved(SavedItemKind.game, detail.game.id);
+    await ref.read(platformServicesProvider).haptics.selection();
+    await ref.read(analyticsProvider).log(AnalyticsEvent.gameSaved);
+
+    if (!context.mounted) return;
+
+    // Ask the shared judgement why an alert would not arrive, rather than
+    // guessing from the categories alone. Blaming the wrong cause sends the
+    // user to a screen that cannot fix their problem.
+    final status = await ref.read(reminderStatusProvider.future);
+    if (!context.mounted) return;
+
+    final blocker = status.blocker;
+    messenger?.showSnackBar(
+      SnackBar(
+        content: Text(
+          blocker.blocks
+              ? '경기를 저장했습니다. ${blocker.messageKo}'
+              : blocker.messageKo,
+        ),
+        action: switch (blocker) {
+          ReminderBlocker.permissionDenied => SnackBarAction(
+            label: blocker.actionLabelKo!,
+            onPressed: () => ref
+                .read(platformServicesProvider)
+                .systemSettings
+                .openNotificationSettings(),
+          ),
+          ReminderBlocker.categoriesOff => SnackBarAction(
+            label: blocker.actionLabelKo!,
+            onPressed: () => context.push(WbRoutes.notifications),
+          ),
+          _ => null,
+        },
+      ),
+    );
+  }
+}
+
+/// One button in [_QuickActionBar]: the label the bar measures, plus what to
+/// draw and run.
+class _QuickAction {
+  const _QuickAction({
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+    this.emphasized = false,
+  });
+
+  final String label;
+  final IconData icon;
+
+  /// Null renders the button disabled — it still occupies a column, because a
+  /// 캘린더 button that vanishes on a device without a calendar app would
+  /// reflow the whole bar rather than explain itself.
+  final VoidCallback? onPressed;
+
+  /// Draws as a `FilledButton.icon` rather than an `OutlinedButton.icon`, and
+  /// is measured with that button's wider padding.
+  final bool emphasized;
+}
+
+/// The action buttons under the fixture card, in as many equal columns as
+/// their labels actually fit in — four, two, or one.
+///
+/// Laying these out as a `Row` of `Expanded` buttons, which is what this
+/// replaced, hands every button an equal 1/N of the width no matter what its
+/// label needs. Like the `Expanded(Text)` shape that
+/// `scripts/validate/find_squeezed_rows.py` enumerates (this row was entry
+/// one on that list), it never overflows — `Expanded` absorbs the squeeze —
+/// so no overflow probe can see it. What it does instead is break each label
+/// into one Hangul syllable per line. Measured on a 360dp screen, that was
+/// not an accessibility-only defect: with four buttons, '캘린더' already drew
+/// as 캘/린/더 at **1.0x**, and '공식 기록' got a label column 0.0dp wide.
+///
+/// The column count is measured per build with [TextPainter] rather than
+/// switched on a text-scale threshold, following [WbNoticeWithAction] in
+/// `notice_widgets.dart` — the same reason applies here: the deciding
+/// variable is how wide these particular labels are, and '알림' vs '알림 켜짐'
+/// changes that at a fixed scale. Labels are never shrunk, ellipsised, or
+/// dropped for their icons: a larger text scale is an accessibility setting
+/// someone turned on deliberately, and answering it by hiding the words
+/// defeats it. The bar gets taller instead, which a scrolling screen can
+/// afford.
+class _QuickActionBar extends StatelessWidget {
+  const _QuickActionBar({required this.actions});
+
+  final List<_QuickAction> actions;
+
+  /// Column counts tried, widest first; counts above [actions] length are
+  /// skipped, so a three-button bar starts at 3. Three is kept for the
+  /// four-button bar too, even though it leaves a single button alone on the
+  /// second run: dropping it would also forbid the three-button bar its own
+  /// natural single row on a screen wide enough for one.
+  static const List<int> _steps = <int>[4, 3, 2, 1];
+
+  @override
+  Widget build(BuildContext context) {
+    if (actions.isEmpty) return const SizedBox.shrink();
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final needed = _widestButton(context);
+        final columns = _columnsThatFit(constraints.maxWidth, needed);
+        final width =
+            (constraints.maxWidth - (columns - 1) * WbSpace.sm) / columns;
+
+        return Wrap(
+          spacing: WbSpace.sm,
+          runSpacing: WbSpace.sm,
+          children: <Widget>[
+            for (final action in actions)
+              SizedBox(width: width, child: _button(action)),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _button(_QuickAction action) {
+    // Keyed the way `game_log_widgets.dart` keys its fields: '길찾기' and
+    // '공식 기록' each appear a second time further down this screen (the
+    // 관람 준비 venue row, the 상세 기록 card), so a test that reaches for a
+    // quick action by its text alone finds two widgets and cannot say which
+    // one it measured.
+    final key = ValueKey<String>('quickAction_${action.label}');
+    final icon = Icon(action.icon, size: 18);
+    // Deliberately not `maxLines: 1`: if [_widestButton] ever measures
+    // short, a wrapped label is visible on screen and fails the
+    // line-count assertion in `game_detail_quick_actions_test.dart`,
+    // whereas a clipped or ellipsised one would hide the same mistake.
+    final label = Text(action.label);
+    return action.emphasized
+        ? FilledButton.icon(
+            key: key,
+            onPressed: action.onPressed,
+            icon: icon,
+            label: label,
+          )
+        : OutlinedButton.icon(
+            key: key,
+            onPressed: action.onPressed,
+            icon: icon,
+            label: label,
+          );
+  }
+
+  /// The largest count in [_steps] whose columns are each at least [needed]
+  /// wide. Falls through to 1 — a single full-width column is the last shape
+  /// that can still show a label whole.
+  int _columnsThatFit(double maxWidth, double needed) {
+    for (final columns in _steps) {
+      if (columns > actions.length) continue;
+      if ((maxWidth - (columns - 1) * WbSpace.sm) / columns >= needed) {
+        return columns;
+      }
+    }
+    return 1;
+  }
+
+  /// Width the widest button needs to keep its label on one line: the label
+  /// text measured at its real style and the live text scale, plus
+  /// [_chromeWidth].
+  ///
+  /// Deliberately generous, for the same reason [WbNoticeWithAction] is: the
+  /// only failure this measurement must not produce is claiming a label fits
+  /// when it does not. Folding to fewer columns a little early costs vertical
+  /// space on a screen that scrolls; folding too late puts a syllable on its
+  /// own line, which is the defect.
+  double _widestButton(BuildContext context) {
+    final textScaler = MediaQuery.textScalerOf(context);
+    var widest = 0.0;
+    for (final action in actions) {
+      // Both `outlinedButtonTheme` and `filledButtonTheme` in `theme.dart`
+      // set `textStyle: WbType.bodyStrong` — the style Material renders these
+      // labels in.
+      final painter = TextPainter(
+        text: TextSpan(text: action.label, style: WbType.bodyStrong),
+        textDirection: TextDirection.ltr,
+        textScaler: textScaler,
+      )..layout();
+      final width = painter.width + _chromeWidth(textScaler, action.emphasized);
+      if (width > widest) widest = width;
+    }
+    return widest;
+  }
+
+  /// Width a button adds beyond its own label: its horizontal padding from
+  /// `theme.dart` (`WbSpace.lg` a side for outlined, `WbSpace.xl` for filled),
+  /// plus the 18dp icon and the gap Material puts beside it.
+  ///
+  /// Material also grows a button's padding as the text scale rises, inside
+  /// its own private implementation. That is not modelled exactly here —
+  /// instead the whole allowance scales with [textScaler], a generous
+  /// stand-in that cannot fall behind Material's growth. Same approach, and
+  /// same reasoning, as `_actionChromeWidth` in `notice_widgets.dart`.
+  double _chromeWidth(TextScaler textScaler, bool emphasized) {
+    final padding = (emphasized ? WbSpace.xl : WbSpace.lg) * 2;
+    const iconAllowance = 18 + WbSpace.sm;
+    final growth = textScaler.scale(1).clamp(1.0, 2.0);
+    return (padding + iconAllowance) * growth;
   }
 }
 
@@ -716,98 +957,3 @@ class GameWeatherPanel extends ConsumerWidget {
 /// Permission is requested here and nowhere earlier — this is the first moment
 /// the user has actually asked to be interrupted. On iOS especially, asking at
 /// launch and being refused is unrecoverable.
-class _ReminderButton extends ConsumerWidget {
-  const _ReminderButton({required this.detail});
-
-  final GameDetail detail;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final game = detail.game;
-    final saved = ref.watch(savedGameIdsProvider).value ?? const <String>{};
-    final isOn = saved.contains(game.id);
-    final categories = ref.watch(notificationPreferenceProvider).value;
-
-    // A finished or called-off fixture has nothing left to announce.
-    final canRemind =
-        game.startTimeUtc.isAfter(ref.watch(clockProvider)()) &&
-        game.status != GameStatus.cancelled &&
-        game.status != GameStatus.postponed;
-
-    return OutlinedButton.icon(
-      onPressed: canRemind
-          ? () => _toggle(context, ref, isOn, categories)
-          : null,
-      icon: Icon(
-        isOn
-            ? Icons.notifications_active_rounded
-            : Icons.notifications_none_rounded,
-        size: 18,
-      ),
-      label: Text(isOn ? '알림 켜짐' : '알림'),
-    );
-  }
-
-  Future<void> _toggle(
-    BuildContext context,
-    WidgetRef ref,
-    bool isOn,
-    NotificationPreference? preference,
-  ) async {
-    final messenger = ScaffoldMessenger.maybeOf(context);
-    final follows = ref.read(followRepositoryProvider);
-    final prefs = ref.read(preferencesProvider);
-
-    if (isOn) {
-      await follows.toggleSaved(SavedItemKind.game, detail.game.id);
-      await ref.read(platformServicesProvider).haptics.selection();
-      messenger?.showSnackBar(const SnackBar(content: Text('이 경기 알림을 껐습니다.')));
-      return;
-    }
-
-    // Ask for permission at the moment of intent, not before.
-    var current = preference ?? prefs.notifications;
-    if (!current.permissionRequested) {
-      await ref.read(notificationServiceProvider).requestPermission();
-      current = current.copyWith(permissionRequested: true);
-      await prefs.saveNotifications(current);
-    }
-
-    await follows.toggleSaved(SavedItemKind.game, detail.game.id);
-    await ref.read(platformServicesProvider).haptics.selection();
-    await ref.read(analyticsProvider).log(AnalyticsEvent.gameSaved);
-
-    if (!context.mounted) return;
-
-    // Ask the shared judgement why an alert would not arrive, rather than
-    // guessing from the categories alone. Blaming the wrong cause sends the
-    // user to a screen that cannot fix their problem.
-    final status = await ref.read(reminderStatusProvider.future);
-    if (!context.mounted) return;
-
-    final blocker = status.blocker;
-    messenger?.showSnackBar(
-      SnackBar(
-        content: Text(
-          blocker.blocks
-              ? '경기를 저장했습니다. ${blocker.messageKo}'
-              : blocker.messageKo,
-        ),
-        action: switch (blocker) {
-          ReminderBlocker.permissionDenied => SnackBarAction(
-            label: blocker.actionLabelKo!,
-            onPressed: () => ref
-                .read(platformServicesProvider)
-                .systemSettings
-                .openNotificationSettings(),
-          ),
-          ReminderBlocker.categoriesOff => SnackBarAction(
-            label: blocker.actionLabelKo!,
-            onPressed: () => context.push(WbRoutes.notifications),
-          ),
-          _ => null,
-        },
-      ),
-    );
-  }
-}
