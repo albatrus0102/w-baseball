@@ -44,6 +44,17 @@ def spans(source: str, opener: str):
 
 
 def main() -> int:
+    # Windows consoles default stdout/stderr to the system codepage (cp949/
+    # cp1252, not UTF-8), which cannot encode the em dash below and crashes
+    # with UnicodeEncodeError -- exit code 1, indistinguishable from a real
+    # finding -- before a single line prints. Same fix as check_contrast.py
+    # and check_declared_assets.py.
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8")
+        except (AttributeError, ValueError):
+            pass
+
     hits: list[str] = []
     for path in sorted((ROOT / "lib").rglob("*.dart")):
         source = path.read_text(encoding="utf-8")
