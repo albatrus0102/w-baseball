@@ -24,6 +24,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 선언된 asset 경로 git 추적 확인
+        # Runs first, before any flutter step, for the same reason
+        # tools/commit_gate.py orders it first: it is the check that would
+        # have caught `assets/icons/` (declared in pubspec.yaml, present on
+        # disk, tracked by git nowhere) before spending any time on the rest
+        # of this job. Needs only python + git, so it does not wait on the
+        # Flutter SDK setup below.
+        run: python scripts/validate/check_declared_assets.py
+
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -110,6 +123,14 @@ jobs:
         run: |
           python scripts/publish/build_seed.py --generated-at 2026-08-30T00:00:00Z
           python scripts/validate/validate_data.py public-data
+
+      - name: 색 대비 검사 (Task A ratchet)
+        # Ratchet: contrast_baseline.json freezes the 11 pre-existing WCAG
+        # shortfalls as of the day this check went live. This only fails on a
+        # NEW shortfall (a regression not in the baseline) or a baseline entry
+        # that now passes and was never removed (stale). See
+        # scripts/validate/check_contrast.py's module docstring.
+        run: python scripts/validate/check_contrast.py
 
   build-android:
     name: Android 빌드

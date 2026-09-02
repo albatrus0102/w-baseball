@@ -63,10 +63,13 @@ python tools/commit_gate.py
 `FLUTTER_ROOT`/`FLUTTER_HOME` → gitignore 된 `.flutter_root` 순으로 찾습니다.
 
 **Flutter 가 없는 환경(클라우드 세션 등)에서는 게이트가 안 돕니다.** 그럴 때는
-**GitHub Actions CI 가 검증을 맡습니다** — `.github/workflows/ci.yml` 이 코드
-생성·포맷·정적 분석·테스트·데이터 검증·Android 빌드를 돌립니다. 게이트를 못
-돌렸으면 **"통과"라고 쓰지 말고 "돌리지 못했고 CI 결과를 기다린다"** 고
-쓰세요. 못 돌린 것과 돌려서 통과한 것은 다릅니다.
+**GitHub Actions CI 가 검증을 맡습니다** — `.github/workflows/ci.yml` 이 로컬
+게이트 12단계를 전부(선언된 asset git 추적 확인·색 대비 래칫 포함) 같은 방식으로
+돌리고, 거기에 로컬 게이트가 일부러 빼는 Android APK 빌드가 하나 더 있습니다
+(release-artefact 빌드일 뿐, `flutter analyze`/`flutter test` 가 이미 검사하지
+않는 것을 증명하지 않아서입니다). 게이트를 못 돌렸으면 **"통과"라고 쓰지 말고
+"돌리지 못했고 CI 결과를 기다린다"** 고 쓰세요. 못 돌린 것과 돌려서 통과한 것은
+다릅니다.
 
 ---
 
