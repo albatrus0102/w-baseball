@@ -106,6 +106,12 @@ python tools/commit_gate.py
 - **git 은 빈 디렉터리를 추적하지 않습니다.** `pubspec.yaml` 에 선언만 하고
   파일이 없는 asset 디렉터리는 새로 받은 저장소에서 `flutter analyze` 를
   깨뜨립니다.
+- **공유 파일은 통째로 복사하지 말고 패치로 얹으세요.** 워크트리나 다른
+  세션의 작업을 가져올 때, 두 쪽이 같은 파일을 만졌으면 복사가 한쪽을
+  조용히 지웁니다. **덮인 코드는 어떤 테스트도 실패시키지 않습니다** —
+  게이트도 CI도 사라진 코드는 못 봅니다. `git diff` 로 패치를 떠서
+  `git apply --check` 로 확인하고 붙이세요. 실제로 겹치는 자리:
+  `test/screenshots/capture_test.dart`, `test/widget/harness.dart`.
 - **파이프에 물린 종료코드를 읽지 마세요.** `cmd | tail` 의 `$?` 는 `tail` 의
   것이고, `cmd; echo "$?"` 를 백그라운드로 돌리면 `echo` 의 것입니다. 이
   프로젝트에서 네 번 틀렸습니다. **파일에 적어서 읽으세요.**
