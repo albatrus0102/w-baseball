@@ -2,10 +2,24 @@ import 'package:flutter/material.dart';
 
 /// Typography for Korean-first sports content.
 ///
-/// Font strategy: we ship no font binaries. `Pretendard` / `Noto Sans KR` are
-/// named first and the platform falls back to the Android system Korean face
-/// when they are absent, so the app never renders tofu and we never bundle a
-/// font whose licence we have not cleared. See docs/design-system.md.
+/// Font strategy: `Pretendard` (v1.3.9, SIL Open Font License 1.1 --
+/// `assets/fonts/OFL.txt` ships alongside per the license's distribution
+/// requirement) is bundled directly, in the five static weights this file
+/// uses -- Regular 400, Medium 500, SemiBold 600, Bold 700, ExtraBold 800 --
+/// declared under `flutter: fonts:` in `pubspec.yaml`. Bundling adds
+/// +6,420,430 bytes (~6.12 MiB) to the release APK; that number is from a
+/// full `flutter clean` rebuild, because an incremental build under-reports
+/// it (Android Gradle's zipflinger incremental packaging showed a false
+/// +514 bytes for this same change).
+///
+/// `_koFallback` below still earns its place even though Pretendard is
+/// bundled: `fontFamilyFallback` is consulted per glyph, not per style, so
+/// it only fires for characters Pretendard itself has no glyph for --
+/// Hanja and other CJK ideographs outside Pretendard's Hangul/Latin
+/// coverage, or symbols/emoji that can turn up in synced article titles.
+/// The system Korean faces are what keep *those* characters from rendering
+/// as tofu; this is not a hedge against Pretendard failing to load. See
+/// docs/design-system.md.
 ///
 /// Scores and record tables use [FontFeature.tabularFigures] so digits stay in
 /// vertical alignment inside line-score and standings tables.

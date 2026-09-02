@@ -50,8 +50,16 @@
 
 ### 타이포그래피
 
-`Pretendard` + 한국어 폴백. **점수와 기록은 tabular figures** — 숫자 폭이
+`Pretendard`(v1.3.9, SIL OFL 1.1) 다섯 굵기(400/500/600/700/800)를
+`assets/fonts/` 에 번들합니다 — 릴리스 APK가 +6,420,430바이트(약 6.12MiB)
+늘어나는 대가로, 기기마다 다른 안드로이드 한국어 시스템 폰트(또는 그 부재)에
+기대지 않고 모든 기기에서 같은 얼굴로 렌더링됩니다. `Noto Sans KR` / `Apple SD
+Gothic Neo` / `Malgun Gothic` / `sans-serif` 폴백은 번들 후에도 남겨 두는데,
+이는 Pretendard 로딩 실패 대비가 아니라 **글자 단위** 폴백입니다 — Pretendard의
+한글·라틴 범위 밖의 한자(漢字)나 동기화된 기사 제목에 섞여 들어올 수 있는
+기호·이모지가 그 대상입니다. **점수와 기록은 tabular figures** — 숫자 폭이
 고정되지 않으면 표에서 자릿수가 흔들립니다. `WbClamp` 이 줄 수 상한을 담당합니다.
+자세한 근거는 `lib/core/design_system/typography.dart` 머리 주석 참고.
 
 ---
 
