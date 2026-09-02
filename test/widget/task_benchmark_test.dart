@@ -33,8 +33,13 @@ void main() {
     WidgetTester tester, {
     required AudiencePreference audience,
     bool seeded = true,
+    DateTime? frozenNow,
   }) async {
-    final app = await buildTestApp(seedAssets: seeded, audience: audience);
+    final app = await buildTestApp(
+      seedAssets: seeded,
+      audience: audience,
+      frozenNow: frozenNow,
+    );
     addTearDown(app.dispose);
 
     await tester.pumpWidget(
@@ -402,7 +407,21 @@ void main() {
     });
 
     testWidgets('알림을 켜면 저장되고 예약 대상이 된다', (tester) async {
-      final app = await pumpApp(tester, audience: player);
+      // `game-demo-20260902-23` (assets/seed/games/2026-09.json) kicks off at
+      // 2026-09-02T05:00:00Z. Without a frozen clock this test reads the real
+      // wall clock: once real time passes that instant, the reminder button's
+      // `canRemind` gate in `_QuickActions` (game_detail_screen.dart) —
+      // correctly — goes false for a game already under way, the tap becomes
+      // a no-op, and `watchSavedIds` stays empty forever. That is a genuine
+      // defect in this test, not a database race: no amount of waiting after
+      // the tap can produce a save the button refused to start. Freeze well
+      // before kickoff so the test's outcome does not depend on what time of
+      // day it happens to run.
+      final app = await pumpApp(
+        tester,
+        audience: player,
+        frozenNow: DateTime.utc(2026, 9, 2),
+      );
 
       await tap(tester, find.byType(WbHeroGameCard), 0);
       expect(find.text('알림'), findsOneWidget);
