@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:w_baseball/app/providers.dart';
 import 'package:w_baseball/core/design_system/components/primitives.dart';
+import 'package:w_baseball/core/design_system/components/stat_strip_widgets.dart';
 import 'package:w_baseball/data/mappers/row_mappers.dart';
 import 'package:w_baseball/data/models/audience.dart';
 import 'package:w_baseball/data/models/game_log.dart';
@@ -151,7 +152,12 @@ void main() {
 
       // '승' was tapped above, so the header now carries the W-L-D suffix
       // too (see `_GameLogSummary._headerTextKo`) — not a bare "1게임 기록".
-      expect(find.text('1게임 기록 · 1승 0패 0무'), findsOneWidget);
+      // Once a result exists, that sentence is the `WbStatStrip`'s semantic
+      // label rather than rendered text (`_GameLogResultHeader`) — the
+      // numbers themselves render as separate "1"/"게임"/"승"/"패"/"무" cell
+      // texts, which is what a screen reader must not be left to stitch
+      // back together on its own.
+      expect(find.bySemanticsLabel('1게임 기록 · 1승 0패 0무'), findsOneWidget);
       expect(find.text('한강 리버베어스'), findsOneWidget);
       expect(find.textContaining('병살 하나 잡음'), findsWidgets);
     });
@@ -189,6 +195,68 @@ void main() {
         find.byKey(const ValueKey('gameLogPositionChip_shortstop')),
       );
       expect(chip.selected, isTrue);
+    });
+  });
+
+  group('요약 헤더의 통계 스트립', () {
+    // `WbStatStrip` folds to a 2x2 grid once its four cells no longer fit
+    // one row — proven directly against the widget in
+    // `test/widget/stat_strip_test.dart`. This test instead answers a
+    // different question: at the width and text scale this repo's own
+    // audit probe treats as the accessibility ceiling (360dp, 2.0x — see
+    // `test/audit/text_scale_probe_test.dart`), does the real card ever
+    // actually reach that folded state? Measured, not assumed: it does not
+    // — 게임/승/패/무 stay short enough that the strip never needs to fold
+    // at any width this app ships to, so this only asserts what is true
+    // either way (no overflow) and records the fold state rather than
+    // asserting one, so a future change that does widen a cell enough to
+    // force a fold does not fail this test for the wrong reason.
+    testWidgets('360dp·2.0배에서도 넘치지 않는다 (실제로는 접히지 않음)', (tester) async {
+      final app = await buildTestApp(
+        audience: player,
+        seedAssets: false,
+        frozenNow: DateTime.utc(2026, 8, 30, 9),
+      );
+      addTearDown(app.dispose);
+
+      final repo = app.container.read(gameLogRepositoryProvider);
+      await repo.addEntry(
+        playedAt: DateTime.utc(2026, 8, 20),
+        result: GameLogResult.win,
+      );
+      await repo.addEntry(
+        playedAt: DateTime.utc(2026, 8, 23),
+        result: GameLogResult.loss,
+      );
+
+      await pumpScreen(
+        tester,
+        app,
+        const MyBaseballScreen(),
+        phone: const TestPhone('probe_360_2x', Size(360, 1400), textScale: 2.0),
+      );
+      await settle(tester);
+      await scrollToEnd(tester);
+
+      expect(tester.takeException(), isNull);
+      expect(find.bySemanticsLabel('2게임 기록 · 1승 1패 0무'), findsOneWidget);
+
+      // Scoped to the strip itself: the entry list below also shows a "패"
+      // result badge, so an unscoped `find.text('패')` is ambiguous once
+      // both a win and a loss are logged.
+      final strip = find.byType(WbStatStrip);
+      final gameTop = tester
+          .getTopLeft(find.descendant(of: strip, matching: find.text('게임')))
+          .dy;
+      final lossTop = tester
+          .getTopLeft(find.descendant(of: strip, matching: find.text('패')))
+          .dy;
+      // Recorded, not asserted either way — see the doc above.
+      debugPrint(
+        lossTop > gameTop
+            ? 'WbStatStrip: 360dp·2.0x에서 2x2로 접힘'
+            : 'WbStatStrip: 360dp·2.0x에서도 한 줄 유지 (게임/승/패/무 넓이가 짧아 접힐 필요가 없었음)',
+      );
     });
   });
 

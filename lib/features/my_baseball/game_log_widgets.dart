@@ -7,6 +7,7 @@ import '../../app/router.dart';
 import '../../core/analytics/analytics.dart';
 import '../../core/design_system/components/notice_widgets.dart';
 import '../../core/design_system/components/primitives.dart';
+import '../../core/design_system/components/stat_strip_widgets.dart';
 import '../../core/design_system/theme.dart';
 import '../../core/design_system/tokens.dart';
 import '../../core/design_system/typography.dart';
@@ -186,6 +187,22 @@ class _GameLogCompactPrompt extends ConsumerWidget {
 /// "1게임 기록" broke mid-syllable ("1게 / 임") against the button at 2.0x
 /// text scale on a 360dp screen, since `WbType.title` is large enough that
 /// the two together no longer fit one line at that scale.
+///
+/// Once a result exists to show (`summary.hasAnyResult`), the count and
+/// W-L-D breakdown render as a `WbStatStrip` (게임/승/패/무) instead of the
+/// sentence `WbNoticeWithAction` used to lay out — see that widget's own
+/// squeeze-fold guarantee, which this header still relies on for its
+/// "기록 추가" button. The button moves to its own row below the strip
+/// rather than sharing a row with it: `WbStatStrip` already decides its own
+/// row-vs-2x2-grid fold from the width it is given, and a second,
+/// independent fold decision for "does the button also fit beside it" would
+/// duplicate that logic for no reason — the strip's cells are short single
+/// syllables (게임/승/패/무) that tolerate a narrow column far better than a
+/// sentence does, so there is no sentence-squeeze failure mode here to
+/// guard against. Before there is any result to show, the header keeps the
+/// original single-sentence `WbNoticeWithAction` unchanged — showing an
+/// all-zero strip for a log with no recorded result would read as "0승 0패
+/// 0무" happened, which is exactly what `_headerTextKo` has never shown.
 class _GameLogSummary extends ConsumerWidget {
   const _GameLogSummary({required this.entries});
 
@@ -203,14 +220,23 @@ class _GameLogSummary extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            WbNoticeWithAction(
-              text: _headerTextKo(summary),
-              textStyle: WbType.title.copyWith(color: c.ink),
-              actionLabel: '기록 추가',
-              actionIcon: Icons.add_rounded,
-              onAction: () =>
-                  showGameLogEntrySheet(context, ref, entries: entries),
-            ),
+            if (summary.hasAnyResult)
+              _GameLogResultHeader(
+                entryCount: entries.length,
+                summary: summary,
+                semanticLabel: _headerTextKo(summary),
+                onAddEntry: () =>
+                    showGameLogEntrySheet(context, ref, entries: entries),
+              )
+            else
+              WbNoticeWithAction(
+                text: _headerTextKo(summary),
+                textStyle: WbType.title.copyWith(color: c.ink),
+                actionLabel: '기록 추가',
+                actionIcon: Icons.add_rounded,
+                onAction: () =>
+                    showGameLogEntrySheet(context, ref, entries: entries),
+              ),
             if (last.note != null && last.note!.trim().isNotEmpty) ...<Widget>[
               const SizedBox(height: WbSpace.sm),
               Text(
@@ -262,6 +288,51 @@ class _GameLogSummary extends ConsumerWidget {
     final base = '${entries.length}게임 기록';
     if (!summary.hasAnyResult) return base;
     return '$base · ${summary.wins}승 ${summary.losses}패 ${summary.draws}무';
+  }
+}
+
+/// The stat-strip form of `_GameLogSummary`'s header, once at least one
+/// result has been recorded. The strip carries [semanticLabel] for the
+/// whole "N게임 기록 · W승 L패 D무" fact; the "기록 추가" button sits on its
+/// own row below so it never has to share width-fold logic with the strip.
+class _GameLogResultHeader extends StatelessWidget {
+  const _GameLogResultHeader({
+    required this.entryCount,
+    required this.summary,
+    required this.semanticLabel,
+    required this.onAddEntry,
+  });
+
+  final int entryCount;
+  final GameLogStatSummary summary;
+  final String semanticLabel;
+  final VoidCallback onAddEntry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        WbStatStrip(
+          semanticLabel: semanticLabel,
+          cells: <WbStatCell>[
+            WbStatCell(value: '$entryCount', label: '게임'),
+            WbStatCell(value: '${summary.wins}', label: '승'),
+            WbStatCell(value: '${summary.losses}', label: '패'),
+            WbStatCell(value: '${summary.draws}', label: '무'),
+          ],
+        ),
+        const SizedBox(height: WbSpace.sm),
+        Align(
+          alignment: Alignment.centerRight,
+          child: FilledButton.icon(
+            onPressed: onAddEntry,
+            icon: const Icon(Icons.add_rounded, size: 18),
+            label: const Text('기록 추가'),
+          ),
+        ),
+      ],
+    );
   }
 }
 
