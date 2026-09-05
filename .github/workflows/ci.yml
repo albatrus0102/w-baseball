@@ -104,9 +104,26 @@ jobs:
         # 실패 여부를 아직 모르는 상태에서 게이트로 걸면, 리눅스가 실제로
         # 다를 경우 아무도 못 미는 CI 가 된다. --update-goldens 는 절대
         # 쓰지 않는다 -- 여기서 갱신하면 측정이 아니라 도장이 된다.
+        #
+        # 출력은 파이프로 넘기지 않고 파일로 받는다: `flutter test | tee` 뒤에서
+        # `$?`를 읽으면 그 종료코드는 tee의 것이지 flutter test의 것이 아니다
+        # -- 이 저장소에서 이미 네 번 틀린 실수라 CLAUDE.md에 적혀 있다.
+        # 파일에 적은 종료코드를 마지막 줄에서 그대로 `exit`하므로, 이 단계
+        # 자체의 성패는 여전히 flutter test의 실제 결과를 그대로 반영한다 --
+        # continue-on-error가 하는 일은 "이 단계가 실패해도 job은 빨갛게 만들지
+        # 않는다"이지 "이 단계가 항상 성공한 척한다"가 아니다. 아래 두 단계
+        # (결과 기록, 상세 집계)가 실제 성패를 구분해서 읽어야 하기 때문에 이
+        # 구분이 필요하다.
         id: golden-linux-check
         continue-on-error: true
-        run: flutter test test/screenshots --tags screenshots --reporter expanded
+        run: |
+          set +e
+          flutter test test/screenshots --tags screenshots --reporter expanded \
+            > golden_test_output.txt 2>&1
+          code=$?
+          echo "$code" > golden_test_exit_code.txt
+          set -e
+          exit "$code"
 
       - name: 골든 재현성 결과 기록
         if: always()
@@ -116,6 +133,22 @@ jobs:
           else
             echo "::warning::리눅스 CI 에서 골든이 하나 이상 어긋났다 -- 'golden-screenshot-failures' 아티팩트의 *_masterImage.png/*_testImage.png/*_isolatedDiff.png 로 무엇이 다른지 확인할 것. 이 단계는 참고용이라 빌드는 막지 않는다."
           fi
+
+      - name: 골든 차이 상세 집계 (참고용)
+        # `--reporter expanded`는 실패한 골든마다 'Golden "...": Pixel test
+        # failed, X.XX%, Npx diff detected.' 를 찍지만, 그 줄이 어디서
+        # 줄바꿈되는지는 골든 경로 길이에 따라 달라지고(실측으로 확인함),
+        # 31개가 수백 줄 사이에 흩어져 나오면 무엇이 얼마나 다른지 사람이
+        # 눈으로 훑어서는 안 보인다. 이 스크립트가 그 줄들을(줄바꿈을
+        # 견디는 파서로) 모아 차이 큰 순으로 정렬하고, 실패 개수·최대·
+        # 중앙값을 한 번에 찍는다. 실패한 골든의 masterImage/testImage
+        # 쌍이 남아 있고 이 러너에 Pillow가 이미 있으면 변경 픽셀 수·최대
+        # 채널차도 덧붙인다 -- 없으면 설치하지 않고 그냥 건너뛴 이유를
+        # 로그에 남긴다 (scripts/ci/report_golden_diffs.py 참고). 이 단계는
+        # 읽기 전용 집계라 스스로 실패하지 않으며, 게이트가 아니므로 위
+        # 단계와 무관하게 항상 실행한다.
+        if: always()
+        run: python scripts/ci/report_golden_diffs.py golden_test_output.txt
 
       - name: 골든 실패 산출물 업로드
         if: always()
