@@ -112,13 +112,40 @@ class GoldenFailure:
         return self.golden_path.rsplit("/", 1)[-1]
 
 
+@dataclass
+class PixelStatRow:
+    """One golden's Pillow-computed stats, or the reason it has none."""
+
+    basename: str
+    changed: Optional[int]  # changed-pixel count, or None if not computed
+    max_channel_diff: Optional[int]
+    note: Optional[str] = None  # e.g. "파일 없음", "크기 다름", "오류: ..."
+
+
+# GitHub turns a `::warning::`/`::notice::` workflow-command line into a
+# Checks-API annotation, and that API caps the `message` field at 4,000
+# characters -- past it, GitHub truncates the annotation without telling the
+# step that emitted it. `build_annotation` below stays under this with a
+# margin, and degrades by dropping whole top-N entries (never mid-entry) when
+# the full table would not fit. See the module docstring's "Usage" section
+# and this file's caller for how that was checked against a real message.
+_ANNOTATION_MAX_CHARS = 3800
+
+
 def parse_failures(text: str) -> List[GoldenFailure]:
     failures: List[GoldenFailure] = [
         GoldenFailure(path, float(pct), int(px))
         for path, pct, px in _GOLDEN_DIFF_RE.findall(text)
     ]
     diff_paths = {f.golden_path for f in failures}
-    for (path,) in _GOLDEN_SIZE_MISMATCH_RE.findall(text):
+    # `_GOLDEN_SIZE_MISMATCH_RE` has exactly one capture group, so
+    # `re.findall` returns a list of plain strings for it, not 1-tuples --
+    # `for (path,) in ...` looked right but raised `ValueError: too many
+    # values to unpack` for any real (multi-character) path. Caught by
+    # exercising this branch directly while verifying the annotation output
+    # below; nothing in this repo's tests exercised the size-mismatch path
+    # before, since flutter test almost never hits it (see module docstring).
+    for path in _GOLDEN_SIZE_MISMATCH_RE.findall(text):
         if path not in diff_paths:
             failures.append(GoldenFailure(path, None, None))
     return failures
@@ -195,40 +222,31 @@ def format_report(text: str) -> str:
     return "\n".join(lines)
 
 
-def _pixel_stats_report(failures: List[GoldenFailure], failures_dir: str) -> str:
+def _compute_pixel_stats(
+    failures: List[GoldenFailure], failures_dir: str
+) -> List[PixelStatRow]:
     """Best-effort per-golden pixel stats straight from the saved
     masterImage/testImage PNG pair, independent of Flutter's own diff-percent
-    arithmetic. Returns a human-readable block, or a one-line explanation of
-    why it was skipped -- never raises, since this is a bonus measurement
-    (task item (3)), not a required one."""
-    try:
-        from PIL import Image, ImageChops
-    except ImportError:
-        return (
-            "픽셀 통계: 이 러너에 Pillow 가 없어 건너뜁니다 (설치하지 않음 -- "
-            "새 의존성을 임의로 추가하지 말라는 지침에 따름)."
-        )
-
-    if not failures:
-        return "픽셀 통계: 실패한 골든이 없어 계산할 것이 없습니다."
+    arithmetic. Assumes Pillow is importable -- callers check that first.
+    Never raises: a row with a `note` and no numbers is how a per-golden
+    failure (missing file, size mismatch, decode error) is reported."""
+    from PIL import Image, ImageChops
 
     import os
 
-    lines = ["", "픽셀 통계 (masterImage vs testImage, Pillow):"]
-    lines.append(f"  {'골든':<55} {'변경 픽셀':>10} {'최대 채널차':>10}")
-    any_computed = False
+    rows: List[PixelStatRow] = []
     for f in failures:
         stem = f.basename.rsplit(".", 1)[0]
         master_path = os.path.join(failures_dir, f"{stem}_masterImage.png")
         test_path = os.path.join(failures_dir, f"{stem}_testImage.png")
         if not (os.path.isfile(master_path) and os.path.isfile(test_path)):
-            lines.append(f"  {f.basename:<55} {'(파일 없음)':>10} {'-':>10}")
+            rows.append(PixelStatRow(f.basename, None, None, "파일 없음"))
             continue
         try:
             master = Image.open(master_path).convert("RGBA")
             test = Image.open(test_path).convert("RGBA")
             if master.size != test.size:
-                lines.append(f"  {f.basename:<55} {'(크기 다름)':>10} {'-':>10}")
+                rows.append(PixelStatRow(f.basename, None, None, "크기 다름"))
                 continue
             diff = ImageChops.difference(master, test)
             extrema = diff.getextrema()
@@ -243,18 +261,150 @@ def _pixel_stats_report(failures: List[GoldenFailure], failures_dir: str) -> str
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", DeprecationWarning)
                 changed = sum(1 for px in diff.getdata() if any(px))
-            lines.append(f"  {f.basename:<55} {changed:>10} {max_channel_diff:>10}")
-            any_computed = True
+            rows.append(PixelStatRow(f.basename, changed, max_channel_diff))
         except Exception as exc:  # noqa: BLE001 -- best-effort, report and move on
-            lines.append(f"  {f.basename:<55} {'(오류: ' + str(exc)[:30] + ')':>10} {'-':>10}")
+            rows.append(PixelStatRow(f.basename, None, None, "오류: " + str(exc)[:30]))
+    return rows
+
+
+def _pixel_stats_report(
+    failures: List[GoldenFailure], failures_dir: str
+) -> tuple:
+    """Returns (human-readable block, rows-or-None). `rows` is None when
+    Pillow itself is unavailable or there were no failures to measure (so a
+    caller building the CI annotation can tell "not computed" apart from
+    "computed, all zero") -- never raises, since this is a bonus measurement
+    (task item (3)), not a required one."""
+    try:
+        import PIL  # noqa: F401 -- presence check only
+    except ImportError:
+        return (
+            "픽셀 통계: 이 러너에 Pillow 가 없어 건너뜁니다 (설치하지 않음 -- "
+            "새 의존성을 임의로 추가하지 말라는 지침에 따름).",
+            None,
+        )
+
+    if not failures:
+        return "픽셀 통계: 실패한 골든이 없어 계산할 것이 없습니다.", None
+
+    rows = _compute_pixel_stats(failures, failures_dir)
+
+    lines = ["", "픽셀 통계 (masterImage vs testImage, Pillow):"]
+    lines.append(f"  {'골든':<55} {'변경 픽셀':>10} {'최대 채널차':>10}")
+    any_computed = False
+    for r in rows:
+        if r.note is not None:
+            lines.append(f"  {r.basename:<55} {'(' + r.note + ')':>10} {'-':>10}")
+        else:
+            lines.append(f"  {r.basename:<55} {r.changed:>10} {r.max_channel_diff:>10}")
+            any_computed = True
     if not any_computed:
         lines.append(
             "  (계산된 항목이 없습니다 -- failures/ 아티팩트가 예상 이름으로 없을 수 있습니다.)"
         )
-    return "\n".join(lines)
+    return "\n".join(lines), rows
+
+
+def _format_top(rankable: List[GoldenFailure], n: int) -> str:
+    if n <= 0 or not rankable:
+        return ""
+    shown = rankable[:n]
+    items = ", ".join(f"{f.basename} {f.diff_percent:.2f}%" for f in shown)
+    return f"차이 큰 상위 {len(shown)}개: {items}"
+
+
+def build_annotation(text: str, pixel_rows: Optional[List[PixelStatRow]]) -> str:
+    """Builds ONE `::warning::`/`::notice::` line summarising the same facts
+    as `format_report`, condensed to fit under `_ANNOTATION_MAX_CHARS`.
+    GitHub caps annotations per step (extras are silently dropped), so this
+    always emits exactly one line rather than one per golden.
+
+    Workflow-command messages cannot contain a literal newline -- the runner
+    treats the first one as the end of the command -- so every line break
+    here is the literal three characters `%0A`, which GitHub decodes back to
+    a newline when it renders the annotation. Both of these (the character
+    cap and the `%0A` requirement) were checked against a real emitted line,
+    not assumed; see this script's caller for how.
+    """
+    totals = parse_totals(text)
+    failures = parse_failures(text)
+    rankable = sorted(
+        (f for f in failures if f.diff_percent is not None),
+        key=lambda f: f.diff_percent,
+        reverse=True,
+    )
+    unrankable = [f for f in failures if f.diff_percent is None]
+
+    if totals is None:
+        header = (
+            f"골든 러너 요약을 찾지 못함 (크래시/타임아웃 가능) -- "
+            f"식별된 실패 {len(failures)}개"
+        )
+        level = "warning"
+    else:
+        passed, failed = totals
+        total_run = passed + failed
+        if failed == 0:
+            return (
+                f"::notice::골든 재현성: {total_run}개 중 0개 실패 "
+                "(전부 재현됨, 픽셀 일치)."
+            )
+        header = f"골든 재현성: {total_run}개 중 {failed}개 실패 (통과 {passed}개)"
+        level = "warning"
+
+    stat_parts = [header]
+    if rankable:
+        percents = [f.diff_percent for f in rankable]
+        stat_parts.append(
+            f"최대 {max(percents):.2f}%, 중앙값 {statistics.median(percents):.2f}%"
+        )
+    if pixel_rows:
+        changed_values = [r.changed for r in pixel_rows if r.changed is not None]
+        if changed_values:
+            stat_parts.append(f"최대 변경 픽셀 {max(changed_values)}px")
+
+    size_note = ""
+    if unrankable:
+        shown_sizes = ", ".join(f.basename for f in unrankable[:3])
+        more = "..." if len(unrankable) > 3 else ""
+        size_note = f"크기 불일치 {len(unrankable)}개: {shown_sizes}{more}"
+
+    # Fit as many top-N entries as possible under the character cap, largest
+    # N first. Degrade only by dropping whole entries -- a top-N line cut off
+    # mid-entry would hide which entries survived, which is worse than a
+    # shorter, complete list -- and say so when we had to shorten it.
+    for n in (5, 4, 3, 2, 1, 0):
+        parts = list(stat_parts)
+        top_line = _format_top(rankable, n)
+        if top_line:
+            parts.append(top_line)
+        if size_note:
+            parts.append(size_note)
+        if n < min(5, len(rankable)):
+            parts.append(f"(상위 {n}개만 표시 -- 전체 {len(rankable)}개는 아티팩트 참고)")
+        message = "%0A".join(parts)
+        if len(message) <= _ANNOTATION_MAX_CHARS:
+            return f"::{level}::{message}"
+
+    # Unreachable in practice (n=0 drops the top-N line entirely, leaving
+    # only the short header/stat lines), but never send an unmeasured
+    # message even so.
+    return f"::{level}::{'%0A'.join(stat_parts)}"
 
 
 def main(argv: Optional[List[str]] = None) -> int:
+    # Without this, a Windows console's own codepage (not UTF-8) can silently
+    # mangle the Korean text below on write -- seen locally verifying this
+    # script (see tools/commit_gate.py for the same guard, same reason).
+    # The Ubuntu CI runner this script actually targets defaults to a UTF-8
+    # locale, but this costs nothing there and removes the failure mode
+    # everywhere else.
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8")
+        except (AttributeError, ValueError):
+            pass
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("output_file", help="flutter test의 표준출력을 받은 파일 경로")
     parser.add_argument(
@@ -280,9 +430,20 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     print(format_report(text))
 
+    pixel_rows: Optional[List[PixelStatRow]] = None
     if not args.skip_pixel_stats:
         failures = parse_failures(text)
-        print(_pixel_stats_report(failures, args.failures_dir))
+        pixel_report, pixel_rows = _pixel_stats_report(failures, args.failures_dir)
+        print(pixel_report)
+
+    # The CI annotation is a convenience on top of the report above, not a
+    # required part of it -- a bug here must not turn a read-only reporting
+    # step into one that raises (this step runs with `if: always()` and
+    # nothing downstream should ever depend on this succeeding).
+    try:
+        print(build_annotation(text, pixel_rows))
+    except Exception as exc:  # noqa: BLE001 -- annotation is best-effort
+        print(f"[report_golden_diffs] 주석 생성 실패 (표는 위에 이미 찍힘): {exc}")
 
     return 0
 
