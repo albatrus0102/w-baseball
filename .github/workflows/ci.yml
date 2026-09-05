@@ -84,9 +84,47 @@ jobs:
         run: flutter analyze
 
       - name: 테스트
-        # Screenshots are excluded: they are review artefacts whose pixels
-        # depend on host fonts, and a pixel diff must never block a build.
+        # Screenshots are excluded from the default run: a pixel diff must
+        # never block a build, by policy (docs/design-system.md 6절). That is
+        # a separate question from whether the pixels are reproducible --
+        # since 00550d4 they are bundled-font-driven, not host-font-driven,
+        # on the machine that has been tried. The step below measures
+        # whether that holds on this runner too.
         run: flutter test --exclude-tags screenshots --reporter expanded
+
+      - name: 골든 스크린샷 리눅스 재현성 측정 (참고용, 게이트 아님)
+        # 이 단계는 결과가 아니라 측정이 산출물이다. 00550d4 이후 골든
+        # 31장은 저장소에 커밋된 Pretendard(assets/fonts/)로 그려지고,
+        # Windows 한 기계에서 10회 연속 바이트 동일이 확인됐다. 하지만
+        # 폰트 파일이 같다고 래스터화까지 같다는 보장은 없다 -- FreeType
+        # 버전, 힌팅, 서브픽셀 처리가 리눅스와 윈도우에서 다를 수 있다.
+        # 그 질문에 아직 아무도 답하지 않았으므로 여기서 처음 재 본다.
+        #
+        # continue-on-error 로 실패해도 job 을 빨갛게 만들지 않는다 --
+        # 실패 여부를 아직 모르는 상태에서 게이트로 걸면, 리눅스가 실제로
+        # 다를 경우 아무도 못 미는 CI 가 된다. --update-goldens 는 절대
+        # 쓰지 않는다 -- 여기서 갱신하면 측정이 아니라 도장이 된다.
+        id: golden-linux-check
+        continue-on-error: true
+        run: flutter test test/screenshots --tags screenshots --reporter expanded
+
+      - name: 골든 재현성 결과 기록
+        if: always()
+        run: |
+          if [ "${{ steps.golden-linux-check.outcome }}" = "success" ]; then
+            echo "::notice::리눅스 CI 에서 골든 31장이 모두 재현됐다(픽셀 일치). docs/design-system.md 6절의 '측정 중' 을 갱신할 근거가 생겼다."
+          else
+            echo "::warning::리눅스 CI 에서 골든이 하나 이상 어긋났다 -- 'golden-screenshot-failures' 아티팩트의 *_masterImage.png/*_testImage.png/*_isolatedDiff.png 로 무엇이 다른지 확인할 것. 이 단계는 참고용이라 빌드는 막지 않는다."
+          fi
+
+      - name: 골든 실패 산출물 업로드
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-screenshot-failures
+          path: test/screenshots/failures/
+          if-no-files-found: ignore
+          retention-days: 14
 
   data:
     name: 데이터 검증
