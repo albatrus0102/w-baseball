@@ -123,6 +123,7 @@ class GameLogEntry {
     this.pitchingStrikeouts,
     this.pitchingWalks,
     this.runsAllowed,
+    this.importBatchId,
   });
 
   /// Local autoincrement id. Never shown to the user, never leaves the
@@ -163,6 +164,15 @@ class GameLogEntry {
   final int? pitchingStrikeouts; // 탈삼진
   final int? pitchingWalks; // 볼넷 + 몸에 맞힘 (투구)
   final int? runsAllowed; // 실점
+
+  /// Which "가져오기" batch wrote this row, if any — null for everything
+  /// typed in by hand. See `GameLogEntries.importBatchId`'s doc. Drives the
+  /// "가져옴" badge on the entry list; never written into the export file.
+  final int? importBatchId;
+
+  /// Whether this row came from a "가져오기" rather than being typed in by
+  /// hand — see [importBatchId].
+  bool get isImported => importBatchId != null;
 
   /// Whether this game has a batting stat line at all. See
   /// `BattingStatSummary.from` — this is the same gate the aggregate uses.
@@ -526,6 +536,7 @@ class GameLogGoal {
     this.entryId,
     this.closedAt,
     this.outcome,
+    this.importBatchId,
   });
 
   final int id;
@@ -545,9 +556,124 @@ class GameLogGoal {
 
   final GameLogGoalOutcome? outcome;
 
+  /// Which "가져오기" batch wrote this row, if any — see
+  /// `GameLogEntry.importBatchId`'s doc; the same meaning applies here.
+  final int? importBatchId;
+
   /// Whether this is the one goal currently shown back to her. At most one
   /// goal is open at a time — see `GameLogGoalRepository.setGoal`'s doc.
   bool get isOpen => closedAt == null;
+}
+
+// ---------------------------------------------------------------------------
+// 가져오기 (import)
+// ---------------------------------------------------------------------------
+
+/// One "가져오기" — a single file the player imported, all-or-nothing.
+///
+/// See `GameLogImportBatches` in `tables.dart` for the storage shape and the
+/// undo contract. This is its read-only reflection on "가져온 기록 관리".
+@immutable
+class GameLogImportBatch {
+  const GameLogImportBatch({
+    required this.id,
+    required this.importedAt,
+    required this.sourceKind,
+    required this.insertedCount,
+    required this.duplicateCount,
+    required this.invalidCount,
+    this.fileLabel,
+    this.fileExportedAt,
+    this.undoneAt,
+  });
+
+  final int id;
+  final DateTime importedAt;
+  final String sourceKind;
+  final String? fileLabel;
+  final DateTime? fileExportedAt;
+  final int insertedCount;
+  final int duplicateCount;
+  final int invalidCount;
+  final DateTime? undoneAt;
+
+  /// Whether "되돌리기" was already pressed for this batch. The row itself
+  /// still stands — see the table doc — so this is what the management
+  /// screen checks to decide whether to still offer the button.
+  bool get isUndone => undoneAt != null;
+}
+
+/// A file's contents, parsed and ready to show on the "가져오기 미리보기"
+/// screen — nothing here has touched the database yet. See
+/// `GameLogImportRepository.pickAndPreview`.
+@immutable
+class GameLogImportPreview {
+  const GameLogImportPreview({
+    required this.entries,
+    required this.skippedCount,
+    this.fileLabel,
+    this.fileExportedAt,
+    this.goals = const <GameLogGoal>[],
+  });
+
+  /// The picked file's own name, if the OS handed one back.
+  final String? fileLabel;
+
+  /// The `exportedAt` the file itself declared, if it parsed — "언제
+  /// 내보낸 파일인가", shown verbatim on the preview screen.
+  final DateTime? fileExportedAt;
+
+  final List<GameLogEntry> entries;
+  final List<GameLogGoal> goals;
+
+  /// Rows the codec could not parse at all — see
+  /// `GameLogJsonCodec.decode`'s doc. Shown on the preview screen and again
+  /// on the result screen once committed.
+  final int skippedCount;
+
+  bool get isEmpty => entries.isEmpty;
+
+  /// The earliest and latest 경기 date in the file, by `playedAt` — the
+  /// preview screen's "기간" line. Null only when [entries] is empty.
+  GameLogEntry? get firstByPlayedAt => _sorted.isEmpty ? null : _sorted.first;
+  GameLogEntry? get lastByPlayedAt => _sorted.isEmpty ? null : _sorted.last;
+
+  List<GameLogEntry> get _sorted =>
+      entries.toList()..sort((a, b) => a.playedAt.compareTo(b.playedAt));
+
+  /// The most recently played game that actually left a note — the preview
+  /// screen's "메모 예" line. Null when no entry in the file has one.
+  String? get sampleNote {
+    for (final entry in _sorted.reversed) {
+      final note = entry.note;
+      if (note != null && note.trim().isNotEmpty) return note;
+    }
+    return null;
+  }
+}
+
+/// What committing a [GameLogImportPreview] actually did.
+@immutable
+class GameLogImportCommitResult {
+  const GameLogImportCommitResult({
+    required this.batchId,
+    required this.insertedCount,
+    required this.duplicateCount,
+    required this.invalidCount,
+  });
+
+  final int batchId;
+  final int insertedCount;
+
+  /// Entries whose fingerprint (see the repository's doc) already matched an
+  /// existing row — skipped so a re-import of the same file, or an
+  /// overlapping one, never doubles a game up.
+  final int duplicateCount;
+
+  /// Rows the codec could not parse at all — carried through from
+  /// [GameLogImportPreview.skippedCount] unchanged; committing never turns a
+  /// parse failure into anything else.
+  final int invalidCount;
 }
 
 /// The whole "내 기록" aggregate card in one object: how many games, her

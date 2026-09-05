@@ -67,6 +67,8 @@ part 'database.g.dart';
     GameLogEntries,
     // --- device-local state (schema v5) ---
     GameLogGoals,
+    // --- device-local state (schema v6) ---
+    GameLogImportBatches,
   ],
 )
 class WbDatabase extends _$WbDatabase {
@@ -93,13 +95,19 @@ class WbDatabase extends _$WbDatabase {
   ///    `GameLogGoals` in `tables.dart` and `game_log_widgets.dart`'s module
   ///    doc for why the app never authors this text itself. Purely
   ///    additive, like v2 and v3.
+  ///  * v6 — 출전 일지 가져오기: `game_log_import_batches`, plus a nullable
+  ///    `import_batch_id` column on both `game_log_entries` and
+  ///    `game_log_goals`. Lets a player restore her own exported records
+  ///    (e.g. after a phone change) and undo that one import as a unit —
+  ///    see `GameLogImportBatches` in `tables.dart`. Purely additive, like
+  ///    every version above.
   ///
   /// Upgrades are strictly additive. User-owned rows — follows, saved items,
-  /// scheduled notification settings, (from v3) game log entries, and (from
-  /// v5) game log goals — are never dropped or recreated;
-  /// `test/unit/migration_test.dart` asserts exactly that.
+  /// scheduled notification settings, (from v3) game log entries, (from v5)
+  /// game log goals, and (from v6) import batches — are never dropped or
+  /// recreated; `test/unit/migration_test.dart` asserts exactly that.
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -172,6 +180,30 @@ class WbDatabase extends _$WbDatabase {
         // folded into the `else if` chain above it.
         await m.createTable(gameLogGoals);
       }
+      if (from < 6) {
+        // v5 → v6: 출전 일지 가져오기. One new table plus one nullable column
+        // on each of the two existing device-local tables it points into —
+        // nothing existing is touched, and every pre-existing row reads as
+        // "typed in by hand", not "imported", exactly as it always has. See
+        // `GameLogImportBatches` in `tables.dart`.
+        await m.createTable(gameLogImportBatches);
+        // Guarded the same way the v3/v4 branch above guards its own
+        // `addColumn` calls: `createTable` above (this method, `from < 3`
+        // and `from < 5` respectively) already builds each table from the
+        // *current* definition — which already includes `importBatchId` —
+        // so an install old enough to hit either of those two `createTable`
+        // calls in this very upgrade must not also `addColumn` the same
+        // column here (that would be "add a column that already exists").
+        // `from >= 3` / `from >= 5` is exactly "this table already existed
+        // before this upgrade ran", which is the one case that still needs
+        // the column added.
+        if (from >= 3) {
+          await m.addColumn(gameLogEntries, gameLogEntries.importBatchId);
+        }
+        if (from >= 5) {
+          await m.addColumn(gameLogGoals, gameLogGoals.importBatchId);
+        }
+      }
       await _createIndexes(m);
     },
     beforeOpen: (OpeningDetails details) async {
@@ -235,6 +267,10 @@ class WbDatabase extends _$WbDatabase {
       'CREATE INDEX IF NOT EXISTS idx_game_log_day ON game_log_entries (day_key)',
       // 다음 경기에서 해볼 것: finding the one open goal (closed_at IS NULL).
       'CREATE INDEX IF NOT EXISTS idx_game_log_goals_open ON game_log_goals (closed_at)',
+      // 가져오기 undo: deleting exactly one batch's rows out of the whole
+      // table without a scan.
+      'CREATE INDEX IF NOT EXISTS idx_game_log_entries_import_batch ON game_log_entries (import_batch_id)',
+      'CREATE INDEX IF NOT EXISTS idx_game_log_goals_import_batch ON game_log_goals (import_batch_id)',
     ];
     for (final sql in statements) {
       await customStatement(sql);

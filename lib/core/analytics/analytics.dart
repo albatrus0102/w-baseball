@@ -32,7 +32,9 @@ enum AnalyticsEvent {
   taskCompleted,
   gameLogEntryAdded,
   gameLogEntryDeleted,
-  gameLogExported;
+  gameLogExported,
+  gameLogImported,
+  gameLogImportUndone;
 
   String get wireValue {
     // snake_case, matching the names in the product brief.

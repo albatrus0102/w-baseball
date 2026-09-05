@@ -114,6 +114,11 @@ class GameLogJsonCodec {
         formatError: '지원하지 않는 형식입니다 ($format).',
       );
     }
+    final exportedAtRaw = parsed['exportedAt'];
+    final exportedAt = exportedAtRaw is String
+        ? DateTime.tryParse(exportedAtRaw)?.toUtc()
+        : null;
+
     final rawEntries = parsed['entries'];
     if (rawEntries is! List) {
       return const GameLogImportResult(
@@ -151,6 +156,7 @@ class GameLogJsonCodec {
       entries: entries,
       goals: goals,
       skippedCount: skipped,
+      exportedAt: exportedAt,
     );
   }
 
@@ -250,9 +256,17 @@ class GameLogImportResult {
     required this.skippedCount,
     this.goals = const <GameLogGoal>[],
     this.formatError,
+    this.exportedAt,
   });
 
   final List<GameLogEntry> entries;
+
+  /// The envelope's own `exportedAt`, once it parsed — "이 파일은 언제 만든
+  /// 것인가", read verbatim (not re-derived) so the import preview screen
+  /// can show it. Null when the field is missing or unparsable, or whenever
+  /// [formatError] is set (there is nothing to trust in an unreadable
+  /// envelope).
+  final DateTime? exportedAt;
 
   /// 다음 경기에서 해볼 것 (Stage 3). Empty on a file exported before this
   /// field existed, or one with no goals ever written — see

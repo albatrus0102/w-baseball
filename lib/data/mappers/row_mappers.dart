@@ -838,6 +838,7 @@ extension GameLogEntryRowMapper on GameLogEntryRow {
     pitchingStrikeouts: pitchingStrikeouts,
     pitchingWalks: pitchingWalks,
     runsAllowed: runsAllowed,
+    importBatchId: importBatchId,
   );
 }
 
@@ -849,6 +850,21 @@ extension GameLogGoalRowMapper on GameLogGoalRow {
     createdAt: createdAt,
     closedAt: closedAt,
     outcome: GameLogGoalOutcome.parse(outcome),
+    importBatchId: importBatchId,
+  );
+}
+
+extension GameLogImportBatchRowMapper on GameLogImportBatchRow {
+  GameLogImportBatch toDomain() => GameLogImportBatch(
+    id: id,
+    importedAt: importedAt,
+    sourceKind: sourceKind,
+    fileLabel: fileLabel,
+    fileExportedAt: fileExportedAt,
+    insertedCount: insertedCount,
+    duplicateCount: duplicateCount,
+    invalidCount: invalidCount,
+    undoneAt: undoneAt,
   );
 }
 

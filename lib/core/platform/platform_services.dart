@@ -246,6 +246,124 @@ class UrlExternalLinkService implements ExternalLinkService {
   }
 }
 
+/// A text file the user picked via the OS document picker.
+@immutable
+class PickedTextFile {
+  const PickedTextFile({required this.content, this.fileName});
+
+  final String content;
+
+  /// The picker's own display name for the file, if it handed one back —
+  /// shown on the 출전 일지 가져오기 preview screen. Null is possible (some
+  /// document providers don't supply one), not an error.
+  final String? fileName;
+}
+
+/// Thrown by [FileOpenService.openTextFile] on a platform with no picker
+/// implementation at all.
+///
+/// Deliberately a *thrown* signal rather than a quiet `null` return: `null`
+/// already means "the user picked nothing" (backed out of the picker), and
+/// folding "there is no picker here" into that same quiet case would make a
+/// missing iOS implementation indistinguishable from a normal cancel — see
+/// the feature brief's "미구현임을 명시적으로 표시" rule. Every current caller
+/// catches this and shows a real message rather than crashing; it exists to
+/// make the state legible in code and dev logs, not to end the app.
+class FileOpenUnsupportedException implements Exception {
+  const FileOpenUnsupportedException();
+}
+
+/// Thrown when a file was picked but could not be safely read — over the
+/// caller's `maxBytes`, or unreadable for any other reason. [messageKo] is
+/// ready to show the user as-is.
+class FileOpenFailure implements Exception {
+  const FileOpenFailure(this.messageKo);
+
+  final String messageKo;
+}
+
+/// Opens the OS's own document picker and hands back a text file's content.
+///
+/// Written as a first-party MethodChannel on Android (`ACTION_OPEN_DOCUMENT`,
+/// mirroring [AndroidCalendarService]'s `ACTION_INSERT` pattern) rather than
+/// a package dependency — see the feature brief: `file_selector` and
+/// `file_picker` each pull in far more platform surface than one ~40-line
+/// Kotlin handler needs, for a picker that (unlike a plugin's) needs no
+/// storage permission at all.
+abstract interface class FileOpenService {
+  /// Opens a picker filtered to [mimeTypes] (a `*/*` fallback is included by
+  /// default — a file shared through a chat app can arrive with its MIME
+  /// type mangled) and returns the picked file's content, or `null` if the
+  /// user picked nothing. Throws [FileOpenFailure] once a file was picked
+  /// but exceeded [maxBytes] or otherwise could not be read, and
+  /// [FileOpenUnsupportedException] on a platform with no implementation —
+  /// see that exception's doc.
+  Future<PickedTextFile?> openTextFile({
+    List<String> mimeTypes = const <String>['application/json', '*/*'],
+    int maxBytes = 5 * 1024 * 1024,
+  });
+}
+
+class AndroidFileOpenService implements FileOpenService {
+  const AndroidFileOpenService();
+
+  static const MethodChannel _channel = MethodChannel(
+    'kr.wbaseball.w_baseball/file_open',
+  );
+
+  @override
+  Future<PickedTextFile?> openTextFile({
+    List<String> mimeTypes = const <String>['application/json', '*/*'],
+    int maxBytes = 5 * 1024 * 1024,
+  }) async {
+    if (kIsWeb || !Platform.isAndroid) {
+      throw const FileOpenUnsupportedException();
+    }
+    try {
+      final result = await _channel.invokeMapMethod<String, Object?>(
+        'openTextFile',
+        <String, Object?>{'mimeTypes': mimeTypes, 'maxBytes': maxBytes},
+      );
+      if (result == null) return null; // The user picked nothing.
+      final content = result['content'];
+      if (content is! String) return null;
+      final fileName = result['fileName'];
+      return PickedTextFile(
+        content: content,
+        fileName: fileName is String ? fileName : null,
+      );
+    } on PlatformException catch (e) {
+      throw FileOpenFailure(_messageFor(e.code));
+    } on MissingPluginException {
+      // No native side registered (e.g. a headless host). Same signal as
+      // "not implemented here" — see [FileOpenUnsupportedException]'s doc.
+      throw const FileOpenUnsupportedException();
+    }
+  }
+
+  String _messageFor(String code) => switch (code) {
+    'file_too_large' => '파일이 너무 커서 열 수 없습니다. (5MB 초과)',
+    'no_picker' => '파일 선택 앱을 찾을 수 없습니다.',
+    _ => '파일을 읽을 수 없습니다.',
+  };
+}
+
+/// Used on platforms with no implementation yet (and as the default in
+/// tests) — always throws [FileOpenUnsupportedException] rather than
+/// returning `null`; see that exception's doc for why the distinction
+/// matters here.
+class UnsupportedFileOpenService implements FileOpenService {
+  const UnsupportedFileOpenService();
+
+  @override
+  Future<PickedTextFile?> openTextFile({
+    List<String> mimeTypes = const <String>['application/json', '*/*'],
+    int maxBytes = 5 * 1024 * 1024,
+  }) async {
+    throw const FileOpenUnsupportedException();
+  }
+}
+
 /// Light haptics, used only where state genuinely changes.
 ///
 /// Not decorative: following a team and committing a filter are the only two
@@ -338,6 +456,7 @@ class PlatformServices {
     required this.externalLinks,
     required this.haptics,
     required this.systemSettings,
+    required this.fileOpen,
   });
 
   final CalendarService calendar;
@@ -346,6 +465,7 @@ class PlatformServices {
   final ExternalLinkService externalLinks;
   final HapticsService haptics;
   final SystemSettingsService systemSettings;
+  final FileOpenService fileOpen;
 
   /// Real implementations for the running platform.
   factory PlatformServices.forCurrentPlatform() {
@@ -363,6 +483,10 @@ class PlatformServices {
       systemSettings: isAndroid
           ? const AndroidSystemSettingsService()
           : const UnsupportedSystemSettingsService(),
+      // iOS lands here next too, alongside calendar/systemSettings above.
+      fileOpen: isAndroid
+          ? const AndroidFileOpenService()
+          : const UnsupportedFileOpenService(),
     );
   }
 
@@ -374,6 +498,7 @@ class PlatformServices {
     externalLinks: _NoopLinkService(),
     haptics: NoopHapticsService(),
     systemSettings: UnsupportedSystemSettingsService(),
+    fileOpen: UnsupportedFileOpenService(),
   );
 
   /// Swaps out one or more services. Used by tests that need to observe a
@@ -386,6 +511,7 @@ class PlatformServices {
     ExternalLinkService? externalLinks,
     HapticsService? haptics,
     SystemSettingsService? systemSettings,
+    FileOpenService? fileOpen,
   }) => PlatformServices(
     calendar: calendar ?? this.calendar,
     maps: maps ?? this.maps,
@@ -393,6 +519,7 @@ class PlatformServices {
     externalLinks: externalLinks ?? this.externalLinks,
     haptics: haptics ?? this.haptics,
     systemSettings: systemSettings ?? this.systemSettings,
+    fileOpen: fileOpen ?? this.fileOpen,
   );
 }
 

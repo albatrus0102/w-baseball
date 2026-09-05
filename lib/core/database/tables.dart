@@ -942,6 +942,14 @@ class GameLogEntries extends Table {
 
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime().nullable()();
+
+  /// Which "가져오기" batch wrote this row, if any (schema v6). Null means
+  /// what it always meant before this column existed: typed in by hand on
+  /// this device. See `GameLogImportBatches` — this is the column undo
+  /// filters on, and it is deliberately never written into the export file
+  /// (`GameLogJsonCodec` does not encode it): a re-exported file describes
+  /// this player's own games, not which of her devices last imported them.
+  IntColumn get importBatchId => integer().nullable()();
 }
 
 /// A goal the player wrote for herself, in her own words, after a logged
@@ -982,6 +990,53 @@ class GameLogGoals extends Table {
   /// nobody answered, which is a different thing from any of the three
   /// buttons being pressed. See `GameLogGoalRepository.setGoal`'s doc.
   TextColumn get outcome => text().nullable()();
+
+  /// Which "가져오기" batch wrote this row, if any (schema v6). See
+  /// `GameLogEntries.importBatchId`'s doc — same meaning, same exclusion
+  /// from the export file.
+  IntColumn get importBatchId => integer().nullable()();
+}
+
+/// One "가져오기" — a single file the player imported, all-or-nothing.
+///
+/// Exists so an import can be undone as the one unit it was committed as:
+/// every [GameLogEntries] and [GameLogGoals] row this batch wrote carries
+/// this row's `id` in its own `importBatchId`, and undoing deletes exactly
+/// those rows and stamps [undoneAt] here — nothing with a null
+/// `importBatchId` (a hand-typed entry) is ever touched by that query,
+/// because SQL's `import_batch_id = X` can never match `NULL`.
+///
+/// [undoneAt] is set, never the row deleted — the batch's own history (when,
+/// how many, whether it was later undone) stays visible on "가져온 기록
+/// 관리" even after undo, which is the whole point of a permanent (not
+/// time-limited) undo affordance.
+@DataClassName('GameLogImportBatchRow')
+class GameLogImportBatches extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  DateTimeColumn get importedAt => dateTime()();
+
+  /// `'json'` today — see the feature brief's "이번 범위 밖" (CSV import is a
+  /// later stage). A column, not a hard-coded assumption, so a later CSV
+  /// importer needs no migration to record which path a batch came from.
+  TextColumn get sourceKind => text()();
+
+  /// The picked file's own name, if the OS handed one back — shown on "가져온
+  /// 기록 관리" so two imports are told apart. Null when the picker returned
+  /// none.
+  TextColumn get fileLabel => text().nullable()();
+
+  /// The `exportedAt` the file itself declared, if it parsed — "이 파일은
+  /// 언제 만들어졌나" is a different fact from [importedAt] ("언제 가져왔나"),
+  /// and the preview screen shows both.
+  DateTimeColumn get fileExportedAt => dateTime().nullable()();
+
+  IntColumn get insertedCount => integer().withDefault(const Constant(0))();
+  IntColumn get duplicateCount => integer().withDefault(const Constant(0))();
+  IntColumn get invalidCount => integer().withDefault(const Constant(0))();
+
+  /// Null while the batch stands; set to when "되돌리기" was pressed. See the
+  /// class doc — the row survives undo, only [undoneAt] changes.
+  DateTimeColumn get undoneAt => dateTime().nullable()();
 }
 
 /// Cached "how complete is this?" figures per scope.

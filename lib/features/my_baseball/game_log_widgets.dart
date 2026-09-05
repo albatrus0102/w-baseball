@@ -15,6 +15,7 @@ import '../../core/utils/kst.dart';
 import '../../data/models/content.dart';
 import '../../data/models/game_log.dart';
 import '../../data/models/stats.dart' show formatRate;
+import 'game_log_import_widgets.dart';
 
 /// 출전 일지: 내 기록.
 ///
@@ -60,7 +61,7 @@ class _GameLogSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        const WbSectionHeader(title: '내 기록'),
+        const _GameLogSectionHeader(),
         if (entries.isEmpty)
           audience.gameLogNudgeDismissed
               ? const _GameLogCompactPrompt()
@@ -85,6 +86,45 @@ class _GameLogSection extends ConsumerWidget {
           const SizedBox(height: WbSpace.sm),
           const _GameLogPrivacyNote(),
         ],
+      ],
+    );
+  }
+}
+
+/// The "내 기록" section title plus the "⋮" 가져오기 menu — shown
+/// unconditionally, before either the nudge/compact-prompt branch or the
+/// entries branch, so 가져오기 stays reachable even with zero entries. That
+/// zero-entry case is not an edge case here: it is exactly what a reinstalled
+/// app looks like right before someone restores her own exported file.
+///
+/// Built by hand rather than adding a trailing-widget slot to the shared
+/// `WbSectionHeader` (used by every other section on this screen): the
+/// header's own right padding is zeroed here and the outer `Row` supplies the
+/// screen gutter once, after the icon, instead of every section paying for a
+/// slot it never uses.
+class _GameLogSectionHeader extends StatelessWidget {
+  const _GameLogSectionHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        const Expanded(
+          child: WbSectionHeader(
+            title: '내 기록',
+            padding: EdgeInsets.fromLTRB(
+              WbSpace.screen,
+              WbSpace.section,
+              0,
+              WbSpace.md,
+            ),
+          ),
+        ),
+        const Padding(
+          padding: EdgeInsets.only(right: WbSpace.xs, top: WbSpace.xs),
+          child: GameLogMenuButton(),
+        ),
       ],
     );
   }
@@ -687,6 +727,13 @@ class _GameLogEntryTile extends ConsumerWidget {
             ),
           ),
           const SizedBox(width: WbSpace.sm),
+          if (entry.isImported) ...<Widget>[
+            // Never hidden — a hand-typed entry and an imported one look
+            // identical otherwise, and the feature brief is explicit that
+            // this difference in provenance is not something to smooth over.
+            const WbBadge(label: '가져옴', tone: WbBadgeTone.muted, dense: true),
+            const SizedBox(width: WbSpace.xs),
+          ],
           if (entry.result != GameLogResult.unspecified)
             WbBadge(
               label: entry.result.labelKo,

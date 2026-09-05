@@ -43271,6 +43271,17 @@ class $GameLogEntriesTable extends GameLogEntries
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _importBatchIdMeta = const VerificationMeta(
+    'importBatchId',
+  );
+  @override
+  late final GeneratedColumn<int> importBatchId = GeneratedColumn<int>(
+    'import_batch_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -43297,6 +43308,7 @@ class $GameLogEntriesTable extends GameLogEntries
     runsAllowed,
     createdAt,
     updatedAt,
+    importBatchId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -43487,6 +43499,15 @@ class $GameLogEntriesTable extends GameLogEntries
         updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
       );
     }
+    if (data.containsKey('import_batch_id')) {
+      context.handle(
+        _importBatchIdMeta,
+        importBatchId.isAcceptableOrUnknown(
+          data['import_batch_id']!,
+          _importBatchIdMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -43592,6 +43613,10 @@ class $GameLogEntriesTable extends GameLogEntries
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
       ),
+      importBatchId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}import_batch_id'],
+      ),
     );
   }
 
@@ -43678,6 +43703,14 @@ class GameLogEntryRow extends DataClass implements Insertable<GameLogEntryRow> {
   final int? runsAllowed;
   final DateTime createdAt;
   final DateTime? updatedAt;
+
+  /// Which "가져오기" batch wrote this row, if any (schema v6). Null means
+  /// what it always meant before this column existed: typed in by hand on
+  /// this device. See `GameLogImportBatches` — this is the column undo
+  /// filters on, and it is deliberately never written into the export file
+  /// (`GameLogJsonCodec` does not encode it): a re-exported file describes
+  /// this player's own games, not which of her devices last imported them.
+  final int? importBatchId;
   const GameLogEntryRow({
     required this.id,
     required this.playedAt,
@@ -43703,6 +43736,7 @@ class GameLogEntryRow extends DataClass implements Insertable<GameLogEntryRow> {
     this.runsAllowed,
     required this.createdAt,
     this.updatedAt,
+    this.importBatchId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -43767,6 +43801,9 @@ class GameLogEntryRow extends DataClass implements Insertable<GameLogEntryRow> {
     if (!nullToAbsent || updatedAt != null) {
       map['updated_at'] = Variable<DateTime>(updatedAt);
     }
+    if (!nullToAbsent || importBatchId != null) {
+      map['import_batch_id'] = Variable<int>(importBatchId);
+    }
     return map;
   }
 
@@ -43828,6 +43865,9 @@ class GameLogEntryRow extends DataClass implements Insertable<GameLogEntryRow> {
       updatedAt: updatedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(updatedAt),
+      importBatchId: importBatchId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(importBatchId),
     );
   }
 
@@ -43861,6 +43901,7 @@ class GameLogEntryRow extends DataClass implements Insertable<GameLogEntryRow> {
       runsAllowed: serializer.fromJson<int?>(json['runsAllowed']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
+      importBatchId: serializer.fromJson<int?>(json['importBatchId']),
     );
   }
   @override
@@ -43891,6 +43932,7 @@ class GameLogEntryRow extends DataClass implements Insertable<GameLogEntryRow> {
       'runsAllowed': serializer.toJson<int?>(runsAllowed),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime?>(updatedAt),
+      'importBatchId': serializer.toJson<int?>(importBatchId),
     };
   }
 
@@ -43919,6 +43961,7 @@ class GameLogEntryRow extends DataClass implements Insertable<GameLogEntryRow> {
     Value<int?> runsAllowed = const Value.absent(),
     DateTime? createdAt,
     Value<DateTime?> updatedAt = const Value.absent(),
+    Value<int?> importBatchId = const Value.absent(),
   }) => GameLogEntryRow(
     id: id ?? this.id,
     playedAt: playedAt ?? this.playedAt,
@@ -43956,6 +43999,9 @@ class GameLogEntryRow extends DataClass implements Insertable<GameLogEntryRow> {
     runsAllowed: runsAllowed.present ? runsAllowed.value : this.runsAllowed,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
+    importBatchId: importBatchId.present
+        ? importBatchId.value
+        : this.importBatchId,
   );
   GameLogEntryRow copyWithCompanion(GameLogEntriesCompanion data) {
     return GameLogEntryRow(
@@ -44009,6 +44055,9 @@ class GameLogEntryRow extends DataClass implements Insertable<GameLogEntryRow> {
           : this.runsAllowed,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      importBatchId: data.importBatchId.present
+          ? data.importBatchId.value
+          : this.importBatchId,
     );
   }
 
@@ -44038,7 +44087,8 @@ class GameLogEntryRow extends DataClass implements Insertable<GameLogEntryRow> {
           ..write('pitchingWalks: $pitchingWalks, ')
           ..write('runsAllowed: $runsAllowed, ')
           ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('importBatchId: $importBatchId')
           ..write(')'))
         .toString();
   }
@@ -44069,6 +44119,7 @@ class GameLogEntryRow extends DataClass implements Insertable<GameLogEntryRow> {
     runsAllowed,
     createdAt,
     updatedAt,
+    importBatchId,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -44097,7 +44148,8 @@ class GameLogEntryRow extends DataClass implements Insertable<GameLogEntryRow> {
           other.pitchingWalks == this.pitchingWalks &&
           other.runsAllowed == this.runsAllowed &&
           other.createdAt == this.createdAt &&
-          other.updatedAt == this.updatedAt);
+          other.updatedAt == this.updatedAt &&
+          other.importBatchId == this.importBatchId);
 }
 
 class GameLogEntriesCompanion extends UpdateCompanion<GameLogEntryRow> {
@@ -44125,6 +44177,7 @@ class GameLogEntriesCompanion extends UpdateCompanion<GameLogEntryRow> {
   final Value<int?> runsAllowed;
   final Value<DateTime> createdAt;
   final Value<DateTime?> updatedAt;
+  final Value<int?> importBatchId;
   const GameLogEntriesCompanion({
     this.id = const Value.absent(),
     this.playedAt = const Value.absent(),
@@ -44150,6 +44203,7 @@ class GameLogEntriesCompanion extends UpdateCompanion<GameLogEntryRow> {
     this.runsAllowed = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.importBatchId = const Value.absent(),
   });
   GameLogEntriesCompanion.insert({
     this.id = const Value.absent(),
@@ -44176,6 +44230,7 @@ class GameLogEntriesCompanion extends UpdateCompanion<GameLogEntryRow> {
     this.runsAllowed = const Value.absent(),
     required DateTime createdAt,
     this.updatedAt = const Value.absent(),
+    this.importBatchId = const Value.absent(),
   }) : playedAt = Value(playedAt),
        dayKey = Value(dayKey),
        createdAt = Value(createdAt);
@@ -44204,6 +44259,7 @@ class GameLogEntriesCompanion extends UpdateCompanion<GameLogEntryRow> {
     Expression<int>? runsAllowed,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
+    Expression<int>? importBatchId,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -44230,6 +44286,7 @@ class GameLogEntriesCompanion extends UpdateCompanion<GameLogEntryRow> {
       if (runsAllowed != null) 'runs_allowed': runsAllowed,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
+      if (importBatchId != null) 'import_batch_id': importBatchId,
     });
   }
 
@@ -44258,6 +44315,7 @@ class GameLogEntriesCompanion extends UpdateCompanion<GameLogEntryRow> {
     Value<int?>? runsAllowed,
     Value<DateTime>? createdAt,
     Value<DateTime?>? updatedAt,
+    Value<int?>? importBatchId,
   }) {
     return GameLogEntriesCompanion(
       id: id ?? this.id,
@@ -44284,6 +44342,7 @@ class GameLogEntriesCompanion extends UpdateCompanion<GameLogEntryRow> {
       runsAllowed: runsAllowed ?? this.runsAllowed,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      importBatchId: importBatchId ?? this.importBatchId,
     );
   }
 
@@ -44362,6 +44421,9 @@ class GameLogEntriesCompanion extends UpdateCompanion<GameLogEntryRow> {
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
+    if (importBatchId.present) {
+      map['import_batch_id'] = Variable<int>(importBatchId.value);
+    }
     return map;
   }
 
@@ -44391,7 +44453,8 @@ class GameLogEntriesCompanion extends UpdateCompanion<GameLogEntryRow> {
           ..write('pitchingWalks: $pitchingWalks, ')
           ..write('runsAllowed: $runsAllowed, ')
           ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('importBatchId: $importBatchId')
           ..write(')'))
         .toString();
   }
@@ -44469,6 +44532,17 @@ class $GameLogGoalsTable extends GameLogGoals
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _importBatchIdMeta = const VerificationMeta(
+    'importBatchId',
+  );
+  @override
+  late final GeneratedColumn<int> importBatchId = GeneratedColumn<int>(
+    'import_batch_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -44477,6 +44551,7 @@ class $GameLogGoalsTable extends GameLogGoals
     createdAt,
     closedAt,
     outcome,
+    importBatchId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -44527,6 +44602,15 @@ class $GameLogGoalsTable extends GameLogGoals
         outcome.isAcceptableOrUnknown(data['outcome']!, _outcomeMeta),
       );
     }
+    if (data.containsKey('import_batch_id')) {
+      context.handle(
+        _importBatchIdMeta,
+        importBatchId.isAcceptableOrUnknown(
+          data['import_batch_id']!,
+          _importBatchIdMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -44560,6 +44644,10 @@ class $GameLogGoalsTable extends GameLogGoals
         DriftSqlType.string,
         data['${effectivePrefix}outcome'],
       ),
+      importBatchId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}import_batch_id'],
+      ),
     );
   }
 
@@ -44592,6 +44680,11 @@ class GameLogGoalRow extends DataClass implements Insertable<GameLogGoalRow> {
   /// nobody answered, which is a different thing from any of the three
   /// buttons being pressed. See `GameLogGoalRepository.setGoal`'s doc.
   final String? outcome;
+
+  /// Which "가져오기" batch wrote this row, if any (schema v6). See
+  /// `GameLogEntries.importBatchId`'s doc — same meaning, same exclusion
+  /// from the export file.
+  final int? importBatchId;
   const GameLogGoalRow({
     required this.id,
     required this.body,
@@ -44599,6 +44692,7 @@ class GameLogGoalRow extends DataClass implements Insertable<GameLogGoalRow> {
     required this.createdAt,
     this.closedAt,
     this.outcome,
+    this.importBatchId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -44614,6 +44708,9 @@ class GameLogGoalRow extends DataClass implements Insertable<GameLogGoalRow> {
     }
     if (!nullToAbsent || outcome != null) {
       map['outcome'] = Variable<String>(outcome);
+    }
+    if (!nullToAbsent || importBatchId != null) {
+      map['import_batch_id'] = Variable<int>(importBatchId);
     }
     return map;
   }
@@ -44632,6 +44729,9 @@ class GameLogGoalRow extends DataClass implements Insertable<GameLogGoalRow> {
       outcome: outcome == null && nullToAbsent
           ? const Value.absent()
           : Value(outcome),
+      importBatchId: importBatchId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(importBatchId),
     );
   }
 
@@ -44647,6 +44747,7 @@ class GameLogGoalRow extends DataClass implements Insertable<GameLogGoalRow> {
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       closedAt: serializer.fromJson<DateTime?>(json['closedAt']),
       outcome: serializer.fromJson<String?>(json['outcome']),
+      importBatchId: serializer.fromJson<int?>(json['importBatchId']),
     );
   }
   @override
@@ -44659,6 +44760,7 @@ class GameLogGoalRow extends DataClass implements Insertable<GameLogGoalRow> {
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'closedAt': serializer.toJson<DateTime?>(closedAt),
       'outcome': serializer.toJson<String?>(outcome),
+      'importBatchId': serializer.toJson<int?>(importBatchId),
     };
   }
 
@@ -44669,6 +44771,7 @@ class GameLogGoalRow extends DataClass implements Insertable<GameLogGoalRow> {
     DateTime? createdAt,
     Value<DateTime?> closedAt = const Value.absent(),
     Value<String?> outcome = const Value.absent(),
+    Value<int?> importBatchId = const Value.absent(),
   }) => GameLogGoalRow(
     id: id ?? this.id,
     body: body ?? this.body,
@@ -44676,6 +44779,9 @@ class GameLogGoalRow extends DataClass implements Insertable<GameLogGoalRow> {
     createdAt: createdAt ?? this.createdAt,
     closedAt: closedAt.present ? closedAt.value : this.closedAt,
     outcome: outcome.present ? outcome.value : this.outcome,
+    importBatchId: importBatchId.present
+        ? importBatchId.value
+        : this.importBatchId,
   );
   GameLogGoalRow copyWithCompanion(GameLogGoalsCompanion data) {
     return GameLogGoalRow(
@@ -44685,6 +44791,9 @@ class GameLogGoalRow extends DataClass implements Insertable<GameLogGoalRow> {
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       closedAt: data.closedAt.present ? data.closedAt.value : this.closedAt,
       outcome: data.outcome.present ? data.outcome.value : this.outcome,
+      importBatchId: data.importBatchId.present
+          ? data.importBatchId.value
+          : this.importBatchId,
     );
   }
 
@@ -44696,14 +44805,22 @@ class GameLogGoalRow extends DataClass implements Insertable<GameLogGoalRow> {
           ..write('entryId: $entryId, ')
           ..write('createdAt: $createdAt, ')
           ..write('closedAt: $closedAt, ')
-          ..write('outcome: $outcome')
+          ..write('outcome: $outcome, ')
+          ..write('importBatchId: $importBatchId')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, body, entryId, createdAt, closedAt, outcome);
+  int get hashCode => Object.hash(
+    id,
+    body,
+    entryId,
+    createdAt,
+    closedAt,
+    outcome,
+    importBatchId,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -44713,7 +44830,8 @@ class GameLogGoalRow extends DataClass implements Insertable<GameLogGoalRow> {
           other.entryId == this.entryId &&
           other.createdAt == this.createdAt &&
           other.closedAt == this.closedAt &&
-          other.outcome == this.outcome);
+          other.outcome == this.outcome &&
+          other.importBatchId == this.importBatchId);
 }
 
 class GameLogGoalsCompanion extends UpdateCompanion<GameLogGoalRow> {
@@ -44723,6 +44841,7 @@ class GameLogGoalsCompanion extends UpdateCompanion<GameLogGoalRow> {
   final Value<DateTime> createdAt;
   final Value<DateTime?> closedAt;
   final Value<String?> outcome;
+  final Value<int?> importBatchId;
   const GameLogGoalsCompanion({
     this.id = const Value.absent(),
     this.body = const Value.absent(),
@@ -44730,6 +44849,7 @@ class GameLogGoalsCompanion extends UpdateCompanion<GameLogGoalRow> {
     this.createdAt = const Value.absent(),
     this.closedAt = const Value.absent(),
     this.outcome = const Value.absent(),
+    this.importBatchId = const Value.absent(),
   });
   GameLogGoalsCompanion.insert({
     this.id = const Value.absent(),
@@ -44738,6 +44858,7 @@ class GameLogGoalsCompanion extends UpdateCompanion<GameLogGoalRow> {
     required DateTime createdAt,
     this.closedAt = const Value.absent(),
     this.outcome = const Value.absent(),
+    this.importBatchId = const Value.absent(),
   }) : body = Value(body),
        createdAt = Value(createdAt);
   static Insertable<GameLogGoalRow> custom({
@@ -44747,6 +44868,7 @@ class GameLogGoalsCompanion extends UpdateCompanion<GameLogGoalRow> {
     Expression<DateTime>? createdAt,
     Expression<DateTime>? closedAt,
     Expression<String>? outcome,
+    Expression<int>? importBatchId,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -44755,6 +44877,7 @@ class GameLogGoalsCompanion extends UpdateCompanion<GameLogGoalRow> {
       if (createdAt != null) 'created_at': createdAt,
       if (closedAt != null) 'closed_at': closedAt,
       if (outcome != null) 'outcome': outcome,
+      if (importBatchId != null) 'import_batch_id': importBatchId,
     });
   }
 
@@ -44765,6 +44888,7 @@ class GameLogGoalsCompanion extends UpdateCompanion<GameLogGoalRow> {
     Value<DateTime>? createdAt,
     Value<DateTime?>? closedAt,
     Value<String?>? outcome,
+    Value<int?>? importBatchId,
   }) {
     return GameLogGoalsCompanion(
       id: id ?? this.id,
@@ -44773,6 +44897,7 @@ class GameLogGoalsCompanion extends UpdateCompanion<GameLogGoalRow> {
       createdAt: createdAt ?? this.createdAt,
       closedAt: closedAt ?? this.closedAt,
       outcome: outcome ?? this.outcome,
+      importBatchId: importBatchId ?? this.importBatchId,
     );
   }
 
@@ -44797,6 +44922,9 @@ class GameLogGoalsCompanion extends UpdateCompanion<GameLogGoalRow> {
     if (outcome.present) {
       map['outcome'] = Variable<String>(outcome.value);
     }
+    if (importBatchId.present) {
+      map['import_batch_id'] = Variable<int>(importBatchId.value);
+    }
     return map;
   }
 
@@ -44808,7 +44936,599 @@ class GameLogGoalsCompanion extends UpdateCompanion<GameLogGoalRow> {
           ..write('entryId: $entryId, ')
           ..write('createdAt: $createdAt, ')
           ..write('closedAt: $closedAt, ')
-          ..write('outcome: $outcome')
+          ..write('outcome: $outcome, ')
+          ..write('importBatchId: $importBatchId')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $GameLogImportBatchesTable extends GameLogImportBatches
+    with TableInfo<$GameLogImportBatchesTable, GameLogImportBatchRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $GameLogImportBatchesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _importedAtMeta = const VerificationMeta(
+    'importedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> importedAt = GeneratedColumn<DateTime>(
+    'imported_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sourceKindMeta = const VerificationMeta(
+    'sourceKind',
+  );
+  @override
+  late final GeneratedColumn<String> sourceKind = GeneratedColumn<String>(
+    'source_kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _fileLabelMeta = const VerificationMeta(
+    'fileLabel',
+  );
+  @override
+  late final GeneratedColumn<String> fileLabel = GeneratedColumn<String>(
+    'file_label',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _fileExportedAtMeta = const VerificationMeta(
+    'fileExportedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> fileExportedAt =
+      GeneratedColumn<DateTime>(
+        'file_exported_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _insertedCountMeta = const VerificationMeta(
+    'insertedCount',
+  );
+  @override
+  late final GeneratedColumn<int> insertedCount = GeneratedColumn<int>(
+    'inserted_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _duplicateCountMeta = const VerificationMeta(
+    'duplicateCount',
+  );
+  @override
+  late final GeneratedColumn<int> duplicateCount = GeneratedColumn<int>(
+    'duplicate_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _invalidCountMeta = const VerificationMeta(
+    'invalidCount',
+  );
+  @override
+  late final GeneratedColumn<int> invalidCount = GeneratedColumn<int>(
+    'invalid_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _undoneAtMeta = const VerificationMeta(
+    'undoneAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> undoneAt = GeneratedColumn<DateTime>(
+    'undone_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    importedAt,
+    sourceKind,
+    fileLabel,
+    fileExportedAt,
+    insertedCount,
+    duplicateCount,
+    invalidCount,
+    undoneAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'game_log_import_batches';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<GameLogImportBatchRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('imported_at')) {
+      context.handle(
+        _importedAtMeta,
+        importedAt.isAcceptableOrUnknown(data['imported_at']!, _importedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_importedAtMeta);
+    }
+    if (data.containsKey('source_kind')) {
+      context.handle(
+        _sourceKindMeta,
+        sourceKind.isAcceptableOrUnknown(data['source_kind']!, _sourceKindMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceKindMeta);
+    }
+    if (data.containsKey('file_label')) {
+      context.handle(
+        _fileLabelMeta,
+        fileLabel.isAcceptableOrUnknown(data['file_label']!, _fileLabelMeta),
+      );
+    }
+    if (data.containsKey('file_exported_at')) {
+      context.handle(
+        _fileExportedAtMeta,
+        fileExportedAt.isAcceptableOrUnknown(
+          data['file_exported_at']!,
+          _fileExportedAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('inserted_count')) {
+      context.handle(
+        _insertedCountMeta,
+        insertedCount.isAcceptableOrUnknown(
+          data['inserted_count']!,
+          _insertedCountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('duplicate_count')) {
+      context.handle(
+        _duplicateCountMeta,
+        duplicateCount.isAcceptableOrUnknown(
+          data['duplicate_count']!,
+          _duplicateCountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('invalid_count')) {
+      context.handle(
+        _invalidCountMeta,
+        invalidCount.isAcceptableOrUnknown(
+          data['invalid_count']!,
+          _invalidCountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('undone_at')) {
+      context.handle(
+        _undoneAtMeta,
+        undoneAt.isAcceptableOrUnknown(data['undone_at']!, _undoneAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  GameLogImportBatchRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return GameLogImportBatchRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      importedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}imported_at'],
+      )!,
+      sourceKind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_kind'],
+      )!,
+      fileLabel: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}file_label'],
+      ),
+      fileExportedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}file_exported_at'],
+      ),
+      insertedCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}inserted_count'],
+      )!,
+      duplicateCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}duplicate_count'],
+      )!,
+      invalidCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}invalid_count'],
+      )!,
+      undoneAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}undone_at'],
+      ),
+    );
+  }
+
+  @override
+  $GameLogImportBatchesTable createAlias(String alias) {
+    return $GameLogImportBatchesTable(attachedDatabase, alias);
+  }
+}
+
+class GameLogImportBatchRow extends DataClass
+    implements Insertable<GameLogImportBatchRow> {
+  final int id;
+  final DateTime importedAt;
+
+  /// `'json'` today — see the feature brief's "이번 범위 밖" (CSV import is a
+  /// later stage). A column, not a hard-coded assumption, so a later CSV
+  /// importer needs no migration to record which path a batch came from.
+  final String sourceKind;
+
+  /// The picked file's own name, if the OS handed one back — shown on "가져온
+  /// 기록 관리" so two imports are told apart. Null when the picker returned
+  /// none.
+  final String? fileLabel;
+
+  /// The `exportedAt` the file itself declared, if it parsed — "이 파일은
+  /// 언제 만들어졌나" is a different fact from [importedAt] ("언제 가져왔나"),
+  /// and the preview screen shows both.
+  final DateTime? fileExportedAt;
+  final int insertedCount;
+  final int duplicateCount;
+  final int invalidCount;
+
+  /// Null while the batch stands; set to when "되돌리기" was pressed. See the
+  /// class doc — the row survives undo, only [undoneAt] changes.
+  final DateTime? undoneAt;
+  const GameLogImportBatchRow({
+    required this.id,
+    required this.importedAt,
+    required this.sourceKind,
+    this.fileLabel,
+    this.fileExportedAt,
+    required this.insertedCount,
+    required this.duplicateCount,
+    required this.invalidCount,
+    this.undoneAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['imported_at'] = Variable<DateTime>(importedAt);
+    map['source_kind'] = Variable<String>(sourceKind);
+    if (!nullToAbsent || fileLabel != null) {
+      map['file_label'] = Variable<String>(fileLabel);
+    }
+    if (!nullToAbsent || fileExportedAt != null) {
+      map['file_exported_at'] = Variable<DateTime>(fileExportedAt);
+    }
+    map['inserted_count'] = Variable<int>(insertedCount);
+    map['duplicate_count'] = Variable<int>(duplicateCount);
+    map['invalid_count'] = Variable<int>(invalidCount);
+    if (!nullToAbsent || undoneAt != null) {
+      map['undone_at'] = Variable<DateTime>(undoneAt);
+    }
+    return map;
+  }
+
+  GameLogImportBatchesCompanion toCompanion(bool nullToAbsent) {
+    return GameLogImportBatchesCompanion(
+      id: Value(id),
+      importedAt: Value(importedAt),
+      sourceKind: Value(sourceKind),
+      fileLabel: fileLabel == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fileLabel),
+      fileExportedAt: fileExportedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fileExportedAt),
+      insertedCount: Value(insertedCount),
+      duplicateCount: Value(duplicateCount),
+      invalidCount: Value(invalidCount),
+      undoneAt: undoneAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(undoneAt),
+    );
+  }
+
+  factory GameLogImportBatchRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return GameLogImportBatchRow(
+      id: serializer.fromJson<int>(json['id']),
+      importedAt: serializer.fromJson<DateTime>(json['importedAt']),
+      sourceKind: serializer.fromJson<String>(json['sourceKind']),
+      fileLabel: serializer.fromJson<String?>(json['fileLabel']),
+      fileExportedAt: serializer.fromJson<DateTime?>(json['fileExportedAt']),
+      insertedCount: serializer.fromJson<int>(json['insertedCount']),
+      duplicateCount: serializer.fromJson<int>(json['duplicateCount']),
+      invalidCount: serializer.fromJson<int>(json['invalidCount']),
+      undoneAt: serializer.fromJson<DateTime?>(json['undoneAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'importedAt': serializer.toJson<DateTime>(importedAt),
+      'sourceKind': serializer.toJson<String>(sourceKind),
+      'fileLabel': serializer.toJson<String?>(fileLabel),
+      'fileExportedAt': serializer.toJson<DateTime?>(fileExportedAt),
+      'insertedCount': serializer.toJson<int>(insertedCount),
+      'duplicateCount': serializer.toJson<int>(duplicateCount),
+      'invalidCount': serializer.toJson<int>(invalidCount),
+      'undoneAt': serializer.toJson<DateTime?>(undoneAt),
+    };
+  }
+
+  GameLogImportBatchRow copyWith({
+    int? id,
+    DateTime? importedAt,
+    String? sourceKind,
+    Value<String?> fileLabel = const Value.absent(),
+    Value<DateTime?> fileExportedAt = const Value.absent(),
+    int? insertedCount,
+    int? duplicateCount,
+    int? invalidCount,
+    Value<DateTime?> undoneAt = const Value.absent(),
+  }) => GameLogImportBatchRow(
+    id: id ?? this.id,
+    importedAt: importedAt ?? this.importedAt,
+    sourceKind: sourceKind ?? this.sourceKind,
+    fileLabel: fileLabel.present ? fileLabel.value : this.fileLabel,
+    fileExportedAt: fileExportedAt.present
+        ? fileExportedAt.value
+        : this.fileExportedAt,
+    insertedCount: insertedCount ?? this.insertedCount,
+    duplicateCount: duplicateCount ?? this.duplicateCount,
+    invalidCount: invalidCount ?? this.invalidCount,
+    undoneAt: undoneAt.present ? undoneAt.value : this.undoneAt,
+  );
+  GameLogImportBatchRow copyWithCompanion(GameLogImportBatchesCompanion data) {
+    return GameLogImportBatchRow(
+      id: data.id.present ? data.id.value : this.id,
+      importedAt: data.importedAt.present
+          ? data.importedAt.value
+          : this.importedAt,
+      sourceKind: data.sourceKind.present
+          ? data.sourceKind.value
+          : this.sourceKind,
+      fileLabel: data.fileLabel.present ? data.fileLabel.value : this.fileLabel,
+      fileExportedAt: data.fileExportedAt.present
+          ? data.fileExportedAt.value
+          : this.fileExportedAt,
+      insertedCount: data.insertedCount.present
+          ? data.insertedCount.value
+          : this.insertedCount,
+      duplicateCount: data.duplicateCount.present
+          ? data.duplicateCount.value
+          : this.duplicateCount,
+      invalidCount: data.invalidCount.present
+          ? data.invalidCount.value
+          : this.invalidCount,
+      undoneAt: data.undoneAt.present ? data.undoneAt.value : this.undoneAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GameLogImportBatchRow(')
+          ..write('id: $id, ')
+          ..write('importedAt: $importedAt, ')
+          ..write('sourceKind: $sourceKind, ')
+          ..write('fileLabel: $fileLabel, ')
+          ..write('fileExportedAt: $fileExportedAt, ')
+          ..write('insertedCount: $insertedCount, ')
+          ..write('duplicateCount: $duplicateCount, ')
+          ..write('invalidCount: $invalidCount, ')
+          ..write('undoneAt: $undoneAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    importedAt,
+    sourceKind,
+    fileLabel,
+    fileExportedAt,
+    insertedCount,
+    duplicateCount,
+    invalidCount,
+    undoneAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GameLogImportBatchRow &&
+          other.id == this.id &&
+          other.importedAt == this.importedAt &&
+          other.sourceKind == this.sourceKind &&
+          other.fileLabel == this.fileLabel &&
+          other.fileExportedAt == this.fileExportedAt &&
+          other.insertedCount == this.insertedCount &&
+          other.duplicateCount == this.duplicateCount &&
+          other.invalidCount == this.invalidCount &&
+          other.undoneAt == this.undoneAt);
+}
+
+class GameLogImportBatchesCompanion
+    extends UpdateCompanion<GameLogImportBatchRow> {
+  final Value<int> id;
+  final Value<DateTime> importedAt;
+  final Value<String> sourceKind;
+  final Value<String?> fileLabel;
+  final Value<DateTime?> fileExportedAt;
+  final Value<int> insertedCount;
+  final Value<int> duplicateCount;
+  final Value<int> invalidCount;
+  final Value<DateTime?> undoneAt;
+  const GameLogImportBatchesCompanion({
+    this.id = const Value.absent(),
+    this.importedAt = const Value.absent(),
+    this.sourceKind = const Value.absent(),
+    this.fileLabel = const Value.absent(),
+    this.fileExportedAt = const Value.absent(),
+    this.insertedCount = const Value.absent(),
+    this.duplicateCount = const Value.absent(),
+    this.invalidCount = const Value.absent(),
+    this.undoneAt = const Value.absent(),
+  });
+  GameLogImportBatchesCompanion.insert({
+    this.id = const Value.absent(),
+    required DateTime importedAt,
+    required String sourceKind,
+    this.fileLabel = const Value.absent(),
+    this.fileExportedAt = const Value.absent(),
+    this.insertedCount = const Value.absent(),
+    this.duplicateCount = const Value.absent(),
+    this.invalidCount = const Value.absent(),
+    this.undoneAt = const Value.absent(),
+  }) : importedAt = Value(importedAt),
+       sourceKind = Value(sourceKind);
+  static Insertable<GameLogImportBatchRow> custom({
+    Expression<int>? id,
+    Expression<DateTime>? importedAt,
+    Expression<String>? sourceKind,
+    Expression<String>? fileLabel,
+    Expression<DateTime>? fileExportedAt,
+    Expression<int>? insertedCount,
+    Expression<int>? duplicateCount,
+    Expression<int>? invalidCount,
+    Expression<DateTime>? undoneAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (importedAt != null) 'imported_at': importedAt,
+      if (sourceKind != null) 'source_kind': sourceKind,
+      if (fileLabel != null) 'file_label': fileLabel,
+      if (fileExportedAt != null) 'file_exported_at': fileExportedAt,
+      if (insertedCount != null) 'inserted_count': insertedCount,
+      if (duplicateCount != null) 'duplicate_count': duplicateCount,
+      if (invalidCount != null) 'invalid_count': invalidCount,
+      if (undoneAt != null) 'undone_at': undoneAt,
+    });
+  }
+
+  GameLogImportBatchesCompanion copyWith({
+    Value<int>? id,
+    Value<DateTime>? importedAt,
+    Value<String>? sourceKind,
+    Value<String?>? fileLabel,
+    Value<DateTime?>? fileExportedAt,
+    Value<int>? insertedCount,
+    Value<int>? duplicateCount,
+    Value<int>? invalidCount,
+    Value<DateTime?>? undoneAt,
+  }) {
+    return GameLogImportBatchesCompanion(
+      id: id ?? this.id,
+      importedAt: importedAt ?? this.importedAt,
+      sourceKind: sourceKind ?? this.sourceKind,
+      fileLabel: fileLabel ?? this.fileLabel,
+      fileExportedAt: fileExportedAt ?? this.fileExportedAt,
+      insertedCount: insertedCount ?? this.insertedCount,
+      duplicateCount: duplicateCount ?? this.duplicateCount,
+      invalidCount: invalidCount ?? this.invalidCount,
+      undoneAt: undoneAt ?? this.undoneAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (importedAt.present) {
+      map['imported_at'] = Variable<DateTime>(importedAt.value);
+    }
+    if (sourceKind.present) {
+      map['source_kind'] = Variable<String>(sourceKind.value);
+    }
+    if (fileLabel.present) {
+      map['file_label'] = Variable<String>(fileLabel.value);
+    }
+    if (fileExportedAt.present) {
+      map['file_exported_at'] = Variable<DateTime>(fileExportedAt.value);
+    }
+    if (insertedCount.present) {
+      map['inserted_count'] = Variable<int>(insertedCount.value);
+    }
+    if (duplicateCount.present) {
+      map['duplicate_count'] = Variable<int>(duplicateCount.value);
+    }
+    if (invalidCount.present) {
+      map['invalid_count'] = Variable<int>(invalidCount.value);
+    }
+    if (undoneAt.present) {
+      map['undone_at'] = Variable<DateTime>(undoneAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GameLogImportBatchesCompanion(')
+          ..write('id: $id, ')
+          ..write('importedAt: $importedAt, ')
+          ..write('sourceKind: $sourceKind, ')
+          ..write('fileLabel: $fileLabel, ')
+          ..write('fileExportedAt: $fileExportedAt, ')
+          ..write('insertedCount: $insertedCount, ')
+          ..write('duplicateCount: $duplicateCount, ')
+          ..write('invalidCount: $invalidCount, ')
+          ..write('undoneAt: $undoneAt')
           ..write(')'))
         .toString();
   }
@@ -44876,6 +45596,8 @@ abstract class _$WbDatabase extends GeneratedDatabase {
   late final $JourneyEventsTable journeyEvents = $JourneyEventsTable(this);
   late final $GameLogEntriesTable gameLogEntries = $GameLogEntriesTable(this);
   late final $GameLogGoalsTable gameLogGoals = $GameLogGoalsTable(this);
+  late final $GameLogImportBatchesTable gameLogImportBatches =
+      $GameLogImportBatchesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -44929,6 +45651,7 @@ abstract class _$WbDatabase extends GeneratedDatabase {
     journeyEvents,
     gameLogEntries,
     gameLogGoals,
+    gameLogImportBatches,
   ];
 }
 
@@ -64598,6 +65321,7 @@ typedef $$GameLogEntriesTableCreateCompanionBuilder =
       Value<int?> runsAllowed,
       required DateTime createdAt,
       Value<DateTime?> updatedAt,
+      Value<int?> importBatchId,
     });
 typedef $$GameLogEntriesTableUpdateCompanionBuilder =
     GameLogEntriesCompanion Function({
@@ -64625,6 +65349,7 @@ typedef $$GameLogEntriesTableUpdateCompanionBuilder =
       Value<int?> runsAllowed,
       Value<DateTime> createdAt,
       Value<DateTime?> updatedAt,
+      Value<int?> importBatchId,
     });
 
 class $$GameLogEntriesTableFilterComposer
@@ -64753,6 +65478,11 @@ class $$GameLogEntriesTableFilterComposer
 
   ColumnFilters<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get importBatchId => $composableBuilder(
+    column: $table.importBatchId,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -64885,6 +65615,11 @@ class $$GameLogEntriesTableOrderingComposer
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get importBatchId => $composableBuilder(
+    column: $table.importBatchId,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$GameLogEntriesTableAnnotationComposer
@@ -64993,6 +65728,11 @@ class $$GameLogEntriesTableAnnotationComposer
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get importBatchId => $composableBuilder(
+    column: $table.importBatchId,
+    builder: (column) => column,
+  );
 }
 
 class $$GameLogEntriesTableTableManager
@@ -65050,6 +65790,7 @@ class $$GameLogEntriesTableTableManager
                 Value<int?> runsAllowed = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
+                Value<int?> importBatchId = const Value.absent(),
               }) => GameLogEntriesCompanion(
                 id: id,
                 playedAt: playedAt,
@@ -65075,6 +65816,7 @@ class $$GameLogEntriesTableTableManager
                 runsAllowed: runsAllowed,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                importBatchId: importBatchId,
               ),
           createCompanionCallback:
               ({
@@ -65102,6 +65844,7 @@ class $$GameLogEntriesTableTableManager
                 Value<int?> runsAllowed = const Value.absent(),
                 required DateTime createdAt,
                 Value<DateTime?> updatedAt = const Value.absent(),
+                Value<int?> importBatchId = const Value.absent(),
               }) => GameLogEntriesCompanion.insert(
                 id: id,
                 playedAt: playedAt,
@@ -65127,6 +65870,7 @@ class $$GameLogEntriesTableTableManager
                 runsAllowed: runsAllowed,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                importBatchId: importBatchId,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -65161,6 +65905,7 @@ typedef $$GameLogGoalsTableCreateCompanionBuilder =
       required DateTime createdAt,
       Value<DateTime?> closedAt,
       Value<String?> outcome,
+      Value<int?> importBatchId,
     });
 typedef $$GameLogGoalsTableUpdateCompanionBuilder =
     GameLogGoalsCompanion Function({
@@ -65170,6 +65915,7 @@ typedef $$GameLogGoalsTableUpdateCompanionBuilder =
       Value<DateTime> createdAt,
       Value<DateTime?> closedAt,
       Value<String?> outcome,
+      Value<int?> importBatchId,
     });
 
 class $$GameLogGoalsTableFilterComposer
@@ -65208,6 +65954,11 @@ class $$GameLogGoalsTableFilterComposer
 
   ColumnFilters<String> get outcome => $composableBuilder(
     column: $table.outcome,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get importBatchId => $composableBuilder(
+    column: $table.importBatchId,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -65250,6 +66001,11 @@ class $$GameLogGoalsTableOrderingComposer
     column: $table.outcome,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get importBatchId => $composableBuilder(
+    column: $table.importBatchId,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$GameLogGoalsTableAnnotationComposer
@@ -65278,6 +66034,11 @@ class $$GameLogGoalsTableAnnotationComposer
 
   GeneratedColumn<String> get outcome =>
       $composableBuilder(column: $table.outcome, builder: (column) => column);
+
+  GeneratedColumn<int> get importBatchId => $composableBuilder(
+    column: $table.importBatchId,
+    builder: (column) => column,
+  );
 }
 
 class $$GameLogGoalsTableTableManager
@@ -65317,6 +66078,7 @@ class $$GameLogGoalsTableTableManager
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime?> closedAt = const Value.absent(),
                 Value<String?> outcome = const Value.absent(),
+                Value<int?> importBatchId = const Value.absent(),
               }) => GameLogGoalsCompanion(
                 id: id,
                 body: body,
@@ -65324,6 +66086,7 @@ class $$GameLogGoalsTableTableManager
                 createdAt: createdAt,
                 closedAt: closedAt,
                 outcome: outcome,
+                importBatchId: importBatchId,
               ),
           createCompanionCallback:
               ({
@@ -65333,6 +66096,7 @@ class $$GameLogGoalsTableTableManager
                 required DateTime createdAt,
                 Value<DateTime?> closedAt = const Value.absent(),
                 Value<String?> outcome = const Value.absent(),
+                Value<int?> importBatchId = const Value.absent(),
               }) => GameLogGoalsCompanion.insert(
                 id: id,
                 body: body,
@@ -65340,6 +66104,7 @@ class $$GameLogGoalsTableTableManager
                 createdAt: createdAt,
                 closedAt: closedAt,
                 outcome: outcome,
+                importBatchId: importBatchId,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -65364,6 +66129,304 @@ typedef $$GameLogGoalsTableProcessedTableManager =
         BaseReferences<_$WbDatabase, $GameLogGoalsTable, GameLogGoalRow>,
       ),
       GameLogGoalRow,
+      PrefetchHooks Function()
+    >;
+typedef $$GameLogImportBatchesTableCreateCompanionBuilder =
+    GameLogImportBatchesCompanion Function({
+      Value<int> id,
+      required DateTime importedAt,
+      required String sourceKind,
+      Value<String?> fileLabel,
+      Value<DateTime?> fileExportedAt,
+      Value<int> insertedCount,
+      Value<int> duplicateCount,
+      Value<int> invalidCount,
+      Value<DateTime?> undoneAt,
+    });
+typedef $$GameLogImportBatchesTableUpdateCompanionBuilder =
+    GameLogImportBatchesCompanion Function({
+      Value<int> id,
+      Value<DateTime> importedAt,
+      Value<String> sourceKind,
+      Value<String?> fileLabel,
+      Value<DateTime?> fileExportedAt,
+      Value<int> insertedCount,
+      Value<int> duplicateCount,
+      Value<int> invalidCount,
+      Value<DateTime?> undoneAt,
+    });
+
+class $$GameLogImportBatchesTableFilterComposer
+    extends Composer<_$WbDatabase, $GameLogImportBatchesTable> {
+  $$GameLogImportBatchesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get importedAt => $composableBuilder(
+    column: $table.importedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sourceKind => $composableBuilder(
+    column: $table.sourceKind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fileLabel => $composableBuilder(
+    column: $table.fileLabel,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get fileExportedAt => $composableBuilder(
+    column: $table.fileExportedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get insertedCount => $composableBuilder(
+    column: $table.insertedCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get duplicateCount => $composableBuilder(
+    column: $table.duplicateCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get invalidCount => $composableBuilder(
+    column: $table.invalidCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get undoneAt => $composableBuilder(
+    column: $table.undoneAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$GameLogImportBatchesTableOrderingComposer
+    extends Composer<_$WbDatabase, $GameLogImportBatchesTable> {
+  $$GameLogImportBatchesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get importedAt => $composableBuilder(
+    column: $table.importedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sourceKind => $composableBuilder(
+    column: $table.sourceKind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get fileLabel => $composableBuilder(
+    column: $table.fileLabel,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get fileExportedAt => $composableBuilder(
+    column: $table.fileExportedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get insertedCount => $composableBuilder(
+    column: $table.insertedCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get duplicateCount => $composableBuilder(
+    column: $table.duplicateCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get invalidCount => $composableBuilder(
+    column: $table.invalidCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get undoneAt => $composableBuilder(
+    column: $table.undoneAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$GameLogImportBatchesTableAnnotationComposer
+    extends Composer<_$WbDatabase, $GameLogImportBatchesTable> {
+  $$GameLogImportBatchesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get importedAt => $composableBuilder(
+    column: $table.importedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get sourceKind => $composableBuilder(
+    column: $table.sourceKind,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get fileLabel =>
+      $composableBuilder(column: $table.fileLabel, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get fileExportedAt => $composableBuilder(
+    column: $table.fileExportedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get insertedCount => $composableBuilder(
+    column: $table.insertedCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get duplicateCount => $composableBuilder(
+    column: $table.duplicateCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get invalidCount => $composableBuilder(
+    column: $table.invalidCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get undoneAt =>
+      $composableBuilder(column: $table.undoneAt, builder: (column) => column);
+}
+
+class $$GameLogImportBatchesTableTableManager
+    extends
+        RootTableManager<
+          _$WbDatabase,
+          $GameLogImportBatchesTable,
+          GameLogImportBatchRow,
+          $$GameLogImportBatchesTableFilterComposer,
+          $$GameLogImportBatchesTableOrderingComposer,
+          $$GameLogImportBatchesTableAnnotationComposer,
+          $$GameLogImportBatchesTableCreateCompanionBuilder,
+          $$GameLogImportBatchesTableUpdateCompanionBuilder,
+          (
+            GameLogImportBatchRow,
+            BaseReferences<
+              _$WbDatabase,
+              $GameLogImportBatchesTable,
+              GameLogImportBatchRow
+            >,
+          ),
+          GameLogImportBatchRow,
+          PrefetchHooks Function()
+        > {
+  $$GameLogImportBatchesTableTableManager(
+    _$WbDatabase db,
+    $GameLogImportBatchesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$GameLogImportBatchesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$GameLogImportBatchesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$GameLogImportBatchesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<DateTime> importedAt = const Value.absent(),
+                Value<String> sourceKind = const Value.absent(),
+                Value<String?> fileLabel = const Value.absent(),
+                Value<DateTime?> fileExportedAt = const Value.absent(),
+                Value<int> insertedCount = const Value.absent(),
+                Value<int> duplicateCount = const Value.absent(),
+                Value<int> invalidCount = const Value.absent(),
+                Value<DateTime?> undoneAt = const Value.absent(),
+              }) => GameLogImportBatchesCompanion(
+                id: id,
+                importedAt: importedAt,
+                sourceKind: sourceKind,
+                fileLabel: fileLabel,
+                fileExportedAt: fileExportedAt,
+                insertedCount: insertedCount,
+                duplicateCount: duplicateCount,
+                invalidCount: invalidCount,
+                undoneAt: undoneAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required DateTime importedAt,
+                required String sourceKind,
+                Value<String?> fileLabel = const Value.absent(),
+                Value<DateTime?> fileExportedAt = const Value.absent(),
+                Value<int> insertedCount = const Value.absent(),
+                Value<int> duplicateCount = const Value.absent(),
+                Value<int> invalidCount = const Value.absent(),
+                Value<DateTime?> undoneAt = const Value.absent(),
+              }) => GameLogImportBatchesCompanion.insert(
+                id: id,
+                importedAt: importedAt,
+                sourceKind: sourceKind,
+                fileLabel: fileLabel,
+                fileExportedAt: fileExportedAt,
+                insertedCount: insertedCount,
+                duplicateCount: duplicateCount,
+                invalidCount: invalidCount,
+                undoneAt: undoneAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$GameLogImportBatchesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$WbDatabase,
+      $GameLogImportBatchesTable,
+      GameLogImportBatchRow,
+      $$GameLogImportBatchesTableFilterComposer,
+      $$GameLogImportBatchesTableOrderingComposer,
+      $$GameLogImportBatchesTableAnnotationComposer,
+      $$GameLogImportBatchesTableCreateCompanionBuilder,
+      $$GameLogImportBatchesTableUpdateCompanionBuilder,
+      (
+        GameLogImportBatchRow,
+        BaseReferences<
+          _$WbDatabase,
+          $GameLogImportBatchesTable,
+          GameLogImportBatchRow
+        >,
+      ),
+      GameLogImportBatchRow,
       PrefetchHooks Function()
     >;
 
@@ -65469,4 +66532,6 @@ class $WbDatabaseManager {
       $$GameLogEntriesTableTableManager(_db, _db.gameLogEntries);
   $$GameLogGoalsTableTableManager get gameLogGoals =>
       $$GameLogGoalsTableTableManager(_db, _db.gameLogGoals);
+  $$GameLogImportBatchesTableTableManager get gameLogImportBatches =>
+      $$GameLogImportBatchesTableTableManager(_db, _db.gameLogImportBatches);
 }
